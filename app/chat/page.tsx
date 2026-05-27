@@ -117,10 +117,10 @@ export default async function ChatPage({
           usageDetail = `Used ${accessState.used} times today. Free tier: ${accessState.limit ?? 10} per day (shared across account).`;
         }
       }
-    } catch {
-      // Fallback to preview content when env or data are incomplete.
+        } catch (error) {
+      console.error('Chat page load failed:', error);
+      throw error;
     }
-  }
 
   return (
     <>

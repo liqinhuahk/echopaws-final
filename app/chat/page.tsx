@@ -58,11 +58,7 @@ export default async function ChatPage({
       } = await supabase.auth.getUser();
 
       if (user) {
-        const [petsData, accessState, context] = await Promise.all([
-          getPetsForUser(user.id),
-          getChatAccessState(user.id),
-          getPrimaryPetAndContext(user.id, selectedPetId),
-        ]);
+        const petsData = await getPetsForUser(user.id);
 
         pets = petsData.pets.map((pet) => ({
           id: pet.id,
@@ -71,54 +67,89 @@ export default async function ChatPage({
           isPrimary: pet.id === petsData.defaultPetId,
         }));
 
-        if (context.pet) {
+        const fallbackPet =
+          petsData.pets.find((pet) => pet.id === selectedPetId) ||
+          petsData.pets.find((pet) => pet.id === petsData.defaultPetId) ||
+          petsData.pets[0] ||
+          null;
+
+        if (fallbackPet) {
           hasPet = true;
-          petId = context.pet.id;
-          petName = context.pet.name || petName;
-          petBreed = context.pet.breed || petBreed;
-          petPersonality = context.pet.personality || petPersonality;
-          favoriteFood = context.pet.favorite_food || favoriteFood;
-          dailyHabit = context.pet.daily_habits || dailyHabit;
-          petImageUrl = context.pet.image_url || null;
-
-          const selectedPetMeta = pets.find((pet) => pet.id === context.pet?.id);
-          selectedPetIsPrimary = Boolean(selectedPetMeta?.isPrimary);
+          petId = fallbackPet.id;
+          petName = fallbackPet.name || petName;
+          petBreed = fallbackPet.breed || petBreed;
+          petPersonality = fallbackPet.personality || petPersonality;
+          favoriteFood = fallbackPet.favorite_food || favoriteFood;
+          dailyHabit = fallbackPet.daily_habits || dailyHabit;
+          petImageUrl = fallbackPet.image_url || null;
+          selectedPetIsPrimary = fallbackPet.id === petsData.defaultPetId;
           selectedPetOrderLabel = getPetOrderDescription(selectedPetIsPrimary);
+          memorySummary = fallbackPet.summary || memorySummary;
         }
 
-        visibleMemories = context.memories.slice(0, 4).map((item) => ({ type: item.type, content: item.content }));
+        const [accessStateResult, contextResult] = await Promise.allSettled([
+          getChatAccessState(user.id),
+          getPrimaryPetAndContext(user.id, selectedPetId),
+        ]);
 
-        if (context.memorySummary?.summary) {
-          memorySummary = context.memorySummary.summary;
-        } else if (context.memories.length > 0) {
-          memorySummary = context.memories.map((item) => item.content).slice(0, 2).join('. ');
-        }
-
-        const emotionMemory = context.memories.find((item) => item.type === 'emotion');
-        if (emotionMemory?.content) {
-          emotionSummary = emotionMemory.content;
-        }
-
-        if (context.history.length > 0) {
-          initialMessages = context.history
-            .filter((item) => item.role === 'user' || item.role === 'assistant')
-            .map((item) => ({
-              role: item.role === 'assistant' ? 'assistant' : 'user',
-              content: item.content,
-            }));
-        }
-
-        if (accessState.vip) {
-          usageLabel = 'VIP — Unlimited Chat';
-          usageDetail = 'VIP active: all pets have unlimited conversations.';
-          vipHint = 'You are a VIP — none of your pets have daily message limits.';
+        if (accessStateResult.status === 'fulfilled') {
+          const accessState = accessStateResult.value;
+          if (accessState.vip) {
+            usageLabel = 'VIP — Unlimited Chat';
+            usageDetail = 'VIP active: all pets have unlimited conversations.';
+            vipHint = 'You are a VIP — none of your pets have daily message limits.';
+          } else {
+            usageLabel = `${accessState.remaining ?? 0} / ${accessState.limit ?? 10} remaining today`;
+            usageDetail = `Used ${accessState.used} times today. Free tier: ${accessState.limit ?? 10} per day (shared across account).`;
+          }
         } else {
-          usageLabel = `${accessState.remaining ?? 0} / ${accessState.limit ?? 10} remaining today`;
-          usageDetail = `Used ${accessState.used} times today. Free tier: ${accessState.limit ?? 10} per day (shared across account).`;
+          console.error('Chat page access state load failed:', accessStateResult.reason);
+        }
+
+        if (contextResult.status === 'fulfilled') {
+          const context = contextResult.value;
+          if (context.pet) {
+            hasPet = true;
+            petId = context.pet.id;
+            petName = context.pet.name || petName;
+            petBreed = context.pet.breed || petBreed;
+            petPersonality = context.pet.personality || petPersonality;
+            favoriteFood = context.pet.favorite_food || favoriteFood;
+            dailyHabit = context.pet.daily_habits || dailyHabit;
+            petImageUrl = context.pet.image_url || null;
+
+            const selectedPetMeta = pets.find((pet) => pet.id === context.pet?.id);
+            selectedPetIsPrimary = Boolean(selectedPetMeta?.isPrimary);
+            selectedPetOrderLabel = getPetOrderDescription(selectedPetIsPrimary);
+          }
+
+          visibleMemories = context.memories.slice(0, 4).map((item) => ({ type: item.type, content: item.content }));
+
+          if (context.memorySummary?.summary) {
+            memorySummary = context.memorySummary.summary;
+          } else if (context.memories.length > 0) {
+            memorySummary = context.memories.map((item) => item.content).slice(0, 2).join('. ');
+          }
+
+          const emotionMemory = context.memories.find((item) => item.type === 'emotion');
+          if (emotionMemory?.content) {
+            emotionSummary = emotionMemory.content;
+          }
+
+          if (context.history.length > 0) {
+            initialMessages = context.history
+              .filter((item) => item.role === 'user' || item.role === 'assistant')
+              .map((item) => ({
+                role: item.role === 'assistant' ? 'assistant' : 'user',
+                content: item.content,
+              }));
+          }
+        } else {
+          console.error('Chat page context load failed:', contextResult.reason);
         }
       }
-    } catch {
-      // Fallback to preview content when env or data are incomplete.
+    } catch (error) {
+      console.error('Chat page load failed:', error);
     }
   }
 

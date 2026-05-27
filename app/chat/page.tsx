@@ -86,15 +86,22 @@ export default async function ChatPage({
           selectedPetOrderLabel = getPetOrderDescription(selectedPetIsPrimary);
         }
 
-        visibleMemories = context.memories.slice(0, 4).map((item) => ({ type: item.type, content: item.content }));
+        visibleMemories = context.memories
+          .slice(0, 4)
+          .map((item) => ({ type: item.type, content: item.content }));
 
         if (context.memorySummary?.summary) {
           memorySummary = context.memorySummary.summary;
         } else if (context.memories.length > 0) {
-          memorySummary = context.memories.map((item) => item.content).slice(0, 2).join('. ');
+          memorySummary = context.memories
+            .map((item) => item.content)
+            .slice(0, 2)
+            .join('. ');
         }
 
-        const emotionMemory = context.memories.find((item) => item.type === 'emotion');
+        const emotionMemory = context.memories.find(
+          (item) => item.type === 'emotion'
+        );
         if (emotionMemory?.content) {
           emotionSummary = emotionMemory.content;
         }
@@ -117,10 +124,12 @@ export default async function ChatPage({
           usageDetail = `Used ${accessState.used} times today. Free tier: ${accessState.limit ?? 10} per day (shared across account).`;
         }
       }
-        } catch (error) {
+       } catch (error) {
       console.error('Chat page load failed:', error);
       throw error;
     }
+  }
+}
 
   return (
     <>

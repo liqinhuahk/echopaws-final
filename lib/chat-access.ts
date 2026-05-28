@@ -1,41 +1,43 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
-import { findSubscriptionByUserId } from "@/lib/subscriptions";
+import { createSupabaseAdminClient } from '@/lib/supabase/admin';
+import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
-export const FREE_DAILY_CHAT_LIMIT = 10;
-const ACTIVE_VIP_STATUSES = new Set(["active", "trialing", "past_due"]);
+export const FREE_TOTAL_CHAT_LIMIT = 20;
+const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-export function isVipActive(subscription: { plan?: string | null; status?: string | null } | null | undefined) {
-  return subscription?.plan === "vip" && ACTIVE_VIP_STATUSES.has(subscription.status ?? "");
+export function isVipActive(
+  subscription: { plan?: string | null; status?: string | null } | null | undefined,
+) {
+  return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
 }
 
-function todayUtcDate() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-export async function getTodayUsage(userId: string) {
+export async function getTotalUsage(userId: string) {
   const supabase = createSupabaseAdminClient();
   const { data, error } = await supabase
-    .from("usage_logs")
-    .select("message_count, usage_date")
-    .eq("user_id", userId)
-    .eq("usage_date", todayUtcDate())
-    .maybeSingle();
+    .from('usage_logs')
+    .select('message_count')
+    .eq('user_id', userId);
 
   if (error) {
     throw error;
   }
 
-  return {
-    used: data?.message_count ?? 0,
-    usageDate: data?.usage_date ?? todayUtcDate(),
-  };
+  const used = (data || []).reduce(
+    (sum, row) => sum + Number(row.message_count ?? 0),
+    0,
+  );
+
+  return { used };
 }
 
 export async function getChatAccessState(userId: string) {
-  const [subscription, usage] = await Promise.all([findSubscriptionByUserId(userId), getTodayUsage(userId)]);
+  const [subscription, usage] = await Promise.all([
+    findSubscriptionByUserId(userId),
+    getTotalUsage(userId),
+  ]);
+
   const vip = isVipActive(subscription);
-  const limit = vip ? null : FREE_DAILY_CHAT_LIMIT;
-  const remaining = vip ? null : Math.max(FREE_DAILY_CHAT_LIMIT - usage.used, 0);
+  const limit = vip ? null : FREE_TOTAL_CHAT_LIMIT;
+  const remaining = vip ? null : Math.max(FREE_TOTAL_CHAT_LIMIT - usage.used, 0);
 
   return {
     subscription,
@@ -46,9 +48,12 @@ export async function getChatAccessState(userId: string) {
   };
 }
 
-export async function consumeFreeChatQuota(userId: string, limit = FREE_DAILY_CHAT_LIMIT) {
+export async function consumeFreeChatQuota(
+  userId: string,
+  limit = FREE_TOTAL_CHAT_LIMIT,
+) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.rpc("consume_free_chat_quota", {
+  const { data, error } = await supabase.rpc('consume_free_chat_quota', {
     p_user_id: userId,
     p_limit: limit,
   });
@@ -57,7 +62,7 @@ export async function consumeFreeChatQuota(userId: string, limit = FREE_DAILY_CH
     throw error;
   }
 
-  const row = Array.isArray(data) ? data[0] : null;
+  const row = Array.isArray(data) ? data[0] : data;
 
   return {
     allowed: Boolean(row?.allowed),

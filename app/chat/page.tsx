@@ -1,5 +1,13 @@
 import Link from 'next/link';
-import { PetChatContextCard, PetEmptyStateCard, PetMemoryListCard, PetNoticeBanner, PetPageHeroCard, PetSidebarProfileCard, PetToolbarCard } from '@/components/pet-cards';
+import {
+  PetChatContextCard,
+  PetEmptyStateCard,
+  PetMemoryListCard,
+  PetNoticeBanner,
+  PetPageHeroCard,
+  PetSidebarProfileCard,
+  PetToolbarCard,
+} from '@/components/pet-cards';
 import { ChatPlayground } from '@/components/chat-playground';
 import { PetSwitcher } from '@/components/pet-switcher';
 import { getPetOrderDescription } from '@/components/pet-ui-badges';
@@ -12,9 +20,17 @@ import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/serve
 
 const fallbackMessages = [
   { role: 'user' as const, content: 'Hey Max! What did you do today?' },
-  { role: 'assistant' as const, content: 'I waited for you by the window again today. You seemed tired yesterday — I hope you can rest a bit sooner today 🐶' },
+  {
+    role: 'assistant' as const,
+    content:
+      'I waited for you by the window again today. You seemed tired yesterday — I hope you can rest a bit sooner today 🐶',
+  },
   { role: 'user' as const, content: 'I am feeling a little down today.' },
-  { role: 'assistant' as const, content: 'Then let me just stay close to you for a while. You always handle things on your own, and I remember that — so today I want to hold you a little tighter.' },
+  {
+    role: 'assistant' as const,
+    content:
+      'Then let me just stay close to you for a while. You always handle things on your own, and I remember that — so today I want to hold you a little tighter.',
+  },
 ];
 
 type PetCard = {
@@ -38,11 +54,15 @@ export default async function ChatPage({
   let favoriteFood = 'Chicken breast';
   let dailyHabit = 'Waiting for you at the door';
   let petImageUrl: string | null = null;
-  let memorySummary = 'Owner is Alex. Likes bedtime chats. Has been a bit tired lately at work.';
-  let emotionSummary = 'Last 3 days: a bit tired. Needs more comforting responses.';
-  let usageLabel = '10 / 10 remaining today';
-  let usageDetail = 'Free tier: 10 conversations per day';
-  let vipHint = 'VIP unlocks unlimited chat, voice companion, and deeper long-term memory.';
+  let memorySummary =
+    'Owner is Alex. Likes bedtime chats. Has been a bit tired lately at work.';
+  let emotionSummary =
+    'Last 3 days: a bit tired. Needs more comforting responses.';
+  let usageLabel = '20 / 20 free trial chats left';
+  let usageDetail =
+    'Free tier includes 20 total lifetime chats shared across the account. The counter does not reset daily.';
+  let vipHint =
+    'VIP removes the free trial counter, unlocks deeper long-term memory, supports more than 2 pets, and prepares your account for future voice companion features.';
   let initialMessages = fallbackMessages;
   let hasPet = false;
   let visibleMemories: Array<{ type: string; content: string }> = [];
@@ -94,10 +114,15 @@ export default async function ChatPage({
         if (context.memorySummary?.summary) {
           memorySummary = context.memorySummary.summary;
         } else if (context.memories.length > 0) {
-          memorySummary = context.memories.map((item) => item.content).slice(0, 2).join('. ');
+          memorySummary = context.memories
+            .map((item) => item.content)
+            .slice(0, 2)
+            .join('. ');
         }
 
-        const emotionMemory = context.memories.find((item) => item.type === 'emotion');
+        const emotionMemory = context.memories.find(
+          (item) => item.type === 'emotion',
+        );
         if (emotionMemory?.content) {
           emotionSummary = emotionMemory.content;
         }
@@ -113,11 +138,13 @@ export default async function ChatPage({
 
         if (accessState.vip) {
           usageLabel = 'VIP — Unlimited Chat';
-          usageDetail = 'VIP active: all pets have unlimited conversations.';
-          vipHint = 'You are a VIP — none of your pets have daily message limits.';
+          usageDetail =
+            'VIP active: all pets have unlimited conversations with no lifetime free-trial counter.';
+          vipHint =
+            'You are a VIP — your account is no longer limited by the 20-chat free trial, and you can continue building deeper companionship across all pets.';
         } else {
-          usageLabel = `${accessState.remaining ?? 0} / ${accessState.limit ?? 10} remaining today`;
-          usageDetail = `Used ${accessState.used} times today. Free tier: ${accessState.limit ?? 10} per day (shared across account).`;
+          usageLabel = `${accessState.remaining ?? 0} / ${accessState.limit ?? 20} free trial chats left`;
+          usageDetail = `Used ${accessState.used} total. Free tier includes ${accessState.limit ?? 20} lifetime chats shared across the account. It does not reset daily.`;
         }
       }
     } catch {
@@ -128,16 +155,21 @@ export default async function ChatPage({
   return (
     <>
       <SiteHeader ctaLabel='Upgrade to VIP' ctaHref='/pricing' />
+
       <main className='container-shell py-10'>
         <PetPageHeroCard
           eyebrow='AI Pet Chat'
           title='It does not just answer you — it stays with you.'
-          description='This version supports multi-pet switching. You can switch between pets on the same account. Each pet has its own profile, chat history, companionship summary, and long-term memory.'
-          notice={searchParams?.pet_created === '1' ? (
-            <PetNoticeBanner tone='success'>
-              {searchParams.pet_name ? `Pet ${searchParams.pet_name} created. You can start chatting now.` : 'Pet created. You can start chatting now.'}
-            </PetNoticeBanner>
-          ) : null}
+          description='This version supports multi-pet switching. Each pet has its own profile, chat history, companionship summary, and long-term memory. Free accounts can keep up to 2 pets and share one total free-trial chat pool across the account.'
+          notice={
+            searchParams?.pet_created === '1' ? (
+              <PetNoticeBanner tone='success'>
+                {searchParams.pet_name
+                  ? `Pet ${searchParams.pet_name} created. You can start chatting now.`
+                  : 'Pet created. You can start chatting now.'}
+              </PetNoticeBanner>
+            ) : null
+          }
         />
 
         {pets.length > 0 ? (
@@ -147,7 +179,9 @@ export default async function ChatPage({
               selectedPetId={petId}
               basePath='/chat'
               title='Switch Chat Pet'
-              description={`You have ${pets.length} pet${pets.length !== 1 ? 's' : ''}. The primary pet stays at the top; others are ordered by recent activity. Switching loads that pet's own chat context and memory.`}
+              description={`You have ${pets.length} pet${
+                pets.length !== 1 ? 's' : ''
+              }. The primary pet stays at the top; others are ordered by recent activity. Switching loads that pet's own chat context and memory.`}
             />
           </PetToolbarCard>
         ) : null}
@@ -156,7 +190,7 @@ export default async function ChatPage({
           <PetEmptyStateCard
             className='mt-8'
             title='No pet profile yet'
-            description='Create your first pet to see a real avatar, breed, personality, preferences, and memory content. You can keep adding more pets and switch freely.'
+            description='Create your first pet to see a real avatar, breed, personality, preferences, and memory content. Free tier supports up to 2 pets. VIP unlocks more.'
             primaryAction={{ label: 'Create Your First Pet', href: '/create-pet' }}
           />
         ) : (
@@ -197,12 +231,20 @@ export default async function ChatPage({
                   {
                     title: 'Companionship Summary',
                     action: (
-                      <Link href={petId ? `/memories?pet_id=${encodeURIComponent(petId)}` : '/memories'} className='text-xs font-bold text-orange-700 hover:text-orange-900'>
+                      <Link
+                        href={
+                          petId
+                            ? `/memories?pet_id=${encodeURIComponent(petId)}`
+                            : '/memories'
+                        }
+                        className='text-xs font-bold text-orange-700 hover:text-orange-900'
+                      >
                         Manage Memory →
                       </Link>
                     ),
                     content: memorySummary,
-                    contentClassName: 'mt-2 whitespace-pre-line text-sm leading-7 text-muted',
+                    contentClassName:
+                      'mt-2 whitespace-pre-line text-sm leading-7 text-muted',
                   },
                   {
                     title: 'Emotional State',
@@ -210,7 +252,7 @@ export default async function ChatPage({
                     contentClassName: 'mt-2 text-sm leading-7 text-muted',
                   },
                   {
-                    title: 'Chat Quota',
+                    title: 'Chat Access',
                     content: usageDetail,
                     contentClassName: 'mt-2 text-sm leading-7 text-muted',
                   },
@@ -221,11 +263,20 @@ export default async function ChatPage({
                       title='Recent Active Memories'
                       items={visibleMemories.map((item, index) => ({
                         key: `${item.type}-${index}`,
-                        badges: <span className='rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-900'>{item.type}</span>,
+                        badges: (
+                          <span className='rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-900'>
+                            {item.type}
+                          </span>
+                        ),
                         content: item.content,
                         className: 'bg-orange-50 border-none',
                       }))}
-                      emptyState={<div className='text-sm leading-7 text-muted'>No active memories yet. Chat a few more times and the system will start building companionship context.</div>}
+                      emptyState={
+                        <div className='text-sm leading-7 text-muted'>
+                          No active memories yet. Chat a few more times and the
+                          system will start building companionship context.
+                        </div>
+                      }
                     />
                     <PetNoticeBanner tone='warning'>{vipHint}</PetNoticeBanner>
                   </>
@@ -236,7 +287,11 @@ export default async function ChatPage({
             <PetChatContextCard
               title={<>Chat with {petName}</>}
               description={`You are seeing ${petName}'s dedicated chat context. Switching to another pet will also switch the conversation history and memory summary.`}
-              badge={<div className='rounded-full bg-orange-50 px-4 py-2 text-xs font-bold text-orange-800'>{usageLabel}</div>}
+              badge={
+                <div className='rounded-full bg-orange-50 px-4 py-2 text-xs font-bold text-orange-800'>
+                  {usageLabel}
+                </div>
+              }
               chatNode={
                 <ChatPlayground
                   key={petId ?? 'default-pet'}
@@ -250,6 +305,7 @@ export default async function ChatPage({
           </section>
         )}
       </main>
+
       <SiteFooter rightText='Primary Pet Badge / Primary Pet Priority Sort / Multi-Pet Switching / Memory Hints' />
     </>
   );

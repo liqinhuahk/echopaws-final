@@ -1,8 +1,11 @@
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
+import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const DEFAULT_BUCKET = process.env.SUPABASE_PET_IMAGES_BUCKET || 'pet-images';
+const FREE_TIER_MAX_PETS = 2;
+const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 type PetBaseInput = {
   name: string;
@@ -51,6 +54,10 @@ export type PetsManagerData = {
   latestActivePetId: string | null;
   pets: ManagedPet[];
 };
+
+function isVipActive(subscription: { plan?: string | null; status?: string | null } | null | undefined) {
+  return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
+}
 
 function getTimeValue(value: string | null) {
   if (!value) return 0;
@@ -190,7 +197,8 @@ async function uploadPetImage(userId: string, imageFile: File) {
 
   const supabase = createSupabaseAdminClient();
   const extension = imageFile.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const fileName = `${Date.now()}-${slugify(imageFile.name.replace(/\/[^\/]+$/, '')) || 'pet'}.${extension}`;
+  const baseName = imageFile.name.replace(/\.[^/.]+$/, '');
+  const fileName = `${Date.now()}-${slugify(baseName) || 'pet'}.${extension}`;
   const filePath = `${userId}/${fileName}`;
 
   const { error: uploadError } = await supabase.storage.from(DEFAULT_BUCKET).upload(filePath, imageFile, {
@@ -235,6 +243,32 @@ async function ensureDefaultPetAfterCreate(userId: string, petId: string) {
   }
 }
 
+async function assertCanCreatePet(userId: string) {
+  if (!hasSupabaseAdminEnv()) {
+    throw new Error('Please configure Supabase Service Role Key.');
+  }
+
+  const supabase = createSupabaseAdminClient();
+
+  const [{ count, error: countError }, subscription] = await Promise.all([
+    supabase.from('pets').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    findSubscriptionByUserId(userId),
+  ]);
+
+  if (countError) {
+    throw new Error(countError.message || 'Failed to check current pet count.');
+  }
+
+  const currentPetCount = count ?? 0;
+  const vip = isVipActive(subscription);
+
+  if (!vip && currentPetCount >= FREE_TIER_MAX_PETS) {
+    throw new Error(
+      `Free tier can create up to ${FREE_TIER_MAX_PETS} AI pets. Please delete one pet or upgrade to VIP.`,
+    );
+  }
+}
+
 export async function createPetForUser(userId: string, formData: FormData): Promise<CreatedPetResult> {
   const validated = validatePetFormData(formData, { imageRequired: true });
 
@@ -245,6 +279,8 @@ export async function createPetForUser(userId: string, formData: FormData): Prom
   if (!hasSupabaseAdminEnv()) {
     throw new Error('Please configure Supabase Service Role Key.');
   }
+
+  await assertCanCreatePet(userId);
 
   const { imageFile, ...rest } = validated.data as CreatePetInput;
   const imageUrl = await uploadPetImage(userId, imageFile);
@@ -320,8 +356,6 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
   for (const item of conversations || []) {
     const petId = String(item.pet_id);
     if (!conversationStats.has(petId)) {
-      // conversations are already ordered by created_at DESC, so the first
-      // occurrence of each pet_id is the most recent chat.
       conversationStats.set(petId, {
         count: 1,
         lastChatAt: item.created_at || null,
@@ -354,8 +388,9 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
     } satisfies ManagedPet;
   });
 
-  const latestActivePetId = [...conversationStats.entries()]
-    .sort((a, b) => getTimeValue(b[1].lastChatAt) - getTimeValue(a[1].lastChatAt))[0]?.[0] || null;
+  const latestActivePetId =
+    [...conversationStats.entries()].sort((a, b) => getTimeValue(b[1].lastChatAt) - getTimeValue(a[1].lastChatAt))[0]?.[0] ||
+    null;
 
   const defaultPetId = profile?.default_pet_id || null;
 
@@ -430,7 +465,13 @@ export async function setDefaultPetForUser(userId: string, petId: string) {
   }
 
   const supabase = createSupabaseAdminClient();
-  const { data: pet, error: petError } = await supabase.from('pets').select('id, name').eq('user_id', userId).eq('id', petId).maybeSingle();
+  const { data: pet, error: petError } = await supabase
+    .from('pets')
+    .select('id, name')
+    .eq('user_id', userId)
+    .eq('id', petId)
+    .maybeSingle();
+
   if (petError) throw petError;
   if (!pet) {
     throw new Error('Pet not found, could not set as default.');

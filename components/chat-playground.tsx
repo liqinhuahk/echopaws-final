@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useEffect, useMemo, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 
 type ChatPlaygroundProps = {
   petId?: string | null;
@@ -29,6 +29,39 @@ type ChatResponse = {
   };
 };
 
+function formatUsageLabel(usage: UsagePayload) {
+  if (usage.vip) {
+    return 'VIP — Unlimited Chat';
+  }
+
+  const remaining = usage.remaining ?? 0;
+  const limit = usage.limit ?? 20;
+
+  return `${remaining} / ${limit} lifetime chats left`;
+}
+
+function formatUsageDetail(usage: UsagePayload) {
+  if (usage.vip) {
+    return 'VIP active: unlimited chats across your account and across all pets.';
+  }
+
+  const used = usage.used ?? 0;
+  const limit = usage.limit ?? 20;
+
+  return `Used ${used} of ${limit} lifetime chats. Free chats are shared across your account and do not reset daily.`;
+}
+
+function normalizeErrorMessage(message: string) {
+  if (
+    message.toLowerCase().includes('daily chat limit') ||
+    message.toLowerCase().includes('come back tomorrow')
+  ) {
+    return 'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
+  }
+
+  return message;
+}
+
 export function ChatPlayground({
   petId,
   initialMessages,
@@ -40,30 +73,29 @@ export function ChatPlayground({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [usageLabel, setUsageLabel] = useState(initialRemainingLabel);
+  const [usageDetail, setUsageDetail] = useState<string | null>(null);
   const [memoryHints, setMemoryHints] = useState<string[]>([]);
   const [memorySummary, setMemorySummary] = useState(initialMemorySummary);
 
-  useEffect(() => {
-    setMessages(initialMessages);
-    setUsageLabel(initialRemainingLabel);
-    setMemorySummary(initialMemorySummary);
-    setMemoryHints([]);
-    setError(null);
-    setInput('');
-  }, [petId, initialMessages, initialRemainingLabel, initialMemorySummary]);
+  const trimmedLength = input.trim().length;
+  const canSubmit = useMemo(
+    () => trimmedLength > 0 && trimmedLength <= 800 && !loading,
+    [trimmedLength, loading],
+  );
 
-  const canSubmit = useMemo(() => input.trim().length > 0 && !loading, [input, loading]);
-  const memoriesHref = petId ? `/memories?pet_id=${encodeURIComponent(petId)}` : '/memories';
+  const memoriesHref = petId
+    ? `/memories?pet_id=${encodeURIComponent(petId)}`
+    : '/memories';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!canSubmit) return;
 
     const message = input.trim();
+
     setLoading(true);
     setError(null);
     setMemoryHints([]);
-    setMessages((current) => [...current, { role: 'user', content: message }]);
     setInput('');
 
     try {
@@ -81,13 +113,15 @@ export function ChatPlayground({
         throw new Error(data.error || 'Chat request failed. Please try again.');
       }
 
-      setMessages((current) => [...current, { role: 'assistant', content: data.reply! }]);
+      setMessages((current) => [
+        ...current,
+        { role: 'user', content: message },
+        { role: 'assistant', content: data.reply! },
+      ]);
 
       if (data.usage) {
-        const label = data.usage.vip
-          ? 'VIP — Unlimited Chat'
-          : `${data.usage.remaining ?? 0} / ${data.usage.limit ?? 10} remaining today`;
-        setUsageLabel(label);
+        setUsageLabel(formatUsageLabel(data.usage));
+        setUsageDetail(formatUsageDetail(data.usage));
       }
 
       if (data.memory?.hints?.length) {
@@ -99,8 +133,12 @@ export function ChatPlayground({
       }
     } catch (submitError) {
       const messageText =
-        submitError instanceof Error ? submitError.message : 'Chat request failed. Please try again.';
+        submitError instanceof Error
+          ? normalizeErrorMessage(submitError.message)
+          : 'Chat request failed. Please try again.';
+
       setError(messageText);
+      setInput(message);
     } finally {
       setLoading(false);
     }
@@ -112,6 +150,7 @@ export function ChatPlayground({
         <div className='rounded-full border border-black/5 bg-white px-3 py-2 text-xs font-bold'>
           {usageLabel}
         </div>
+
         <a
           href={memoriesHref}
           className='rounded-full border border-orange-200 bg-orange-50 px-3 py-2 text-xs font-bold text-orange-900 transition hover:bg-orange-100'
@@ -119,6 +158,12 @@ export function ChatPlayground({
           Open Pet Memory Page
         </a>
       </div>
+
+      {usageDetail ? (
+        <div className='mt-3 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700'>
+          {usageDetail}
+        </div>
+      ) : null}
 
       {memorySummary ? (
         <div className='mt-4 rounded-[24px] border border-orange-100 bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-3'>
@@ -166,20 +211,28 @@ export function ChatPlayground({
         </div>
       ) : null}
 
-      <form className='mt-5 flex gap-3' onSubmit={handleSubmit}>
-        <input
-          className='input-shell rounded-full'
-          type='text'
-          placeholder='Type a message, e.g. I am feeling a little tired today'
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-        />
-        <button
-          className='brand-button whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60'
-          disabled={!canSubmit}
-        >
-          {loading ? 'Sending...' : 'Send'}
-        </button>
+      <form className='mt-5' onSubmit={handleSubmit}>
+        <div className='flex gap-3'>
+          <input
+            className='input-shell rounded-full'
+            type='text'
+            placeholder='Type a message, e.g. I am feeling a little tired today'
+            value={input}
+            maxLength={800}
+            onChange={(event) => setInput(event.target.value)}
+          />
+          <button
+            className='brand-button whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60'
+            disabled={!canSubmit}
+          >
+            {loading ? 'Sending...' : 'Send'}
+          </button>
+        </div>
+
+        <div className='mt-2 flex items-center justify-between px-2 text-xs text-muted'>
+          <span>Free chats are shared across your account.</span>
+          <span>{input.length} / 800</span>
+        </div>
       </form>
     </div>
   );

@@ -76,7 +76,7 @@ export default async function AccountPage() {
   const freeSlotsLeft = Math.max(FREE_TIER_MAX_PETS - petCount, 0);
 
   const freePlanHighlights = [
-    `20 total lifetime chats`,
+    '20 total lifetime chats',
     `Up to ${FREE_TIER_MAX_PETS} AI pets`,
     'Basic memory capability',
     'Pet profile and photo upload',
@@ -84,7 +84,7 @@ export default async function AccountPage() {
 
   const vipPlanHighlights = [
     'Unlimited chats',
-    `Create more than ${FREE_TIER_MAX_PETS} AI pets`,
+    `More than ${FREE_TIER_MAX_PETS} pets`,
     'Deeper long-term memory',
     'Richer emotional continuity',
     'Priority access to future voice features',
@@ -103,9 +103,8 @@ export default async function AccountPage() {
         <h1 className='page-title mt-4'>Welcome back, {displayName}</h1>
 
         <p className='page-subtitle mx-0'>
-          This is your EchoPaws account and membership hub. You can view your login
-          status, check your current plan, review Free versus VIP benefits, manage
-          your pets, and securely handle subscription settings.
+          Review your current plan, Free versus VIP benefits, pet setup, and
+          membership controls in one place.
         </p>
 
         <section className='mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]'>
@@ -135,7 +134,7 @@ export default async function AccountPage() {
                 <div className='mt-2 text-lg font-extrabold tracking-tight text-neutral-900'>
                   {maskedEmail}
                 </div>
-                <div className='mt-1 break-all text-xs text-muted'>
+                <div className='mt-1 truncate text-xs text-muted'>
                   {user.email || 'No email available'}
                 </div>
               </div>
@@ -171,8 +170,8 @@ export default async function AccountPage() {
                 </div>
                 <div className='mt-1 text-xs text-muted'>
                   {vipActive
-                    ? 'No lifetime Free-trial cap'
-                    : 'Lifetime trial chats, not daily reset'}
+                    ? 'No Free chat cap'
+                    : 'Lifetime chats, not daily reset'}
                 </div>
               </div>
             </div>
@@ -232,7 +231,7 @@ export default async function AccountPage() {
               </Link>
 
               <Link href='/pets' className='subtle-button w-full text-center'>
-                Manage Pets & Default Target
+                Manage Pets
               </Link>
 
               <form action={signOut}>
@@ -286,10 +285,7 @@ export default async function AccountPage() {
                   )}
                 </>
               ) : (
-                <>
-                  You are currently on VIP, so this Free-tier cap no longer limits your
-                  account.
-                </>
+                <>You are currently on VIP, so the Free-tier pet cap no longer limits your account.</>
               )}
             </div>
           </div>

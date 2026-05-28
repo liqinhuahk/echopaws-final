@@ -55,7 +55,9 @@ export type PetsManagerData = {
   pets: ManagedPet[];
 };
 
-function isVipActive(subscription: { plan?: string | null; status?: string | null } | null | undefined) {
+function isVipActive(
+  subscription: { plan?: string | null; status?: string | null } | null | undefined,
+) {
   return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
 }
 
@@ -116,23 +118,38 @@ function validateSharedFields(formData: FormData) {
   const dailyHabits = sanitizeText(formData.get('dailyHabits'));
 
   if (!name || name.length < 1 || name.length > 30) {
-    return { success: false as const, message: 'Pet name is required and must be 30 characters or less.' };
+    return {
+      success: false as const,
+      message: 'Pet name is required and must be 30 characters or less.',
+    };
   }
 
   if (!breed || breed.length > 30) {
-    return { success: false as const, message: 'Please fill in the pet breed (30 characters or less).' };
+    return {
+      success: false as const,
+      message: 'Please fill in the pet breed (30 characters or less).',
+    };
   }
 
   if (!personality || personality.length > 120) {
-    return { success: false as const, message: 'Personality is required (120 characters or less recommended).' };
+    return {
+      success: false as const,
+      message: 'Personality is required (120 characters or less recommended).',
+    };
   }
 
   if (favoriteFood.length > 120) {
-    return { success: false as const, message: 'Favorite food must be 120 characters or less.' };
+    return {
+      success: false as const,
+      message: 'Favorite food must be 120 characters or less.',
+    };
   }
 
   if (dailyHabits.length > 500) {
-    return { success: false as const, message: 'Daily habits must be 500 characters or less.' };
+    return {
+      success: false as const,
+      message: 'Daily habits must be 500 characters or less.',
+    };
   }
 
   return {
@@ -157,11 +174,17 @@ function validateImageFile(imageFile: File | null, imageRequired: boolean) {
   }
 
   if (!ALLOWED_IMAGE_TYPES.includes(imageFile.type)) {
-    return { success: false as const, message: 'Only JPG, PNG, and WebP images are supported.' };
+    return {
+      success: false as const,
+      message: 'Only JPG, PNG, and WebP images are supported.',
+    };
   }
 
   if (imageFile.size > MAX_IMAGE_SIZE) {
-    return { success: false as const, message: 'Image size must be under 5MB.' };
+    return {
+      success: false as const,
+      message: 'Image size must be under 5MB.',
+    };
   }
 
   return { success: true as const, file: imageFile };
@@ -201,11 +224,13 @@ async function uploadPetImage(userId: string, imageFile: File) {
   const fileName = `${Date.now()}-${slugify(baseName) || 'pet'}.${extension}`;
   const filePath = `${userId}/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage.from(DEFAULT_BUCKET).upload(filePath, imageFile, {
-    contentType: imageFile.type,
-    cacheControl: '3600',
-    upsert: false,
-  });
+  const { error: uploadError } = await supabase.storage
+    .from(DEFAULT_BUCKET)
+    .upload(filePath, imageFile, {
+      contentType: imageFile.type,
+      cacheControl: '3600',
+      upsert: false,
+    });
 
   if (uploadError) {
     throw new Error(`Failed to upload pet image: ${uploadError.message}`);
@@ -236,7 +261,11 @@ async function removePetImageByPublicUrl(publicUrl: string | null) {
 
 async function ensureDefaultPetAfterCreate(userId: string, petId: string) {
   const supabase = createSupabaseAdminClient();
-  const { data: profile } = await supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle();
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('default_pet_id')
+    .eq('id', userId)
+    .maybeSingle();
 
   if (!profile?.default_pet_id) {
     await supabase.from('profiles').update({ default_pet_id: petId }).eq('id', userId);
@@ -269,7 +298,10 @@ async function assertCanCreatePet(userId: string) {
   }
 }
 
-export async function createPetForUser(userId: string, formData: FormData): Promise<CreatedPetResult> {
+export async function createPetForUser(
+  userId: string,
+  formData: FormData,
+): Promise<CreatedPetResult> {
   const validated = validatePetFormData(formData, { imageRequired: true });
 
   if (!validated.success) {
@@ -331,7 +363,9 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
   ] = await Promise.all([
     supabase
       .from('pets')
-      .select('id, name, breed, personality, favorite_food, daily_habits, image_url, created_at, updated_at')
+      .select(
+        'id, name, breed, personality, favorite_food, daily_habits, image_url, created_at, updated_at',
+      )
       .eq('user_id', userId)
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
@@ -381,7 +415,8 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
       image_url: (pet.image_url as string | null) || null,
       created_at: String(pet.created_at),
       updated_at: String(pet.updated_at),
-      summary: summary?.summary || 'No companionship summary yet. Keep chatting to build it.',
+      summary:
+        summary?.summary || 'No companionship summary yet. Keep chatting to build it.',
       memory_count: Number(summary?.memory_count || 0),
       conversation_count: Number(stats?.count || 0),
       last_chat_at: stats?.lastChatAt || null,
@@ -389,21 +424,32 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
   });
 
   const latestActivePetId =
-    [...conversationStats.entries()].sort((a, b) => getTimeValue(b[1].lastChatAt) - getTimeValue(a[1].lastChatAt))[0]?.[0] ||
-    null;
+    [...conversationStats.entries()].sort(
+      (a, b) => getTimeValue(b[1].lastChatAt) - getTimeValue(a[1].lastChatAt),
+    )[0]?.[0] || null;
 
   const defaultPetId = profile?.default_pet_id || null;
 
   return {
     defaultPetId,
-    totalMemories: (summaries || []).reduce((sum, item) => sum + Number(item.memory_count || 0), 0),
-    totalConversations: [...conversationStats.values()].reduce((sum, item) => sum + item.count, 0),
+    totalMemories: (summaries || []).reduce(
+      (sum, item) => sum + Number(item.memory_count || 0),
+      0,
+    ),
+    totalConversations: [...conversationStats.values()].reduce(
+      (sum, item) => sum + item.count,
+      0,
+    ),
     latestActivePetId,
     pets: sortManagedPets(mappedPets, defaultPetId),
   };
 }
 
-export async function updatePetForUser(userId: string, petId: string, formData: FormData) {
+export async function updatePetForUser(
+  userId: string,
+  petId: string,
+  formData: FormData,
+) {
   const validated = validatePetFormData(formData, { imageRequired: false });
 
   if (!validated.success) {
@@ -477,7 +523,11 @@ export async function setDefaultPetForUser(userId: string, petId: string) {
     throw new Error('Pet not found, could not set as default.');
   }
 
-  const { error } = await supabase.from('profiles').update({ default_pet_id: petId }).eq('id', userId);
+  const { error } = await supabase
+    .from('profiles')
+    .update({ default_pet_id: petId })
+    .eq('id', userId);
+
   if (error) throw error;
 
   return { petId, petName: pet.name as string };
@@ -489,10 +539,16 @@ export async function deletePetForUser(userId: string, petId: string) {
   }
 
   const supabase = createSupabaseAdminClient();
-  const [{ data: pet, error: petError }, { data: profile, error: profileError }] = await Promise.all([
-    supabase.from('pets').select('id, name, image_url').eq('user_id', userId).eq('id', petId).maybeSingle(),
-    supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
-  ]);
+  const [{ data: pet, error: petError }, { data: profile, error: profileError }] =
+    await Promise.all([
+      supabase
+        .from('pets')
+        .select('id, name, image_url')
+        .eq('user_id', userId)
+        .eq('id', petId)
+        .maybeSingle(),
+      supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
+    ]);
 
   if (petError) throw petError;
   if (profileError) throw profileError;
@@ -500,7 +556,12 @@ export async function deletePetForUser(userId: string, petId: string) {
     throw new Error('Pet not found, could not delete.');
   }
 
-  const { error: deleteError } = await supabase.from('pets').delete().eq('user_id', userId).eq('id', petId);
+  const { error: deleteError } = await supabase
+    .from('pets')
+    .delete()
+    .eq('user_id', userId)
+    .eq('id', petId);
+
   if (deleteError) throw deleteError;
 
   await removePetImageByPublicUrl((pet.image_url as string | null) || null);

@@ -1,10 +1,11 @@
 import { createSupabaseAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
 import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
+export const FREE_TIER_MAX_PETS = 2;
+
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 const DEFAULT_BUCKET = process.env.SUPABASE_PET_IMAGES_BUCKET || 'pet-images';
-const FREE_TIER_MAX_PETS = 2;
 const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 type PetBaseInput = {
@@ -55,12 +56,6 @@ export type PetsManagerData = {
   pets: ManagedPet[];
 };
 
-function isVipActive(
-  subscription: { plan?: string | null; status?: string | null } | null | undefined,
-) {
-  return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
-}
-
 function getTimeValue(value: string | null) {
   if (!value) return 0;
   const time = new Date(value).getTime();
@@ -71,7 +66,10 @@ function sortManagedPets(pets: ManagedPet[], defaultPetId: string | null) {
   return [...pets].sort((a, b) => {
     const aIsDefault = a.id === defaultPetId ? 1 : 0;
     const bIsDefault = b.id === defaultPetId ? 1 : 0;
-    if (aIsDefault !== bIsDefault) return bIsDefault - aIsDefault;
+
+    if (aIsDefault !== bIsDefault) {
+      return bIsDefault - aIsDefault;
+    }
 
     const chatDiff = getTimeValue(b.last_chat_at) - getTimeValue(a.last_chat_at);
     if (chatDiff !== 0) return chatDiff;
@@ -108,6 +106,10 @@ function buildSystemPrompt(input: PetBaseInput) {
   ]
     .filter(Boolean)
     .join('\n');
+}
+
+function isVipActive(subscription: { plan?: string | null; status?: string | null } | null | undefined) {
+  return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
 }
 
 function validateSharedFields(formData: FormData) {
@@ -224,13 +226,11 @@ async function uploadPetImage(userId: string, imageFile: File) {
   const fileName = `${Date.now()}-${slugify(baseName) || 'pet'}.${extension}`;
   const filePath = `${userId}/${fileName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from(DEFAULT_BUCKET)
-    .upload(filePath, imageFile, {
-      contentType: imageFile.type,
-      cacheControl: '3600',
-      upsert: false,
-    });
+  const { error: uploadError } = await supabase.storage.from(DEFAULT_BUCKET).upload(filePath, imageFile, {
+    contentType: imageFile.type,
+    cacheControl: '3600',
+    upsert: false,
+  });
 
   if (uploadError) {
     throw new Error(`Failed to upload pet image: ${uploadError.message}`);
@@ -279,29 +279,30 @@ async function assertCanCreatePet(userId: string) {
 
   const supabase = createSupabaseAdminClient();
 
-  const [{ count, error: countError }, subscription] = await Promise.all([
-    supabase.from('pets').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+  const [subscription, petCountResult] = await Promise.all([
     findSubscriptionByUserId(userId),
+    supabase.from('pets').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ]);
 
-  if (countError) {
-    throw new Error(countError.message || 'Failed to check current pet count.');
+  if (petCountResult.error) {
+    throw petCountResult.error;
   }
 
-  const currentPetCount = count ?? 0;
+  const petCount = petCountResult.count ?? 0;
   const vip = isVipActive(subscription);
 
-  if (!vip && currentPetCount >= FREE_TIER_MAX_PETS) {
-    throw new Error(
-      `Free tier can create up to ${FREE_TIER_MAX_PETS} AI pets. Please delete one pet or upgrade to VIP.`,
-    );
+  if (!vip && petCount >= FREE_TIER_MAX_PETS) {
+    throw new Error(`Free plan supports up to ${FREE_TIER_MAX_PETS} pets. Upgrade to VIP to create more pets.`);
   }
+
+  return {
+    vip,
+    petCount,
+    remaining: vip ? null : Math.max(FREE_TIER_MAX_PETS - petCount, 0),
+  };
 }
 
-export async function createPetForUser(
-  userId: string,
-  formData: FormData,
-): Promise<CreatedPetResult> {
+export async function createPetForUser(userId: string, formData: FormData): Promise<CreatedPetResult> {
   const validated = validatePetFormData(formData, { imageRequired: true });
 
   if (!validated.success) {
@@ -363,9 +364,7 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
   ] = await Promise.all([
     supabase
       .from('pets')
-      .select(
-        'id, name, breed, personality, favorite_food, daily_habits, image_url, created_at, updated_at',
-      )
+      .select('id, name, breed, personality, favorite_food, daily_habits, image_url, created_at, updated_at')
       .eq('user_id', userId)
       .order('created_at', { ascending: false }),
     supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
@@ -389,6 +388,7 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
 
   for (const item of conversations || []) {
     const petId = String(item.pet_id);
+
     if (!conversationStats.has(petId)) {
       conversationStats.set(petId, {
         count: 1,
@@ -415,8 +415,7 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
       image_url: (pet.image_url as string | null) || null,
       created_at: String(pet.created_at),
       updated_at: String(pet.updated_at),
-      summary:
-        summary?.summary || 'No companionship summary yet. Keep chatting to build it.',
+      summary: summary?.summary || 'No companionship summary yet. Keep chatting to build it.',
       memory_count: Number(summary?.memory_count || 0),
       conversation_count: Number(stats?.count || 0),
       last_chat_at: stats?.lastChatAt || null,
@@ -432,24 +431,14 @@ export async function getPetsForUser(userId: string): Promise<PetsManagerData> {
 
   return {
     defaultPetId,
-    totalMemories: (summaries || []).reduce(
-      (sum, item) => sum + Number(item.memory_count || 0),
-      0,
-    ),
-    totalConversations: [...conversationStats.values()].reduce(
-      (sum, item) => sum + item.count,
-      0,
-    ),
+    totalMemories: (summaries || []).reduce((sum, item) => sum + Number(item.memory_count || 0), 0),
+    totalConversations: [...conversationStats.values()].reduce((sum, item) => sum + item.count, 0),
     latestActivePetId,
     pets: sortManagedPets(mappedPets, defaultPetId),
   };
 }
 
-export async function updatePetForUser(
-  userId: string,
-  petId: string,
-  formData: FormData,
-) {
+export async function updatePetForUser(userId: string, petId: string, formData: FormData) {
   const validated = validatePetFormData(formData, { imageRequired: false });
 
   if (!validated.success) {
@@ -523,11 +512,7 @@ export async function setDefaultPetForUser(userId: string, petId: string) {
     throw new Error('Pet not found, could not set as default.');
   }
 
-  const { error } = await supabase
-    .from('profiles')
-    .update({ default_pet_id: petId })
-    .eq('id', userId);
-
+  const { error } = await supabase.from('profiles').update({ default_pet_id: petId }).eq('id', userId);
   if (error) throw error;
 
   return { petId, petName: pet.name as string };
@@ -539,16 +524,10 @@ export async function deletePetForUser(userId: string, petId: string) {
   }
 
   const supabase = createSupabaseAdminClient();
-  const [{ data: pet, error: petError }, { data: profile, error: profileError }] =
-    await Promise.all([
-      supabase
-        .from('pets')
-        .select('id, name, image_url')
-        .eq('user_id', userId)
-        .eq('id', petId)
-        .maybeSingle(),
-      supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
-    ]);
+  const [{ data: pet, error: petError }, { data: profile, error: profileError }] = await Promise.all([
+    supabase.from('pets').select('id, name, image_url').eq('user_id', userId).eq('id', petId).maybeSingle(),
+    supabase.from('profiles').select('default_pet_id').eq('id', userId).maybeSingle(),
+  ]);
 
   if (petError) throw petError;
   if (profileError) throw profileError;
@@ -556,12 +535,7 @@ export async function deletePetForUser(userId: string, petId: string) {
     throw new Error('Pet not found, could not delete.');
   }
 
-  const { error: deleteError } = await supabase
-    .from('pets')
-    .delete()
-    .eq('user_id', userId)
-    .eq('id', petId);
-
+  const { error: deleteError } = await supabase.from('pets').delete().eq('user_id', userId).eq('id', petId);
   if (deleteError) throw deleteError;
 
   await removePetImageByPublicUrl((pet.image_url as string | null) || null);

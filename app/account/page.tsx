@@ -10,29 +10,58 @@ import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
 const FREE_TOTAL_CHAT_LIMIT = 20;
 const FREE_TIER_MAX_PETS = 2;
-const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
+const ACTIVE_VIP_STATUSES = ['active', 'trialing', 'past_due'];
 
-function isVipActive(
-  subscription: { plan?: string | null; status?: string | null } | null | undefined,
-) {
-  return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
+function maskEmail(email: string | null | undefined) {
+  if (!email || !email.includes('@')) return 'No email available';
+
+  const [localPart, domain] = email.split('@');
+  const safeLocal =
+    localPart.length <= 3
+      ? `${localPart.slice(0, 1)}***`
+      : `${localPart.slice(0, 3)}***`;
+
+  return `${safeLocal}@${domain}`;
 }
 
-function maskEmail(email?: string | null) {
-  if (!email) return 'No email available';
+function getPlanStatusLabel(status?: string | null) {
+  if (!status) return 'No active subscription';
+  if (status === 'active') return 'Active';
+  if (status === 'trialing') return 'Trialing';
+  if (status === 'past_due') return 'Past due';
+  if (status === 'canceled') return 'Canceled';
+  if (status === 'incomplete') return 'Incomplete';
+  return status;
+}
 
-  const [localPart = '', domain = ''] = email.split('@');
-  if (!localPart || !domain) return email;
+function getCopyEmailScript() {
+  return `
+    (() => {
+      const button = document.getElementById('copy-email-button');
+      const feedback = document.getElementById('copy-email-feedback');
+      if (!button || !feedback) return;
 
-  if (localPart.length <= 1) {
-    return `${localPart}***@${domain}`;
-  }
+      const originalText = feedback.textContent || 'Copy email';
 
-  if (localPart.length === 2) {
-    return `${localPart[0]}***@${domain}`;
-  }
+      button.addEventListener('click', async () => {
+        const email = button.getAttribute('data-email');
+        if (!email) return;
 
-  return `${localPart.slice(0, 3)}***@${domain}`;
+        try {
+          await navigator.clipboard.writeText(email);
+          feedback.textContent = 'Copied';
+          setTimeout(() => {
+            feedback.textContent = originalText;
+          }, 1800);
+        } catch (error) {
+          feedback.textContent = 'Copy failed';
+          setTimeout(() => {
+            feedback.textContent = originalText;
+          }, 1800);
+        }
+      });
+    })();
+  `;
 }
 
 export default async function AccountPage() {
@@ -67,156 +96,138 @@ export default async function AccountPage() {
     petOverview = null;
   }
 
-  const vipActive = isVipActive(subscription);
-  const currentPlan = vipActive ? 'VIP' : 'Free';
-  const petCount = petOverview?.pets.length || 0;
+  const vipActive =
+    subscription?.plan === 'vip' &&
+    ACTIVE_VIP_STATUSES.includes(subscription.status);
+
+  const currentPlan = vipActive ? 'VIP Membership' : 'Free Plan';
+  const planBadge = vipActive ? 'VIP Active' : 'Free Plan';
+  const planStatus = vipActive
+    ? getPlanStatusLabel(subscription?.status)
+    : 'Free plan active';
+
+  const pets = petOverview?.pets ?? [];
+  const petCount = pets.length;
   const defaultPet =
-    petOverview?.pets.find((pet) => pet.id === petOverview.defaultPetId) || null;
+    pets.find((pet) => pet.id === petOverview?.defaultPetId) || null;
+
   const maskedEmail = maskEmail(user.email);
+  const fullEmail = user.email ?? 'No email available';
   const freeSlotsLeft = Math.max(FREE_TIER_MAX_PETS - petCount, 0);
-
-  const freePlanHighlights = [
-    '20 total lifetime chats',
-    `Up to ${FREE_TIER_MAX_PETS} AI pets`,
-    'Basic memory capability',
-    'Pet profile and photo upload',
-  ];
-
-  const vipPlanHighlights = [
-    'Unlimited chats',
-    `More than ${FREE_TIER_MAX_PETS} pets`,
-    'Deeper long-term memory',
-    'Richer emotional continuity',
-    'Priority access to future voice features',
-  ];
 
   return (
     <>
       <SiteHeader
         ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
-        ctaHref='/pricing'
+        ctaHref={vipActive ? '/pricing' : '/pricing'}
       />
 
       <main className='container-shell py-10'>
         <div className='eyebrow'>My Account</div>
-
         <h1 className='page-title mt-4'>Welcome back, {displayName}</h1>
-
-        <p className='page-subtitle mx-0'>
+        <p className='page-subtitle mx-0 max-w-4xl'>
           Review your current plan, Free versus VIP benefits, pet setup, and
           membership controls in one place.
         </p>
 
-        <section className='mt-8 grid gap-5 lg:grid-cols-[1.15fr_.85fr]'>
+        <section className='mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]'>
           <div className='glass-card p-6'>
-            <div className='flex items-start justify-between gap-4'>
-              <div>
-                <h2 className='text-2xl font-extrabold'>Account Status</h2>
-                <p className='mt-1 text-sm text-muted'>
-                  Your sign-in identity, current plan, and pet setup overview.
-                </p>
-              </div>
-
-              <div
-                className={`hidden rounded-full px-3 py-1 text-xs font-bold md:block ${
+            <div className='flex flex-wrap items-center gap-3'>
+              <h2 className='text-2xl font-extrabold'>Account Status</h2>
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] ${
                   vipActive
-                    ? 'bg-emerald-100 text-emerald-800'
-                    : 'bg-orange-100 text-orange-800'
+                    ? 'bg-orange-100 text-orange-800'
+                    : 'bg-stone-100 text-stone-700'
                 }`}
               >
-                {vipActive ? 'VIP Active' : 'Free Plan'}
-              </div>
+                {planBadge}
+              </span>
             </div>
 
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-              <div className='rounded-2xl border border-black/5 bg-white p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white p-4'>
                 <div className='text-sm font-bold text-muted'>Email</div>
-                <div className='mt-2 text-lg font-extrabold tracking-tight text-neutral-900'>
-                  {maskedEmail}
-                </div>
-                <div className='mt-1 truncate text-xs text-muted'>
-                  {user.email || 'No email available'}
+
+                <div className='mt-2 text-base font-semibold'>{maskedEmail}</div>
+
+                <div className='mt-1 flex items-center gap-2'>
+                  <div className='min-w-0 flex-1 text-xs text-muted'>
+                    <div className='truncate whitespace-nowrap'>{fullEmail}</div>
+                  </div>
+
+                  <button
+                    id='copy-email-button'
+                    type='button'
+                    data-email={fullEmail}
+                    className='rounded-full border border-black/10 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-100'
+                  >
+                    <span id='copy-email-feedback'>Copy email</span>
+                  </button>
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white p-4'>
                 <div className='text-sm font-bold text-muted'>Current Plan</div>
-                <div className='mt-2 text-lg font-extrabold text-neutral-900'>
-                  {currentPlan}
-                </div>
-                <div className='mt-1 text-xs text-muted'>
-                  {subscription
-                    ? `Stripe status: ${subscription.status}`
-                    : 'No subscription synced yet'}
-                </div>
+                <div className='mt-2 text-base font-semibold'>{currentPlan}</div>
+                <div className='mt-1 text-xs text-muted'>{planStatus}</div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white p-4'>
                 <div className='text-sm font-bold text-muted'>Pets</div>
-                <div className='mt-2 text-lg font-extrabold text-neutral-900'>
-                  {petCount}
-                </div>
+                <div className='mt-2 text-base font-semibold'>{petCount}</div>
                 <div className='mt-1 text-xs text-muted'>
-                  {defaultPet ? `Default: ${defaultPet.name}` : 'No default pet set'}
+                  {defaultPet ? `Default pet: ${defaultPet.name}` : 'No default pet set'}
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white p-4'>
                 <div className='text-sm font-bold text-muted'>
                   {vipActive ? 'Chat Access' : 'Free Chat Allowance'}
                 </div>
-                <div className='mt-2 text-lg font-extrabold text-neutral-900'>
+                <div className='mt-2 text-base font-semibold'>
                   {vipActive ? 'Unlimited' : `${FREE_TOTAL_CHAT_LIMIT} total`}
                 </div>
                 <div className='mt-1 text-xs text-muted'>
                   {vipActive
-                    ? 'No Free chat cap'
+                    ? 'Unlimited chats with VIP'
                     : 'Lifetime chats, not daily reset'}
                 </div>
               </div>
             </div>
 
-            <div
-              className={`mt-5 rounded-2xl px-4 py-4 text-sm leading-7 ${
-                vipActive
-                  ? 'border border-emerald-200 bg-emerald-50 text-emerald-900'
-                  : 'border border-amber-200 bg-amber-50 text-amber-900'
-              }`}
-            >
-              <div className='font-extrabold uppercase tracking-[0.06em]'>
-                {vipActive ? 'Current Membership Snapshot' : 'Free Plan Snapshot'}
+            {!vipActive ? (
+              <div className='mt-5 rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-900'>
+                <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-amber-800'>
+                  Free plan snapshot
+                </div>
+                <p className='mt-2 leading-7'>
+                  Your account is currently on Free. Free includes{' '}
+                  <strong>{FREE_TOTAL_CHAT_LIMIT} total lifetime chats</strong> and{' '}
+                  <strong>up to {FREE_TIER_MAX_PETS} pets</strong>. These chats are
+                  shared across your account and do not reset daily.
+                </p>
               </div>
-
-              {vipActive ? (
-                <div className='mt-2'>
-                  Your account currently has <strong>VIP access</strong>. That means
-                  unlimited chats, more than {FREE_TIER_MAX_PETS} pets, deeper
-                  long-term memory, and stronger emotional continuity across your
-                  companion experience.
+            ) : (
+              <div className='mt-5 rounded-2xl bg-orange-50 px-4 py-4 text-sm text-orange-900'>
+                <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-orange-800'>
+                  VIP membership active
                 </div>
-              ) : (
-                <div className='mt-2'>
-                  Your account is currently on <strong>Free</strong>. Free includes{' '}
-                  <strong>{FREE_TOTAL_CHAT_LIMIT} total lifetime chats</strong> and up
-                  to <strong>{FREE_TIER_MAX_PETS} AI pets</strong>. These chats are
-                  shared across the account and do <strong>not</strong> reset daily.
-                </div>
-              )}
-            </div>
+                <p className='mt-2 leading-7'>
+                  Your account currently has VIP access. You have unlimited chats,
+                  more pet capacity, deeper long-term memory, richer emotional
+                  continuity, and priority access to future voice features.
+                </p>
+              </div>
+            )}
           </div>
 
           <div className='glass-card p-6'>
-            <div className='flex items-start justify-between gap-4'>
-              <div>
-                <h2 className='text-2xl font-extrabold'>Membership & Security</h2>
-                <p className='mt-1 text-sm text-muted'>
-                  Billing, plan upgrade, pet management, and secure sign out.
-                </p>
-              </div>
-
-              <div className='hidden rounded-full bg-black/[0.04] px-3 py-1 text-xs font-bold text-neutral-700 md:block'>
+            <div className='flex flex-wrap items-center gap-3'>
+              <h2 className='text-2xl font-extrabold'>Membership & Security</h2>
+              <span className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-stone-700'>
                 Quick Actions
-              </div>
+              </span>
             </div>
 
             <div className='mt-5 grid gap-3'>
@@ -226,144 +237,112 @@ export default async function AccountPage() {
                 </button>
               </form>
 
-              <Link href='/pricing' className='brand-button w-full text-center'>
-                {vipActive ? 'Review Membership Details' : 'Upgrade to VIP'}
-              </Link>
+              {!vipActive ? (
+                <Link href='/pricing' className='brand-button w-full text-center'>
+                  Upgrade to VIP
+                </Link>
+              ) : (
+                <Link href='/pricing' className='subtle-button w-full text-center'>
+                  View Membership Details
+                </Link>
+              )}
 
               <Link href='/pets' className='subtle-button w-full text-center'>
-                Manage Pets
+                Manage Pets & Default Pet
               </Link>
 
               <form action={signOut}>
                 <button className='subtle-button w-full'>Sign Out Securely</button>
               </form>
             </div>
-          </div>
-        </section>
 
-        <section className='mt-8 grid gap-5 lg:grid-cols-2'>
-          <div className='glass-card p-6'>
-            <div className='flex items-start justify-between gap-4'>
-              <div>
-                <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-                  Free Plan
-                </div>
-                <h2 className='mt-2 text-2xl font-extrabold'>What Free includes</h2>
-              </div>
-
-              {!vipActive ? (
-                <div className='rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-800'>
-                  Current Plan
-                </div>
-              ) : null}
-            </div>
-
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-ink'>
-              {freePlanHighlights.map((item) => (
-                <li key={item}>✓ {item}</li>
-              ))}
-            </ul>
-
-            <div className='mt-5 rounded-2xl border border-black/5 bg-white p-4 text-sm leading-7 text-muted'>
-              {!vipActive ? (
-                <>
-                  You currently have <strong>{petCount}</strong> pet
-                  {petCount !== 1 ? 's' : ''} on Free tier.
-                  {freeSlotsLeft > 0 ? (
-                    <>
-                      {' '}
-                      You can still create <strong>{freeSlotsLeft}</strong> more pet
-                      {freeSlotsLeft !== 1 ? 's' : ''} before reaching the Free-tier
-                      cap of <strong>{FREE_TIER_MAX_PETS}</strong>.
-                    </>
-                  ) : (
-                    <>
-                      {' '}
-                      You have already reached the Free-tier pet cap. Upgrade to VIP
-                      if you want more companions.
-                    </>
-                  )}
-                </>
-              ) : (
-                <>You are currently on VIP, so the Free-tier pet cap no longer limits your account.</>
-              )}
-            </div>
-          </div>
-
-          <div className='glass-card p-6 bg-gradient-to-b from-orange-50 to-amber-50'>
-            <div className='flex items-start justify-between gap-4'>
-              <div>
-                <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-                  VIP Membership
-                </div>
-                <h2 className='mt-2 text-2xl font-extrabold'>
-                  What VIP unlocks
-                </h2>
-              </div>
-
-              {vipActive ? (
-                <div className='rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800'>
-                  Active Now
-                </div>
-              ) : (
-                <div className='rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-800'>
-                  $12.9 / month
-                </div>
-              )}
-            </div>
-
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-ink'>
-              {vipPlanHighlights.map((item) => (
-                <li key={item}>✓ {item}</li>
-              ))}
-            </ul>
-
-            <div className='mt-5 rounded-2xl border border-orange-200 bg-white/80 p-4 text-sm leading-7 text-muted'>
-              {vipActive ? (
-                <>
-                  Your VIP benefits remain active{' '}
-                  {subscription?.status
-                    ? `while Stripe status is "${subscription.status}".`
-                    : 'for the current subscription period.'}
-                </>
-              ) : (
-                <>
-                  VIP is best for users who want uninterrupted companionship, more than{' '}
-                  {FREE_TIER_MAX_PETS} pets, and a pet that remembers with greater
-                  depth and continuity over time.
-                </>
-              )}
+            <div className='mt-5 rounded-2xl border border-black/5 bg-stone-50 px-4 py-4 text-sm text-stone-700'>
+              If you just upgraded, your VIP status may take a moment to appear
+              here after checkout.
             </div>
           </div>
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <div className='glass-card bg-card-gradient p-6'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Plan Rules
+          <article className='glass-card p-6'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
+              Free plan
             </div>
-            <p className='mt-3 text-lg leading-9'>
-              Free accounts receive {FREE_TOTAL_CHAT_LIMIT} total lifetime chats and
-              can keep up to {FREE_TIER_MAX_PETS} pets. VIP removes the Free chat cap,
-              unlocks more pet capacity, and gives your companion deeper long-term
-              memory.
-            </p>
-          </div>
+            <h2 className='mt-2 text-2xl font-extrabold'>What Free includes</h2>
 
-          <div className='glass-card bg-card-gradient p-6'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Billing Note
+            <ul className='mt-5 grid gap-3 text-sm leading-7'>
+              <li>✓ {FREE_TOTAL_CHAT_LIMIT} total lifetime chats</li>
+              <li>✓ Up to {FREE_TIER_MAX_PETS} pets</li>
+              <li>✓ Basic memory capability</li>
+              <li>✓ Pet profile and photo upload</li>
+            </ul>
+
+            <div className='mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700'>
+              {petCount >= FREE_TIER_MAX_PETS && !vipActive
+                ? `You currently have ${petCount} pets on the Free plan. You’ve reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
+                : !vipActive
+                ? `You can still create ${freeSlotsLeft} more ${freeSlotsLeft === 1 ? 'pet' : 'pets'} on Free.`
+                : 'Your account is not currently limited by the Free plan.'}
             </div>
-            <p className='mt-3 text-lg leading-9'>
-              Membership status is synced from Stripe via webhook. If you just
-              upgraded, please allow a short moment for your VIP status to appear here
-              after checkout.
+          </article>
+
+          <article className='glass-card bg-gradient-to-b from-orange-50 to-amber-50 p-6'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
+              VIP membership
+            </div>
+            <h2 className='mt-2 text-2xl font-extrabold'>What VIP unlocks</h2>
+
+            <div className='mt-4 flex items-end gap-2'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em]'>
+                $12.9
+              </strong>
+              <span className='mb-1 text-muted'>/ month</span>
+            </div>
+
+            <ul className='mt-5 grid gap-3 text-sm leading-7'>
+              <li>✓ Unlimited chats</li>
+              <li>✓ More than {FREE_TIER_MAX_PETS} pets</li>
+              <li>✓ Deeper long-term memory</li>
+              <li>✓ Richer emotional continuity</li>
+              <li>✓ Priority access to future voice features</li>
+            </ul>
+
+            <div className='mt-5 rounded-2xl bg-orange-100/70 px-4 py-3 text-sm text-orange-900'>
+              VIP is best for users who want uninterrupted companionship, more
+              pet capacity, and a pet that remembers with greater depth over time.
+            </div>
+          </article>
+        </section>
+
+        <section className='mt-8 grid gap-5 md:grid-cols-2'>
+          <article className='glass-card p-6'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
+              Plan rules
+            </div>
+            <p className='mt-3 text-sm leading-8 text-muted'>
+              Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats
+              and can keep up to {FREE_TIER_MAX_PETS} pets. VIP removes the{' '}
+              {FREE_TOTAL_CHAT_LIMIT}-chat limit, unlocks more pet capacity, and
+              gives your pet deeper long-term memory.
             </p>
-          </div>
+          </article>
+
+          <article className='glass-card p-6'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
+              Billing note
+            </div>
+            <p className='mt-3 text-sm leading-8 text-muted'>
+              If you subscribed recently, your membership status may take a short
+              moment to update. You can always manage billing from the Stripe
+              customer portal.
+            </p>
+          </article>
         </section>
       </main>
 
-      <SiteFooter rightText='Account · Membership · Pets · Billing · Sign Out' />
+      <script dangerouslySetInnerHTML={{ __html: getCopyEmailScript() }} />
+
+      <SiteFooter rightText='Account · Membership · Default Pet · Sign Out' />
     </>
   );
 }

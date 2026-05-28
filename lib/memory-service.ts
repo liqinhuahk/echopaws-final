@@ -67,26 +67,38 @@ export function inferEmotionTag(message: string) {
   const text = message.toLowerCase();
 
   if (
-    /(unhappy|sad|upset|down|depressed|heartbroken|low|melancholy|gloomy)/
-      .test(text)
-  )
+    /(unhappy|sad|upset|down|depressed|heartbroken|low|melancholy|gloomy)/.test(
+      text
+    )
+  ) {
     return 'sad';
-  if (/(tired|exhausted|wiped|beat|need sleep|so sleepy|fatigued)/.test(text))
+  }
+
+  if (/(tired|exhausted|wiped|beat|need sleep|so sleepy|fatigued)/.test(text)) {
     return 'tired';
+  }
+
   if (
     /(anxious|nervous|worried|tense|stressed|overwhelmed|panic)/.test(text)
-  )
+  ) {
     return 'anxious';
-  if (
-    /(pressure|stress|annoyed|frustrated|irritated|burned out)/.test(text)
-  )
+  }
+
+  if (/(pressure|stress|annoyed|frustrated|irritated|burned out)/.test(text)) {
     return 'stressed';
-  if (/(happy|joy|excited|glad|cheerful|wonderful|amazing)/.test(text))
+  }
+
+  if (/(happy|joy|excited|glad|cheerful|wonderful|amazing)/.test(text)) {
     return 'happy';
-  if (/(angry|mad|furious|annoyed|frustrated|hate it)/.test(text))
+  }
+
+  if (/(angry|mad|furious|annoyed|frustrated|hate it)/.test(text)) {
     return 'angry';
-  if (/(lonely|alone|miss you|wish someone was here|need company)/.test(text))
+  }
+
+  if (/(lonely|alone|miss you|wish someone was here|need company)/.test(text)) {
     return 'lonely';
+  }
 
   return null;
 }
@@ -96,14 +108,15 @@ function heuristicCandidates(message: string): MemoryCandidate[] {
   const candidates: MemoryCandidate[] = [];
 
   const emotionTag = inferEmotionTag(text);
+
   if (emotionTag === 'sad') {
     candidates.push({
       type: 'emotion',
-      content:
-        'The owner has been feeling down lately and needs gentle comfort.',
+      content: 'The owner has been feeling down lately and needs gentle comfort.',
       importance: 5,
     });
   }
+
   if (emotionTag === 'tired') {
     candidates.push({
       type: 'emotion',
@@ -112,6 +125,7 @@ function heuristicCandidates(message: string): MemoryCandidate[] {
       importance: 4,
     });
   }
+
   if (emotionTag === 'anxious' || emotionTag === 'stressed') {
     candidates.push({
       type: 'emotion',
@@ -120,6 +134,7 @@ function heuristicCandidates(message: string): MemoryCandidate[] {
       importance: 5,
     });
   }
+
   if (emotionTag === 'happy') {
     candidates.push({
       type: 'emotion',
@@ -223,9 +238,8 @@ function compressCandidates(candidates: MemoryCandidate[]) {
   );
 }
 
-// Call Gemini API for memory extraction
 async function callGemini(prompt: string, systemInstruction?: string) {
-  const model = process.env.GEMINI_MODEL || 'gemini-2.0-flash';
+  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
 
   const contents: Array<{ role?: string; parts: Array<{ text?: string }> }> = [];
@@ -242,22 +256,20 @@ async function callGemini(prompt: string, systemInstruction?: string) {
     parts: [{ text: prompt }],
   });
 
-  const response = await fetch(
-    `${endpoint}?key=${process.env.GEMINI_API_KEY}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
+  const response = await fetch(`${endpoint}?key=${process.env.GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents,
+      generationConfig: {
+        temperature: 0.3,
+        maxOutputTokens: 1024,
       },
-      body: JSON.stringify({
-        contents,
-        generationConfig: {
-          temperature: 0.3,
-          maxOutputTokens: 1024,
-        },
-      }),
-    }
-  );
+    }),
+    cache: 'no-store',
+  });
 
   if (!response.ok) {
     const errorText = await response.text();
@@ -282,23 +294,23 @@ async function aiExtractCandidates(params: {
   }
 
   const systemInstruction =
-    'You only output a JSON object, format: {\"memories\": [{\"type\": \"emotion\", \"content\": \"...\", \"importance\": 1-5}]}. Output nothing else.';
+    'You only output a JSON object, format: {"memories": [{"type": "emotion", "content": "...", "importance": 1-5}]}. Output nothing else.';
 
   const prompt = [
     'You are a memory extractor. From the following conversation, extract only memories that have long-term companionship value.',
-    'Output must be a JSON object with format: {\"memories\": [{\"type\": \"...\", \"content\": \"...\", \"importance\": 1-5}]}.',
+    'Output must be a JSON object with format: {"memories": [{"type": "...", "content": "...", "importance": 1-5}]}.',
     'type must be one of: profile / fact / emotion / preference.',
     'content should be in English, concise, third-person, suitable for long-term storage.',
     'Avoid extracting one-off chitchat, greetings, or content without companionship value.',
-    'If there is nothing worth remembering, output: {\"memories\": []}.',
+    'If there is nothing worth remembering, output: {"memories": []}.',
     '',
     `User message: ${params.userMessage}`,
     `Pet reply: ${params.assistantMessage}`,
   ].join('\n');
 
-  const raw = await callGemini(prompt, systemInstruction);
-
   try {
+    const raw = await callGemini(prompt, systemInstruction);
+
     const parsed = JSON.parse(raw) as {
       memories?: Array<{
         type?: string;
@@ -306,6 +318,7 @@ async function aiExtractCandidates(params: {
         importance?: number;
       }>;
     };
+
     const memories = (parsed.memories || [])
       .filter((item) => item.type && item.content)
       .map((item) => ({
@@ -322,7 +335,8 @@ async function aiExtractCandidates(params: {
     return memories.length
       ? compressCandidates(memories).slice(0, 4)
       : heuristicCandidates(params.userMessage);
-  } catch {
+  } catch (error) {
+    console.error('aiExtractCandidates fallback to heuristic:', error);
     return heuristicCandidates(params.userMessage);
   }
 }
@@ -436,10 +450,7 @@ async function dedupeExistingMemories(memories: MemoryRow[]) {
 
   if (deleteIds.length) {
     const supabase = createSupabaseAdminClient();
-    const { error } = await supabase
-      .from('memories')
-      .delete()
-      .in('id', deleteIds);
+    const { error } = await supabase.from('memories').delete().in('id', deleteIds);
     if (error) throw error;
   }
 
@@ -464,7 +475,21 @@ export async function refreshMemorySummary(params: {
   const deduped = await dedupeExistingMemories(
     await fetchScopedMemories(params.userId, params.petId)
   );
-  const summary = await aiBuildSummary({ memories: deduped, petName: params.petName });
+
+  let summary = '';
+
+  try {
+    summary = await aiBuildSummary({
+      memories: deduped,
+      petName: params.petName,
+    });
+  } catch (error) {
+    console.error(
+      'AI summary rebuild failed, using heuristic summary instead:',
+      error
+    );
+    summary = buildHeuristicSummary(deduped, params.petName);
+  }
 
   const payload = {
     user_id: params.userId,
@@ -477,6 +502,7 @@ export async function refreshMemorySummary(params: {
   const { error } = await supabase
     .from('memory_summaries')
     .upsert(payload, { onConflict: 'user_id,pet_id' });
+
   if (error) throw error;
 
   return {
@@ -508,6 +534,7 @@ export async function extractAndStoreMemories(params: {
           petName: params.petName,
         })
       : { summary: '', memoryCount: 0 };
+
     return {
       storedCount: 0,
       emotionTag: inferEmotionTag(params.userMessage),
@@ -518,15 +545,9 @@ export async function extractAndStoreMemories(params: {
 
   const { data: existing, error: existingError } = await supabase
     .from('memories')
-    .select(
-      'id, user_id, pet_id, type, content, importance, created_at, updated_at'
-    )
+    .select('id, user_id, pet_id, type, content, importance, created_at, updated_at')
     .eq('user_id', params.userId)
-    .or(
-      params.petId
-        ? `pet_id.is.null,pet_id.eq.${params.petId}`
-        : 'pet_id.is.null'
-    )
+    .or(params.petId ? `pet_id.is.null,pet_id.eq.${params.petId}` : 'pet_id.is.null')
     .order('updated_at', { ascending: false })
     .limit(40);
 
@@ -556,7 +577,10 @@ export async function extractAndStoreMemories(params: {
     const matched = existingMap.get(key);
 
     if (matched) {
-      const nextImportance = Math.max(matched.importance || 1, candidate.importance);
+      const nextImportance = Math.max(
+        matched.importance || 1,
+        candidate.importance
+      );
       updates.push({ id: matched.id, importance: nextImportance });
       hints.push(candidate.content);
       continue;
@@ -585,6 +609,7 @@ export async function extractAndStoreMemories(params: {
         last_used_at: new Date().toISOString(),
       })
       .eq('id', update.id);
+
     if (error) throw error;
   }
 
@@ -713,6 +738,7 @@ export async function deleteMemoryById(params: {
   memoryId: string;
 }) {
   const supabase = createSupabaseAdminClient();
+
   const { data: memory, error: fetchError } = await supabase
     .from('memories')
     .select('id, pet_id')
@@ -721,31 +747,51 @@ export async function deleteMemoryById(params: {
     .maybeSingle();
 
   if (fetchError) throw fetchError;
-  if (!memory) return { deleted: false };
+
+  if (!memory) {
+    return {
+      deleted: false,
+      summaryRefreshed: false,
+    };
+  }
 
   const { error: deleteError } = await supabase
     .from('memories')
     .delete()
     .eq('id', params.memoryId)
     .eq('user_id', params.userId);
+
   if (deleteError) throw deleteError;
 
-  if (memory.pet_id) {
-    const { data: petRow } = await supabase
-      .from('pets')
-      .select('name')
-      .eq('id', memory.pet_id)
-      .maybeSingle();
-    await refreshMemorySummary({
-      userId: params.userId,
-      petId: memory.pet_id,
-      petName: petRow?.name || null,
-    });
-  } else {
-    await rebuildAllMemorySummariesForUser(params.userId);
+  let summaryRefreshed = true;
+
+  try {
+    if (memory.pet_id) {
+      const { data: petRow, error: petError } = await supabase
+        .from('pets')
+        .select('name')
+        .eq('id', memory.pet_id)
+        .maybeSingle();
+
+      if (petError) throw petError;
+
+      await refreshMemorySummary({
+        userId: params.userId,
+        petId: memory.pet_id,
+        petName: petRow?.name || null,
+      });
+    } else {
+      await rebuildAllMemorySummariesForUser(params.userId);
+    }
+  } catch (error) {
+    summaryRefreshed = false;
+    console.error('Memory deleted but summary refresh failed:', error);
   }
 
-  return { deleted: true };
+  return {
+    deleted: true,
+    summaryRefreshed,
+  };
 }
 
 export async function rebuildAllMemorySummariesForUser(userId: string) {
@@ -754,6 +800,7 @@ export async function rebuildAllMemorySummariesForUser(userId: string) {
     .from('pets')
     .select('id, name')
     .eq('user_id', userId);
+
   if (error) throw error;
 
   for (const pet of pets || []) {
@@ -778,6 +825,7 @@ export async function rebuildPetMemorySummary(params: {
     .eq('user_id', params.userId)
     .eq('id', params.petId)
     .maybeSingle();
+
   if (error) throw error;
   if (!pet) return { count: 0 };
 
@@ -786,5 +834,9 @@ export async function rebuildPetMemorySummary(params: {
     petId: pet.id,
     petName: pet.name || null,
   });
-  return { count: 1, petName: pet.name || null };
+
+  return {
+    count: 1,
+    petName: pet.name || null,
+  };
 }

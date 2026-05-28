@@ -2,28 +2,49 @@
 
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import { createPetForUser, deletePetForUser, setDefaultPetForUser, updatePetForUser } from '@/lib/pets';
+import {
+  createPetForUser,
+  deletePetForUser,
+  setDefaultPetForUser,
+  updatePetForUser,
+} from '@/lib/pets';
 
 function encodeMessage(message: string) {
   return encodeURIComponent(message);
 }
 
-function buildPetsRedirect(params: { message?: string; error?: string; petId?: string | null }) {
+function buildPetsRedirect(params: {
+  message?: string;
+  error?: string;
+  petId?: string | null;
+}) {
   const search = new URLSearchParams();
+
   if (params.petId) search.set('pet_id', params.petId);
   if (params.message) search.set('message', params.message);
   if (params.error) search.set('error', params.error);
+
   const query = search.toString();
   return query ? `/pets?${query}` : '/pets';
 }
 
-function toCreatePetError(message: string) {
-  return `/create-pet?error=${encodeMessage(message)}`;
+function buildCreatePetRedirect(params: { error?: string; message?: string }) {
+  const search = new URLSearchParams();
+
+  if (params.error) search.set('error', params.error);
+  if (params.message) search.set('message', params.message);
+
+  const query = search.toString();
+  return query ? `/create-pet?${query}` : '/create-pet';
 }
 
 async function requireUser() {
   if (!hasSupabaseEnv()) {
-    redirect(toCreatePetError('Please configure Supabase environment variables first.'));
+    redirect(
+      buildCreatePetRedirect({
+        error: 'Please configure Supabase environment variables first.',
+      }),
+    );
   }
 
   const supabase = createServerSupabaseClient();
@@ -32,10 +53,20 @@ async function requireUser() {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect('/login?message=' + encodeMessage('Please sign in first to manage pets.'));
+    redirect(
+      '/login?message=' + encodeMessage('Please sign in first to manage pets.'),
+    );
   }
 
   return user;
+}
+
+function normalizeCreatePetErrorMessage(message: string) {
+  if (message.includes('Free plan supports up to')) {
+    return `${message} Free includes up to 2 pets. Upgrade to VIP if you want more pet capacity.`;
+  }
+
+  return message;
 }
 
 export async function createPetAction(formData: FormData) {
@@ -43,10 +74,24 @@ export async function createPetAction(formData: FormData) {
 
   try {
     const result = await createPetForUser(user.id, formData);
-    redirect(`/chat?pet_created=1&pet_name=${encodeURIComponent(result.pet.name)}&pet_id=${result.pet.id}`);
+    redirect(
+      `/chat?pet_created=1&pet_name=${encodeURIComponent(
+        result.pet.name,
+      )}&pet_id=${result.pet.id}`,
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create pet. Please try again.';
-    redirect(toCreatePetError(message));
+    const rawMessage =
+      error instanceof Error
+        ? error.message
+        : 'Failed to create pet. Please try again.';
+
+    const message = normalizeCreatePetErrorMessage(rawMessage);
+
+    redirect(
+      buildCreatePetRedirect({
+        error: message,
+      }),
+    );
   }
 }
 
@@ -60,9 +105,18 @@ export async function updatePetAction(formData: FormData) {
 
   try {
     await updatePetForUser(user.id, petId, formData);
-    redirect(buildPetsRedirect({ petId, message: 'Pet profile updated. Changes are now in effect.' }));
+    redirect(
+      buildPetsRedirect({
+        petId,
+        message: 'Pet profile updated. Changes are now in effect.',
+      }),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to update pet. Please try again.';
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Failed to update pet. Please try again.';
+
     redirect(buildPetsRedirect({ petId, error: message }));
   }
 }
@@ -72,14 +126,25 @@ export async function setDefaultPetAction(formData: FormData) {
   const petId = String(formData.get('petId') || '').trim();
 
   if (!petId) {
-    redirect(buildPetsRedirect({ error: 'Missing pet ID. Could not set as primary.' }));
+    redirect(
+      buildPetsRedirect({
+        error: 'Missing pet ID. Could not set as primary.',
+      }),
+    );
   }
 
   try {
     const result = await setDefaultPetForUser(user.id, petId);
-    redirect(buildPetsRedirect({ petId, message: `${result.petName} is now your primary pet and pinned at the top.` }));
+    redirect(
+      buildPetsRedirect({
+        petId,
+        message: `${result.petName} is now your primary pet and pinned at the top.`,
+      }),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to set primary pet.';
+    const message =
+      error instanceof Error ? error.message : 'Failed to set primary pet.';
+
     redirect(buildPetsRedirect({ petId, error: message }));
   }
 }
@@ -94,9 +159,18 @@ export async function deletePetAction(formData: FormData) {
 
   try {
     const result = await deletePetForUser(user.id, petId);
-    redirect(buildPetsRedirect({ petId: result.nextPetId, message: `${result.petName} has been deleted.` }));
+    redirect(
+      buildPetsRedirect({
+        petId: result.nextPetId,
+        message: `${result.petName} has been deleted.`,
+      }),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete pet. Please try again.';
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Failed to delete pet. Please try again.';
+
     redirect(buildPetsRedirect({ petId, error: message }));
   }
 }

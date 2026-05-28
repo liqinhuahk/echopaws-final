@@ -68,12 +68,12 @@ export default async function PricingPage({
 
             <p className='mt-3 text-sm leading-8 text-muted'>
               Great for first-time exploration of EchoPaws&apos; emotional atmosphere,
-              core chat experience, and multi-pet setup.
+              core chat experience, and a two-pet companion setup.
             </p>
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>
               <li>✓ 10 chats per day (shared across account)</li>
-              <li>✓ Multiple AI pets</li>
+              <li>✓ Up to 2 AI pets</li>
               <li>✓ Basic memory capability</li>
               <li>✓ Upload pet profile and photo</li>
             </ul>
@@ -99,12 +99,13 @@ export default async function PricingPage({
             </div>
 
             <p className='mt-3 text-sm leading-8 text-muted'>
-              For users who want to build a real long-term emotional bond with
-              richer continuity and future companion features.
+              For users who want to build a real long-term emotional bond with more
+              pets, richer continuity, and future companion features.
             </p>
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>
               <li>✓ Unlimited chats</li>
+              <li>✓ Create more than 2 AI pets</li>
               <li>✓ Deeper long-term memory</li>
               <li>✓ Future voice interaction support</li>
               <li>✓ Richer comfort and companionship modes</li>
@@ -137,10 +138,10 @@ export default async function PricingPage({
               Technical guidance
             </div>
             <p className='mt-3 text-lg leading-9'>
-              Free tier includes a daily shared chat quota across your account and
-              supports multiple pets. VIP gives you unlimited conversations, deeper
-              long-term memory, and priority access to future features like voice
-              interaction and companionship modes.
+              Free tier includes up to 2 AI pets and a daily shared chat quota across
+              your account. VIP removes the 2-pet cap, gives you unlimited
+              conversations, deeper long-term memory, and priority access to future
+              features like voice interaction and companionship modes.
             </p>
           </div>
         </section>

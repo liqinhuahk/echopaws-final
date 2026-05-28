@@ -17,7 +17,7 @@ const comparisonRows = [
   {
     feature: 'Pet slots',
     free: 'Up to 2 AI pets',
-    vip: 'More than 2 AI pets',
+    vip: 'More than 2 pets',
   },
   {
     feature: 'Memory',
@@ -53,14 +53,14 @@ const faqs = [
       'Yes. You can open the billing portal at any time and cancel your subscription. Your VIP benefits stay active until the end of the current billing period.',
   },
   {
-    question: 'Do free chats reset every day?',
+    question: 'Do Free chats reset every day?',
     answer:
-      'No. Free accounts receive 20 total lifetime trial chats for the account. The counter does not refresh daily. Once those 20 chats are used, you need VIP to continue chatting.',
+      'No. Free accounts receive 20 total lifetime chats for the account. The counter does not refresh daily. Once those 20 chats are used, you need VIP to continue chatting.',
   },
   {
     question: 'What exactly does VIP unlock?',
     answer:
-      'VIP removes the 20-chat free-trial cap, unlocks unlimited conversations, supports more than 2 pets, gives access to deeper long-term memory, and prepares your account for future companion features like voice.',
+      'VIP removes the 20-chat free cap, unlocks unlimited conversations, supports more than 2 pets, gives access to deeper long-term memory, and prepares your account for future companion features like voice.',
   },
   {
     question: 'What happens to my data if I cancel VIP?',
@@ -110,9 +110,8 @@ export default async function PricingPage({
             Pricing designed for deeper companionship
           </h1>
           <p className='section-subtitle mx-auto max-w-3xl'>
-            Start free, then upgrade only when the bond feels real. EchoPaws VIP is
-            not about counting messages — it is about preserving continuity,
-            emotional memory, and a companion that keeps growing with you.
+            Start free. Upgrade only when the bond becomes real. EchoPaws VIP is
+            built for continuity, memory, and companionship that does not reset.
           </p>
         </section>
 
@@ -144,7 +143,7 @@ export default async function PricingPage({
         <section id='plans' className='mt-8 grid gap-5 md:grid-cols-2'>
           <article className='glass-card p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Free Trial
+              Free Plan
             </div>
 
             <h2 className='mt-3 text-2xl font-extrabold'>Free Tier</h2>
@@ -158,7 +157,7 @@ export default async function PricingPage({
 
             <p className='mt-3 text-sm leading-8 text-muted'>
               Great for first-time exploration. Meet your companion, try the core
-              chat experience, and see whether the emotional bond feels right.
+              experience, and see whether the emotional bond feels right.
             </p>
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>
@@ -205,7 +204,7 @@ export default async function PricingPage({
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>
               <li>✓ Unlimited chats</li>
-              <li>✓ Create more than 2 AI pets</li>
+              <li>✓ Unlock more than 2 pets</li>
               <li>✓ Deeper long-term memory</li>
               <li>✓ Richer emotional continuity</li>
               <li>✓ Priority access to future voice features</li>
@@ -219,7 +218,7 @@ export default async function PricingPage({
 
             <form action={openBillingPortal} className='mt-3'>
               <button className='subtle-button w-full'>
-                Manage Subscription
+                Already subscribed? Manage billing
               </button>
             </form>
           </article>
@@ -243,8 +242,8 @@ export default async function PricingPage({
             </div>
             <p className='mt-3 text-lg leading-9'>
               Free accounts receive 20 total lifetime chats and can keep up to 2 AI
-              pets. VIP removes the free-trial counter, unlocks more pet capacity,
-              and gives your account a deeper, more persistent companionship layer.
+              pets. VIP removes the Free chat cap, unlocks more pet capacity, and
+              gives your companion a deeper, more persistent memory layer.
             </p>
           </div>
         </section>
@@ -289,7 +288,10 @@ export default async function PricingPage({
 
           <div className='mt-6 grid gap-5 md:grid-cols-2'>
             {faqs.map((item) => (
-              <div key={item.question} className='rounded-2xl border border-black/5 bg-white p-5'>
+              <div
+                key={item.question}
+                className='rounded-2xl border border-black/5 bg-white p-5'
+              >
                 <div className='text-base font-extrabold text-ink'>
                   {item.question}
                 </div>

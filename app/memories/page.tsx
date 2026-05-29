@@ -19,11 +19,18 @@ type MemoriesPageProps = {
 
 type MemoryRow = {
   id: string;
-  pet_id: string;
+  pet_id: string | null;
   content: string;
-  memory_type: string | null;
-  priority: number | null;
+  type: string | null;
+  importance: number | null;
   created_at: string | null;
+  updated_at: string | null;
+};
+
+type MemorySummaryRow = {
+  pet_id: string;
+  summary: string;
+  memory_count: number | null;
   updated_at: string | null;
 };
 
@@ -35,7 +42,7 @@ function pickFirst(value: string | string[] | undefined) {
   return value ?? '';
 }
 
-function buildTypeLabel(value: string | null) {
+function buildTypeLabel(value: string | null | undefined) {
   if (!value) return 'Memory';
 
   return value
@@ -43,16 +50,17 @@ function buildTypeLabel(value: string | null) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-function buildPriorityLabel(priority: number | null) {
-  const value = priority ?? 1;
-  return `Priority ${value >= 4 ? 4 : value <= 1 ? 1 : value}`;
+function buildPriorityLabel(importance: number | null) {
+  const value = Math.max(1, Math.min(5, importance ?? 1));
+  return `Priority ${value}`;
 }
 
-function buildPriorityTone(priority: number | null) {
-  const value = priority ?? 1;
+function buildPriorityTone(importance: number | null) {
+  const value = Math.max(1, Math.min(5, importance ?? 1));
 
-  if (value >= 4) return 'bg-rose-50 text-rose-700 border-rose-200';
-  if (value === 3) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (value >= 5) return 'bg-rose-50 text-rose-700 border-rose-200';
+  if (value === 4) return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (value === 3) return 'bg-sky-50 text-sky-700 border-sky-200';
   return 'bg-slate-100 text-slate-700 border-slate-200';
 }
 
@@ -78,7 +86,17 @@ function buildExcerpt(value: string, maxLength = 140) {
   return `${normalized.slice(0, maxLength).trim()}…`;
 }
 
-function buildSummaryFromPetAndMemories(pet: PetItem | null, memories: MemoryRow[]) {
+function buildSummaryFromPetAndMemories(
+  pet: PetItem | null,
+  memories: MemoryRow[],
+  summaryText?: string | null,
+) {
+  const normalizedSummary = summaryText?.trim();
+
+  if (normalizedSummary) {
+    return normalizedSummary;
+  }
+
   if (!pet) {
     if (!memories.length) {
       return 'No memory content yet. As chats accumulate, this page can become a searchable memory workspace for habits, emotional clues, and preferences.';
@@ -144,19 +162,15 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
       redirect(returnTo || '/memories');
     }
 
-    await supabase
-      .from('pet_memories')
-      .delete()
-      .eq('id', memoryId)
-      .eq('user_id', user.id);
+    await supabase.from('memories').delete().eq('id', memoryId).eq('user_id', user.id);
 
     revalidatePath('/memories');
+    revalidatePath('/chat');
+    revalidatePath('/pets');
     redirect(returnTo || '/memories');
   }
 
-  const resolvedSearchParams = searchParams
-    ? await Promise.resolve(searchParams)
-    : undefined;
+  const resolvedSearchParams = searchParams ? await Promise.resolve(searchParams) : undefined;
 
   const selectedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
   const q = pickFirst(resolvedSearchParams?.q).trim();
@@ -228,37 +242,41 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
     pets[0] ??
     null;
 
-  const baseQuery = supabase
-    .from('pet_memories')
-    .select('id, pet_id, content, memory_type, priority, created_at, updated_at')
-    .eq('user_id', user.id);
-
-  const scopedQuery = selectedPet
-    ? baseQuery.eq('pet_id', selectedPet.id)
-    : baseQuery;
-
-  const { data: memoriesData } = await scopedQuery
-    .order('updated_at', { ascending: false })
-    .limit(500);
+  const [{ data: memoriesData }, { data: summaryData }] = await Promise.all([
+    supabase
+      .from('memories')
+      .select('id, pet_id, type, content, importance, created_at, updated_at')
+      .eq('user_id', user.id)
+      .eq('pet_id', selectedPet.id)
+      .order('importance', { ascending: false })
+      .order('updated_at', { ascending: false })
+      .limit(500),
+    supabase
+      .from('memory_summaries')
+      .select('pet_id, summary, memory_count, updated_at')
+      .eq('user_id', user.id)
+      .eq('pet_id', selectedPet.id)
+      .maybeSingle(),
+  ]);
 
   const allMemories = (memoriesData ?? []) as MemoryRow[];
+  const summaryRow = (summaryData as MemorySummaryRow | null) ?? null;
 
   let filteredMemories = allMemories.filter((item) => {
     if (q) {
-      const haystack = `${item.content} ${item.memory_type ?? ''}`.toLowerCase();
+      const haystack = `${item.content} ${item.type ?? ''}`.toLowerCase();
       if (!haystack.includes(q.toLowerCase())) return false;
     }
 
-    if (type !== 'all' && (item.memory_type ?? '') !== type) {
+    if (type !== 'all' && (item.type ?? '') !== type) {
       return false;
     }
 
-    const itemPriority = item.priority ?? 1;
+    const itemPriority = item.importance ?? 1;
 
-    if (priority === '4' && itemPriority < 4) return false;
-    if (priority === '3' && itemPriority !== 3) return false;
-    if (priority === '2' && itemPriority !== 2) return false;
-    if (priority === '1' && itemPriority !== 1) return false;
+    if (priority !== 'all' && itemPriority !== Number(priority)) {
+      return false;
+    }
 
     return true;
   });
@@ -266,7 +284,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
   filteredMemories = [...filteredMemories].sort((a, b) => {
     if (sort === 'highest_priority') {
       return (
-        (b.priority ?? 1) - (a.priority ?? 1) ||
+        (b.importance ?? 1) - (a.importance ?? 1) ||
         new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime()
       );
     }
@@ -276,14 +294,14 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
     }
 
     if (sort === 'type') {
-      return buildTypeLabel(a.memory_type).localeCompare(buildTypeLabel(b.memory_type));
+      return buildTypeLabel(a.type).localeCompare(buildTypeLabel(b.type));
     }
 
     return new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime();
   });
 
   const availableTypes = Array.from(
-    new Set(allMemories.map((item) => item.memory_type).filter(Boolean) as string[]),
+    new Set(allMemories.map((item) => item.type).filter(Boolean) as string[]),
   ).sort();
 
   const openAll = expand === 'all';
@@ -296,6 +314,9 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
     sort: sort !== 'latest' ? sort : '',
     expand,
   });
+
+  const headerMemoryCount = summaryRow?.memory_count ?? allMemories.length;
+  const headerUpdatedAt = summaryRow?.updated_at ?? allMemories[0]?.updated_at ?? null;
 
   return (
     <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
@@ -353,12 +374,12 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
                 <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
                   <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
-                    {allMemories.length} memories
+                    {headerMemoryCount} memories
                   </span>
                 </div>
 
                 <p className='mt-3 text-sm leading-7 text-slate-600'>
-                  Updated {formatDateLabel(allMemories[0]?.updated_at ?? null)}
+                  Updated {formatDateLabel(headerUpdatedAt)}
                 </p>
               </div>
             </div>
@@ -412,7 +433,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             <h3 className='mt-1 text-lg font-black text-slate-900'>Summary panel</h3>
 
             <div className='mt-4 rounded-[22px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700'>
-              {buildSummaryFromPetAndMemories(selectedPet, allMemories)}
+              {buildSummaryFromPetAndMemories(selectedPet, allMemories, summaryRow?.summary)}
             </div>
 
             <div className='mt-4 flex flex-wrap gap-2'>
@@ -475,7 +496,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <input type='hidden' name='pet_id' value={selectedPet.id} />
 
               <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]'>
-                <label className='grid gap-2 min-w-0'>
+                <label className='grid min-w-0 gap-2'>
                   <span className='text-sm font-bold text-slate-800'>Search</span>
                   <input
                     name='q'
@@ -500,7 +521,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
 
               <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
-                <label className='grid gap-2 min-w-0'>
+                <label className='grid min-w-0 gap-2'>
                   <span className='text-sm font-bold text-slate-800'>Type</span>
                   <select name='type' defaultValue={type} className='input-shell w-full'>
                     <option value='all'>All types</option>
@@ -512,10 +533,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </select>
                 </label>
 
-                <label className='grid gap-2 min-w-0'>
+                <label className='grid min-w-0 gap-2'>
                   <span className='text-sm font-bold text-slate-800'>Priority</span>
                   <select name='priority' defaultValue={priority} className='input-shell w-full'>
                     <option value='all'>All priorities</option>
+                    <option value='5'>Priority 5</option>
                     <option value='4'>Priority 4</option>
                     <option value='3'>Priority 3</option>
                     <option value='2'>Priority 2</option>
@@ -523,7 +545,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </select>
                 </label>
 
-                <label className='grid gap-2 min-w-0'>
+                <label className='grid min-w-0 gap-2'>
                   <span className='text-sm font-bold text-slate-800'>Sort</span>
                   <select name='sort' defaultValue={sort} className='input-shell w-full'>
                     <option value='latest'>Latest updated</option>
@@ -617,51 +639,52 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                           <div className='min-w-0 flex-1'>
                             <div className='flex flex-wrap items-center gap-2'>
                               <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
-                                {buildTypeLabel(memory.memory_type)}
+                                {buildTypeLabel(memory.type)}
                               </span>
 
                               <span
                                 className={[
                                   'rounded-full border px-2.5 py-1 text-[11px] font-bold',
-                                  buildPriorityTone(memory.priority),
+                                  buildPriorityTone(memory.importance),
                                 ].join(' ')}
                               >
-                                {buildPriorityLabel(memory.priority)}
+                                {buildPriorityLabel(memory.importance)}
                               </span>
 
                               {selectedPet.id === defaultPetId ? (
                                 <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
-                                  Primary
+                                  Primary pet
                                 </span>
                               ) : null}
                             </div>
 
-                            <div className='mt-3 truncate text-sm font-semibold text-slate-900'>
-                              {buildExcerpt(memory.content, 140)}
+                            <div className='mt-3 text-sm font-semibold leading-7 text-slate-900'>
+                              {buildExcerpt(memory.content)}
                             </div>
 
-                            <div className='mt-2 text-xs text-slate-500'>
+                            <div className='mt-3 text-xs text-slate-500'>
                               Updated {formatDateLabel(memory.updated_at)}
                             </div>
                           </div>
 
-                          <div className='flex items-center gap-2 text-xs text-slate-500'>
-                            <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700 transition group-open:bg-orange-50 group-open:text-orange-800'>
-                              {expandedByDefault ? 'Expanded by default' : 'Click to expand'}
+                          <div className='flex items-center gap-2'>
+                            <span className='rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-700'>
+                              Click to expand
                             </span>
                           </div>
                         </div>
                       </summary>
 
-                      <div className='border-t border-slate-100 px-4 py-4 sm:px-5'>
-                        <div className='rounded-[20px] bg-slate-50 px-4 py-4 text-sm leading-7 text-slate-700'>
+                      <div className='border-t border-slate-200 px-4 py-4 sm:px-5'>
+                        <div className='whitespace-pre-wrap break-words text-sm leading-7 text-slate-700'>
                           {memory.content}
                         </div>
 
-                        <div className='mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                          <div className='text-xs text-slate-500'>
-                            Created {formatDateLabel(memory.created_at)} · Updated{' '}
-                            {formatDateLabel(memory.updated_at)}
+                        <div className='mt-4 flex flex-wrap items-center justify-between gap-3'>
+                          <div className='flex flex-wrap gap-2 text-xs text-slate-500'>
+                            <span>Created {formatDateLabel(memory.created_at)}</span>
+                            <span>•</span>
+                            <span>Updated {formatDateLabel(memory.updated_at)}</span>
                           </div>
 
                           <form action={deleteMemoryAction}>
@@ -669,7 +692,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                             <input type='hidden' name='returnTo' value={returnTo} />
                             <button
                               type='submit'
-                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50'
+                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50'
                             >
                               Delete
                             </button>

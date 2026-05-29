@@ -7,7 +7,6 @@ type ChatPlaygroundProps = {
   initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
   initialRemainingLabel: string;
   initialMemorySummary?: string;
-  showInlineSummary?: boolean;
 };
 
 type UsagePayload = {
@@ -30,58 +29,10 @@ type ChatResponse = {
   };
 };
 
-const PET_ACTION_WORDS = [
-  'purr',
-  'purrr',
-  'purrrrr',
-  'purrrrrr',
-  'purring',
-  'blink',
-  'blinks',
-  'blinking',
-  'nuzzle',
-  'nuzzles',
-  'nuzzling',
-  'stretch',
-  'stretches',
-  'stretching',
-  'yawn',
-  'yawns',
-  'yawning',
-  'wag',
-  'wags',
-  'wagging',
-  'tilt',
-  'tilts',
-  'tilting',
-  'snuggle',
-  'snuggles',
-  'snuggling',
-  'cuddle',
-  'cuddles',
-  'cuddling',
-  'lick',
-  'licks',
-  'licking',
-  'paw',
-  'paws',
-  'pawing',
-  'chirp',
-  'chirps',
-  'chirping',
-  'meow',
-  'meows',
-  'meowing',
-  'woof',
-  'bark',
-  'barks',
-  'pant',
-  'pants',
-  'sigh',
-  'sighs',
-  'head bonk',
-  'bonks',
-];
+type ParsedSegment =
+  | { type: 'text'; content: string }
+  | { type: 'action'; content: string }
+  | { type: 'emphasis'; content: string };
 
 function formatUsageLabel(usage: UsagePayload) {
   if (usage.vip) {
@@ -106,11 +57,12 @@ function formatUsageDetail(usage: UsagePayload) {
 }
 
 function normalizeErrorMessage(message: string) {
-  const lower = message.toLowerCase();
+  const lowered = message.toLowerCase();
 
   if (
-    lower.includes('daily chat limit') ||
-    lower.includes('come back tomorrow')
+    lowered.includes('daily chat limit') ||
+    lowered.includes('come back tomorrow') ||
+    lowered.includes('daily limit')
   ) {
     return 'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
   }
@@ -118,73 +70,203 @@ function normalizeErrorMessage(message: string) {
   return message;
 }
 
-function isWrappedAsteriskToken(segment: string) {
-  return /^\*[^*]+\*$/.test(segment.trim());
+function normalizeActionText(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
 }
 
-function unwrapAsteriskToken(segment: string) {
-  return segment.trim().replace(/^\*/, '').replace(/\*$/, '').trim();
-}
+function isLikelyPetAction(raw: string) {
+  const value = normalizeActionText(raw).toLowerCase();
+  if (!value) return false;
+  if (value.length > 90) return false;
 
-function looksLikePetAction(raw: string) {
-  const text = raw.trim().toLowerCase();
-  if (!text) return false;
+  const normalized = value.replace(/[^\p{L}\p{N}\s,'’-]/gu, ' ');
+  const words = normalized.split(/\s+/).filter(Boolean);
 
-  if (/(.)\1{2,}/.test(text)) return true;
+  if (words.length === 0) return false;
 
-  if (text.includes(' ')) {
-    return PET_ACTION_WORDS.some((word) => text.includes(word));
+  const simpleEmphasisWords = new Set([
+    'just',
+    'love',
+    'really',
+    'very',
+    'so',
+    'always',
+    'never',
+    'truly',
+    'literally',
+    'super',
+    'best',
+    'okay',
+    'ok',
+  ]);
+
+  if (words.length === 1 && simpleEmphasisWords.has(words[0])) {
+    return false;
   }
 
-  return PET_ACTION_WORDS.some((word) => text === word || text.includes(word));
+  const actionRoots = [
+    'blink',
+    'nuzzle',
+    'stretch',
+    'yawn',
+    'purr',
+    'wag',
+    'snuggle',
+    'cuddle',
+    'boop',
+    'bonk',
+    'tilt',
+    'lick',
+    'paw',
+    'rub',
+    'curl',
+    'hop',
+    'bounce',
+    'snooze',
+    'nap',
+    'chirp',
+    'meow',
+    'woof',
+    'sniff',
+    'shuffle',
+    'flop',
+    'roll',
+    'bump',
+    'press',
+    'lean',
+    'trot',
+    'pounce',
+    'sway',
+    'swish',
+    'nestle',
+  ];
+
+  const soundPatterns = [
+    /^p+u+r+r+/,
+    /^m+e+o+w+/,
+    /^w+o+o+f+/,
+    /^a+r+f+/,
+    /^r+u+f+f+/,
+    /^m+r+r+p+/,
+    /^c+h+i+r+p+/,
+  ];
+
+  const compact = value.replace(/\s+/g, '');
+  if (soundPatterns.some((pattern) => pattern.test(compact))) {
+    return true;
+  }
+
+  const hasActionWord = words.some((word) =>
+    actionRoots.some(
+      (root) =>
+        word === root ||
+        word === `${root}s` ||
+        word === `${root}ed` ||
+        word === `${root}ing`,
+    ),
+  );
+
+  const hasStageDirectionShape =
+    /\b(softly|slowly|gently|sleepily|happily|at you|toward you|towards you|your hand|your face|and|then)\b/.test(
+      value,
+    ) || /,/.test(value);
+
+  if (words.length >= 2 && hasActionWord) {
+    return true;
+  }
+
+  if (words.length >= 4 && hasActionWord && hasStageDirectionShape) {
+    return true;
+  }
+
+  return false;
 }
 
-function renderInlineRichText(content: string): ReactNode[] {
-  const segments = content.split(/(\*[^*]+\*)/g).filter(Boolean);
+function parseAssistantMessage(content: string): ParsedSegment[] {
+  const segments: ParsedSegment[] = [];
+  const regex = /\*([^*]+)\*/g;
 
-  return segments.map((segment, index) => {
-    if (!isWrappedAsteriskToken(segment)) {
-      return <Fragment key={`text-${index}`}>{segment}</Fragment>;
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    const fullMatch = match[0];
+    const inner = match[1];
+    const start = match.index;
+
+    if (start > lastIndex) {
+      segments.push({
+        type: 'text',
+        content: content.slice(lastIndex, start),
+      });
     }
 
-    const tokenText = unwrapAsteriskToken(segment);
+    const cleaned = normalizeActionText(inner);
 
-    if (looksLikePetAction(tokenText)) {
-      return (
-        <span
-          key={`action-${index}`}
-          className='mx-[2px] inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-amber-900/80 ring-1 ring-amber-100'
-        >
-          {tokenText}
-        </span>
-      );
+    if (cleaned) {
+      segments.push({
+        type: isLikelyPetAction(cleaned) ? 'action' : 'emphasis',
+        content: cleaned,
+      });
+    } else {
+      segments.push({
+        type: 'text',
+        content: fullMatch,
+      });
     }
 
-    return (
-      <em key={`emphasis-${index}`} className='italic text-amber-900/85'>
-        {tokenText}
-      </em>
-    );
-  });
+    lastIndex = start + fullMatch.length;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({
+      type: 'text',
+      content: content.slice(lastIndex),
+    });
+  }
+
+  if (!segments.length) {
+    return [{ type: 'text', content }];
+  }
+
+  return segments;
 }
 
-function renderMessageContent(content: string) {
-  const lines = content.split('\n');
+function renderAssistantContent(content: string): ReactNode {
+  const segments = parseAssistantMessage(content);
 
-  return lines.map((line, lineIndex) => (
-    <Fragment key={`line-${lineIndex}`}>
-      {renderInlineRichText(line)}
-      {lineIndex < lines.length - 1 ? <br /> : null}
-    </Fragment>
-  ));
+  return (
+    <div className='whitespace-pre-wrap break-words leading-7'>
+      {segments.map((segment, index) => {
+        if (segment.type === 'text') {
+          return <Fragment key={`text-${index}`}>{segment.content}</Fragment>;
+        }
+
+        if (segment.type === 'emphasis') {
+          return (
+            <em key={`emphasis-${index}`} className='font-medium italic text-slate-700'>
+              {segment.content}
+            </em>
+          );
+        }
+
+        return (
+          <span
+            key={`action-${index}`}
+            className='mx-[2px] inline rounded-full border border-orange-200/70 bg-gradient-to-r from-amber-50 to-orange-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-orange-900'
+          >
+            {segment.content}
+          </span>
+        );
+      })}
+    </div>
+  );
 }
 
 export function ChatPlayground({
   petId,
   initialMessages,
   initialRemainingLabel,
-  initialMemorySummary = '',
-  showInlineSummary = false,
 }: ChatPlaygroundProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -193,20 +275,18 @@ export function ChatPlayground({
   const [usageLabel, setUsageLabel] = useState(initialRemainingLabel);
   const [usageDetail, setUsageDetail] = useState<string | null>(null);
   const [memoryHints, setMemoryHints] = useState<string[]>([]);
-  const [memorySummary, setMemorySummary] = useState(initialMemorySummary);
 
   const trimmedLength = input.trim().length;
-  const canSubmit = useMemo(
-    () => trimmedLength > 0 && trimmedLength <= 800 && !loading,
-    [trimmedLength, loading],
-  );
 
-  const memoriesHref = petId
-    ? `/memories?pet_id=${encodeURIComponent(petId)}`
-    : '/memories';
+  const canSubmit = useMemo(() => {
+    return trimmedLength > 0 && trimmedLength <= 800 && !loading;
+  }, [trimmedLength, loading]);
+
+  const memoriesHref = petId ? `/memories?pet_id=${encodeURIComponent(petId)}` : '/memories';
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
     if (!canSubmit) return;
 
     const message = input.trim();
@@ -225,29 +305,35 @@ export function ChatPlayground({
         body: JSON.stringify({ message, petId }),
       });
 
-      const data = (await response.json()) as ChatResponse;
+      let data: ChatResponse | null = null;
 
-      if (!response.ok || !data.reply) {
-        throw new Error(data.error || 'Chat request failed. Please try again.');
+      try {
+        data = (await response.json()) as ChatResponse;
+      } catch {
+        data = null;
+      }
+
+      if (!response.ok || !data?.reply) {
+        throw new Error(data?.error || 'Chat request failed. Please try again.');
       }
 
       setMessages((current) => [
         ...current,
         { role: 'user', content: message },
-        { role: 'assistant', content: data.reply! },
+        { role: 'assistant', content: data!.reply! },
       ]);
 
       if (data.usage) {
         setUsageLabel(formatUsageLabel(data.usage));
         setUsageDetail(formatUsageDetail(data.usage));
+      } else {
+        setUsageDetail(null);
       }
 
       if (data.memory?.hints?.length) {
         setMemoryHints(data.memory.hints);
-      }
-
-      if (data.memory?.summary) {
-        setMemorySummary(data.memory.summary);
+      } else {
+        setMemoryHints([]);
       }
     } catch (submitError) {
       const messageText =
@@ -263,9 +349,9 @@ export function ChatPlayground({
   }
 
   return (
-    <div>
+    <div className='flex min-h-0 flex-col'>
       <div className='flex flex-wrap items-center gap-3'>
-        <div className='rounded-full border border-black/5 bg-white px-3 py-2 text-xs font-bold'>
+        <div className='rounded-full border border-black/5 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm'>
           {usageLabel}
         </div>
 
@@ -277,20 +363,34 @@ export function ChatPlayground({
         </a>
       </div>
 
-      {usageDetail ? (
-        <div className='mt-3 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700'>
-          {usageDetail}
-        </div>
-      ) : null}
+      <div className='mt-5 grid gap-3'>
+        {messages.map((message, index) => (
+          <div
+            key={`${message.role}-${index}`}
+            className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
+          >
+            {message.role === 'assistant' ? (
+              renderAssistantContent(message.content)
+            ) : (
+              <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
+            )}
+          </div>
+        ))}
 
-      {showInlineSummary && memorySummary ? (
-        <div className='mt-4 rounded-[24px] border border-orange-100 bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-3'>
-          <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-            Companionship Summary
+        {loading ? (
+          <div className='chat-bubble-ai'>
+            <div className='flex items-center gap-2 text-slate-500'>
+              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300' />
+              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
+              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:240ms]' />
+            </div>
           </div>
-          <div className='mt-2 whitespace-pre-line text-sm leading-7 text-slate-700'>
-            {memorySummary}
-          </div>
+        ) : null}
+      </div>
+
+      {error ? (
+        <div className='mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+          {error}
         </div>
       ) : null}
 
@@ -312,29 +412,8 @@ export function ChatPlayground({
         </div>
       ) : null}
 
-      <div className='mt-5 grid gap-3'>
-        {messages.map((message, index) => (
-          <div
-            key={`${message.role}-${index}`}
-            className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
-          >
-            <div className='whitespace-pre-wrap break-words text-[15px] leading-8'>
-              {message.role === 'assistant'
-                ? renderMessageContent(message.content)
-                : message.content}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {error ? (
-        <div className='mt-4 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-          {error}
-        </div>
-      ) : null}
-
       <form className='mt-5' onSubmit={handleSubmit}>
-        <div className='flex gap-3'>
+        <div className='flex flex-col gap-3 sm:flex-row'>
           <input
             className='input-shell rounded-full'
             type='text'
@@ -344,6 +423,7 @@ export function ChatPlayground({
             onChange={(event) => setInput(event.target.value)}
           />
           <button
+            type='submit'
             className='brand-button whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60'
             disabled={!canSubmit}
           >
@@ -351,8 +431,8 @@ export function ChatPlayground({
           </button>
         </div>
 
-        <div className='mt-2 flex items-center justify-between px-2 text-xs text-muted'>
-          <span>Free chats are shared across your account.</span>
+        <div className='mt-3 flex flex-col gap-2 px-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between'>
+          <span>{usageDetail || 'Free chats are shared across your account.'}</span>
           <span>{input.length} / 800</span>
         </div>
       </form>

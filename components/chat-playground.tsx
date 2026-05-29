@@ -7,6 +7,7 @@ type ChatPlaygroundProps = {
   initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
   initialRemainingLabel: string;
   initialMemorySummary?: string;
+  showInlineSummary?: boolean;
 };
 
 type UsagePayload = {
@@ -28,6 +29,59 @@ type ChatResponse = {
     summary?: string;
   };
 };
+
+const PET_ACTION_WORDS = [
+  'purr',
+  'purrr',
+  'purrrrr',
+  'purrrrrr',
+  'purring',
+  'blink',
+  'blinks',
+  'blinking',
+  'nuzzle',
+  'nuzzles',
+  'nuzzling',
+  'stretch',
+  'stretches',
+  'stretching',
+  'yawn',
+  'yawns',
+  'yawning',
+  'wag',
+  'wags',
+  'wagging',
+  'tilt',
+  'tilts',
+  'tilting',
+  'snuggle',
+  'snuggles',
+  'snuggling',
+  'cuddle',
+  'cuddles',
+  'cuddling',
+  'lick',
+  'licks',
+  'licking',
+  'paw',
+  'paws',
+  'pawing',
+  'chirp',
+  'chirps',
+  'chirping',
+  'meow',
+  'meows',
+  'meowing',
+  'woof',
+  'bark',
+  'barks',
+  'pant',
+  'pants',
+  'sigh',
+  'sighs',
+  'head bonk',
+  'bonks',
+];
 
 function formatUsageLabel(usage: UsagePayload) {
   if (usage.vip) {
@@ -64,32 +118,53 @@ function normalizeErrorMessage(message: string) {
   return message;
 }
 
-function isActionToken(segment: string) {
+function isWrappedAsteriskToken(segment: string) {
   return /^\*[^*]+\*$/.test(segment.trim());
 }
 
-function cleanActionToken(segment: string) {
+function unwrapAsteriskToken(segment: string) {
   return segment.trim().replace(/^\*/, '').replace(/\*$/, '').trim();
+}
+
+function looksLikePetAction(raw: string) {
+  const text = raw.trim().toLowerCase();
+  if (!text) return false;
+
+  if (/(.)\1{2,}/.test(text)) return true;
+
+  if (text.includes(' ')) {
+    return PET_ACTION_WORDS.some((word) => text.includes(word));
+  }
+
+  return PET_ACTION_WORDS.some((word) => text === word || text.includes(word));
 }
 
 function renderInlineRichText(content: string): ReactNode[] {
   const segments = content.split(/(\*[^*]+\*)/g).filter(Boolean);
 
   return segments.map((segment, index) => {
-    if (isActionToken(segment)) {
-      const actionText = cleanActionToken(segment);
+    if (!isWrappedAsteriskToken(segment)) {
+      return <Fragment key={`text-${index}`}>{segment}</Fragment>;
+    }
 
+    const tokenText = unwrapAsteriskToken(segment);
+
+    if (looksLikePetAction(tokenText)) {
       return (
         <span
           key={`action-${index}`}
           className='mx-[2px] inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-amber-900/80 ring-1 ring-amber-100'
         >
-          {actionText}
+          {tokenText}
         </span>
       );
     }
 
-    return <Fragment key={`text-${index}`}>{segment}</Fragment>;
+    return (
+      <em key={`emphasis-${index}`} className='italic text-amber-900/85'>
+        {tokenText}
+      </em>
+    );
   });
 }
 
@@ -109,6 +184,7 @@ export function ChatPlayground({
   initialMessages,
   initialRemainingLabel,
   initialMemorySummary = '',
+  showInlineSummary = false,
 }: ChatPlaygroundProps) {
   const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
@@ -207,7 +283,7 @@ export function ChatPlayground({
         </div>
       ) : null}
 
-      {memorySummary ? (
+      {showInlineSummary && memorySummary ? (
         <div className='mt-4 rounded-[24px] border border-orange-100 bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-3'>
           <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
             Companionship Summary
@@ -243,7 +319,9 @@ export function ChatPlayground({
             className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
           >
             <div className='whitespace-pre-wrap break-words text-[15px] leading-8'>
-              {renderMessageContent(message.content)}
+              {message.role === 'assistant'
+                ? renderMessageContent(message.content)
+                : message.content}
             </div>
           </div>
         ))}

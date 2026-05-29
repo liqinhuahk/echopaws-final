@@ -6,13 +6,8 @@ import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/serve
 function buildLoginRedirect(params: { message?: string; error?: string }) {
   const search = new URLSearchParams();
 
-  if (params.message) {
-    search.set('message', params.message);
-  }
-
-  if (params.error) {
-    search.set('error', params.error);
-  }
+  if (params.message) search.set('message', params.message);
+  if (params.error) search.set('error', params.error);
 
   const query = search.toString();
   return query ? `/login?${query}` : '/login';
@@ -24,13 +19,8 @@ function getSiteUrl() {
     process.env.NEXT_PUBLIC_APP_URL ||
     process.env.SITE_URL;
 
-  if (explicit) {
-    return explicit.replace(/\/$/, '');
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
+  if (explicit) return explicit.replace(/\/$/, '');
+  if (process.env.VERCEL_URL) return `https://${process.env.VERCEL_URL}`;
 
   return 'http://localhost:3000';
 }
@@ -42,11 +32,8 @@ export async function signInWithGoogle() {
 
   const supabase = createServerSupabaseClient();
 
-  let oauthData:
-    | {
-        url?: string;
-      }
-    | undefined;
+  let oauthUrl: string | null = null;
+  let oauthError: string | null = null;
 
   try {
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -57,21 +44,21 @@ export async function signInWithGoogle() {
     });
 
     if (error) {
-      redirect(buildLoginRedirect({ error: error.message }));
+      oauthError = error.message;
+    } else if (!data?.url) {
+      oauthError = 'Google sign-in could not be started.';
+    } else {
+      oauthUrl = data.url;
     }
-
-    oauthData = data;
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unexpected Google sign-in error.';
-    redirect(buildLoginRedirect({ error: message }));
+  } catch {
+    oauthError = 'Google sign-in is unavailable. Please try again later.';
   }
 
-  if (!oauthData?.url) {
-    redirect(buildLoginRedirect({ error: 'Google sign-in could not be started.' }));
+  if (oauthError) {
+    redirect(buildLoginRedirect({ error: oauthError }));
   }
 
-  redirect(oauthData.url);
+  redirect(oauthUrl!);
 }
 
 export async function signInWithPassword(formData: FormData) {
@@ -88,18 +75,20 @@ export async function signInWithPassword(formData: FormData) {
 
   const supabase = createServerSupabaseClient();
 
+  let signInError: string | null = null;
+
   try {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
-      redirect(buildLoginRedirect({ error: error.message }));
+      signInError = error.message;
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected sign-in error.';
-    redirect(buildLoginRedirect({ error: message }));
+  } catch {
+    signInError = 'Sign-in is unavailable. Please try again later.';
+  }
+
+  if (signInError) {
+    redirect(buildLoginRedirect({ error: signInError }));
   }
 
   redirect('/create-pet');
@@ -120,11 +109,8 @@ export async function signUpWithPassword(formData: FormData) {
 
   const supabase = createServerSupabaseClient();
 
-  let signUpResult:
-    | {
-        session: unknown | null;
-      }
-    | undefined;
+  let signUpError: string | null = null;
+  let hasSession = false;
 
   try {
     const { data, error } = await supabase.auth.signUp({
@@ -137,16 +123,19 @@ export async function signUpWithPassword(formData: FormData) {
     });
 
     if (error) {
-      redirect(buildLoginRedirect({ error: error.message }));
+      signUpError = error.message;
+    } else if (data.session) {
+      hasSession = true;
     }
-
-    signUpResult = data;
-  } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unexpected sign-up error.';
-    redirect(buildLoginRedirect({ error: message }));
+  } catch {
+    signUpError = 'Sign-up is unavailable. Please try again later.';
   }
 
-  if (signUpResult?.session) {
+  if (signUpError) {
+    redirect(buildLoginRedirect({ error: signUpError }));
+  }
+
+  if (hasSession) {
     redirect('/create-pet');
   }
 

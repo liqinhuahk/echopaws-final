@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useMemo, useState } from 'react';
+import { Fragment, FormEvent, ReactNode, useMemo, useState } from 'react';
 
 type ChatPlaygroundProps = {
   petId?: string | null;
@@ -52,14 +52,56 @@ function formatUsageDetail(usage: UsagePayload) {
 }
 
 function normalizeErrorMessage(message: string) {
+  const lower = message.toLowerCase();
+
   if (
-    message.toLowerCase().includes('daily chat limit') ||
-    message.toLowerCase().includes('come back tomorrow')
+    lower.includes('daily chat limit') ||
+    lower.includes('come back tomorrow')
   ) {
     return 'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
   }
 
   return message;
+}
+
+function isActionToken(segment: string) {
+  return /^\*[^*]+\*$/.test(segment.trim());
+}
+
+function cleanActionToken(segment: string) {
+  return segment.trim().replace(/^\*/, '').replace(/\*$/, '').trim();
+}
+
+function renderInlineRichText(content: string): ReactNode[] {
+  const segments = content.split(/(\*[^*]+\*)/g).filter(Boolean);
+
+  return segments.map((segment, index) => {
+    if (isActionToken(segment)) {
+      const actionText = cleanActionToken(segment);
+
+      return (
+        <span
+          key={`action-${index}`}
+          className='mx-[2px] inline-flex items-center rounded-md bg-amber-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-amber-900/80 ring-1 ring-amber-100'
+        >
+          {actionText}
+        </span>
+      );
+    }
+
+    return <Fragment key={`text-${index}`}>{segment}</Fragment>;
+  });
+}
+
+function renderMessageContent(content: string) {
+  const lines = content.split('\n');
+
+  return lines.map((line, lineIndex) => (
+    <Fragment key={`line-${lineIndex}`}>
+      {renderInlineRichText(line)}
+      {lineIndex < lines.length - 1 ? <br /> : null}
+    </Fragment>
+  ));
 }
 
 export function ChatPlayground({
@@ -200,7 +242,9 @@ export function ChatPlayground({
             key={`${message.role}-${index}`}
             className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
           >
-            {message.content}
+            <div className='whitespace-pre-wrap break-words text-[15px] leading-8'>
+              {renderMessageContent(message.content)}
+            </div>
           </div>
         ))}
       </div>

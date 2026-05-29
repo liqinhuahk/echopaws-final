@@ -1,21 +1,16 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChatPlayground } from '@/components/chat-playground';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import { getChatAccessStatus } from '@/lib/chat-access';
+import { getPetsForUser } from '@/lib/pets';
+import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-type SearchParams = Record<string, string | string[] | undefined>;
+type SearchParamsShape = {
+  pet_id?: string | string[];
+};
 
-type PetRow = {
-  id: string;
-  name: string;
-  breed: string | null;
-  personality: string | null;
-  favorite_food: string | null;
-  daily_habits: string | null;
-  image_url: string | null;
-  is_default: boolean | null;
-  updated_at: string | null;
+type ChatPageProps = {
+  searchParams?: Promise<SearchParamsShape> | SearchParamsShape;
 };
 
 type ChatMessageRow = {
@@ -33,8 +28,12 @@ type MemoryRow = {
   updated_at: string | null;
 };
 
-function pickParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value ?? '';
+type PetOverview = Awaited<ReturnType<typeof getPetsForUser>>;
+type PetItem = PetOverview['pets'][number];
+
+function pickFirst(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
 }
 
 function formatUsageLabel(usage: {
@@ -66,49 +65,24 @@ function formatDateLabel(value: string | null) {
   }
 }
 
-function buildFallbackGreeting(pet: PetRow) {
-  const petName = pet.name || 'your pet';
-  const personality = pet.personality?.trim();
-
-  if (personality) {
-    return `*blinks slowly* Hi, I'm ${petName}. I'm feeling ${personality.toLowerCase()} today. Tell me what's on your mind, and I'll stay right here with you.`;
-  }
-
-  return `*blinks slowly* Hi, I'm ${petName}. I'm here with you. Tell me what's on your mind, and let's chat for a while.`;
+function buildFallbackGreeting(pet: PetItem) {
+  return `*blinks slowly* Hi, I'm ${pet.name}. I'm here with you. Tell me what's on your mind, and let's chat for a while.`;
 }
 
-function buildCompanionshipSummary(pet: PetRow, memories: MemoryRow[]) {
-  const parts: string[] = [];
-
-  if (pet.personality?.trim()) {
-    parts.push(`${pet.name} usually feels ${pet.personality.trim().toLowerCase()}.`);
-  }
-
-  if (pet.favorite_food?.trim()) {
-    parts.push(`Favorite food: ${pet.favorite_food.trim()}.`);
-  }
-
-  if (pet.daily_habits?.trim()) {
-    parts.push(`Daily habits: ${pet.daily_habits.trim()}.`);
-  }
-
-  const recentMemories = memories
+function buildCompanionshipSummary(pet: PetItem, memories: MemoryRow[]) {
+  const clues = memories
     .map((item) => item.content?.trim())
     .filter(Boolean)
     .slice(0, 3) as string[];
 
-  if (recentMemories.length) {
-    parts.push(`Recent companionship clues: ${recentMemories.join(' ')}`);
-  }
-
-  if (!parts.length) {
+  if (!clues.length) {
     return `${pet.name} is ready to chat. As you talk more, this summary will grow into a clearer companionship snapshot.`;
   }
 
-  return parts.join(' ');
+  return `${pet.name}'s recent companionship clues: ${clues.join(' ')}`;
 }
 
-function buildCompactTypeLabel(value: string | null) {
+function buildMemoryTypeLabel(value: string | null) {
   if (!value) return 'Memory';
 
   return value
@@ -116,39 +90,38 @@ function buildCompactTypeLabel(value: string | null) {
     .replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
-export default async function ChatPage({
-  searchParams,
-}: {
-  searchParams?: SearchParams;
-}) {
+export default async function ChatPage({ searchParams }: ChatPageProps) {
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : undefined;
+
+  const requestedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
+
   if (!hasSupabaseEnv()) {
-    redirect('/login?message=Please configure Supabase first.');
+    redirect('/login?error=Please+configure+Supabase+first.');
   }
 
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/login?message=Please sign in first to continue chatting.');
+  if (userError) {
+    redirect('/login?error=Unable+to+verify+your+session.+Please+sign+in+again.');
   }
 
-  const requestedPetId = pickParam(searchParams?.pet_id).trim();
+  if (!user) {
+    redirect('/login?message=Please+log+in+to+continue.');
+  }
 
-  const [{ data: petsData }, usageResult] = await Promise.all([
-    supabase
-      .from('pets')
-      .select(
-        'id, name, breed, personality, favorite_food, daily_habits, image_url, is_default, updated_at',
-      )
-      .eq('user_id', user.id)
-      .order('is_default', { ascending: false })
-      .order('updated_at', { ascending: false }),
+  const [petOverview, usageResult] = await Promise.all([
+    getPetsForUser(user.id).catch(() => ({ pets: [], defaultPetId: null })),
     getChatAccessStatus(user.id).catch(() => null),
   ]);
 
-  const pets = (petsData ?? []) as PetRow[];
+  const pets = petOverview?.pets ?? [];
+  const defaultPetId = petOverview?.defaultPetId ?? null;
 
   if (!pets.length) {
     return (
@@ -183,11 +156,10 @@ export default async function ChatPage({
 
   const selectedPet =
     pets.find((pet) => pet.id === requestedPetId) ??
-    pets.find((pet) => pet.is_default) ??
+    pets.find((pet) => pet.id === defaultPetId) ??
     pets[0];
 
   const [{ data: messagesData }, { data: memoriesData }] = await Promise.all([
-    // 如果你的表名不是 chat_messages，只改这一处即可。
     supabase
       .from('chat_messages')
       .select('id, role, content, created_at')
@@ -221,7 +193,6 @@ export default async function ChatPage({
       : [{ role: 'assistant' as const, content: buildFallbackGreeting(selectedPet) }];
 
   const recentMemories = (memoriesData ?? []) as MemoryRow[];
-
   const summaryText = buildCompanionshipSummary(selectedPet, recentMemories);
 
   const usageLabel = formatUsageLabel(
@@ -236,7 +207,7 @@ export default async function ChatPage({
     <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
       <div className='mb-6 rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm'>
         <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-          Chat with Dog
+          Chat with Pet
         </div>
 
         <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
@@ -271,23 +242,15 @@ export default async function ChatPage({
         <aside className='space-y-5'>
           <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
             <div className='flex items-start gap-4'>
-              {selectedPet.image_url ? (
-                <img
-                  src={selectedPet.image_url}
-                  alt={selectedPet.name}
-                  className='h-20 w-20 rounded-[22px] object-cover'
-                />
-              ) : (
-                <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
-                  🐶
-                </div>
-              )}
+              <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
+                🐾
+              </div>
 
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
 
-                  {selectedPet.is_default ? (
+                  {selectedPet.id === defaultPetId ? (
                     <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
                       Primary
                     </span>
@@ -295,19 +258,14 @@ export default async function ChatPage({
                 </div>
 
                 <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
-                  {selectedPet.breed ? (
-                    <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
-                      {selectedPet.breed}
-                    </span>
-                  ) : null}
-
                   <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
                     {usageLabel}
                   </span>
                 </div>
 
                 <p className='mt-3 text-sm leading-7 text-slate-600'>
-                  Updated {formatDateLabel(selectedPet.updated_at)}
+                  Memory updated{' '}
+                  {formatDateLabel(recentMemories[0]?.updated_at ?? null)}
                 </p>
               </div>
             </div>
@@ -322,8 +280,8 @@ export default async function ChatPage({
                 <h3 className='mt-1 text-lg font-black text-slate-900'>Choose a pet</h3>
               </div>
 
-              <Link href='/create-pet' className='text-sm font-bold text-orange-700 hover:underline'>
-                + New
+              <Link href='/pets' className='text-sm font-bold text-orange-700 hover:underline'>
+                Manage
               </Link>
             </div>
 
@@ -346,7 +304,7 @@ export default async function ChatPage({
                       <div className='min-w-0'>
                         <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
                         <div className='mt-1 truncate text-xs text-slate-500'>
-                          {pet.breed || 'Pet profile'}
+                          {pet.id === defaultPetId ? 'Primary pet' : 'Available for chat'}
                         </div>
                       </div>
 
@@ -380,11 +338,15 @@ export default async function ChatPage({
                     className='rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-900'
                     title={memory.content}
                   >
-                    {buildCompactTypeLabel(memory.memory_type)}
+                    {buildMemoryTypeLabel(memory.memory_type)}
                   </span>
                 ))}
               </div>
-            ) : null}
+            ) : (
+              <div className='mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600'>
+                No saved memories yet. Keep chatting and this panel will grow.
+              </div>
+            )}
           </section>
         </aside>
 

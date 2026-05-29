@@ -2,37 +2,105 @@
 
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import { getSiteUrl } from '@/lib/stripe';
 
-function toMessage(path: string, key: string, value: string) {
-  return `${path}?${key}=${encodeURIComponent(value)}`;
+function encodeMessage(value: string) {
+  return encodeURIComponent(value);
+}
+
+function buildLoginRedirect(params: { message?: string; error?: string }) {
+  const search = new URLSearchParams();
+
+  if (params.message) {
+    search.set('message', params.message);
+  }
+
+  if (params.error) {
+    search.set('error', params.error);
+  }
+
+  const query = search.toString();
+  return query ? `/login?${query}` : '/login';
+}
+
+function getSiteUrl() {
+  const explicit =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.SITE_URL;
+
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
+  }
+
+  if (process.env.VERCEL_URL) {
+    return `https://${process.env.VERCEL_URL}`;
+  }
+
+  return 'http://localhost:3000';
+}
+
+export async function signInWithGoogle() {
+  if (!hasSupabaseEnv()) {
+    redirect(buildLoginRedirect({ error: 'Please configure Supabase Auth first.' }));
+  }
+
+  try {
+    const supabase = createServerSupabaseClient();
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${getSiteUrl()}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      redirect(buildLoginRedirect({ error: error.message }));
+    }
+
+    if (!data?.url) {
+      redirect(buildLoginRedirect({ error: 'Google sign-in could not be started.' }));
+    }
+
+    redirect(data.url);
+  } catch {
+    redirect(buildLoginRedirect({ error: 'Unexpected Google sign-in error.' }));
+  }
 }
 
 export async function signInWithPassword(formData: FormData) {
   if (!hasSupabaseEnv()) {
-    redirect(toMessage('/login', 'error', 'Please configure Supabase environment variables first.'));
+    redirect(buildLoginRedirect({ error: 'Please configure Supabase Auth first.' }));
   }
 
   const email = String(formData.get('email') || '').trim();
   const password = String(formData.get('password') || '');
 
   if (!email || !password) {
-    redirect(toMessage('/login', 'error', 'Please enter your email and password.'));
+    redirect(buildLoginRedirect({ error: 'Please enter both email and password.' }));
   }
 
-  const supabase = createServerSupabaseClient();
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  try {
+    const supabase = createServerSupabaseClient();
 
-  if (error) {
-    redirect(toMessage('/login', 'error', error.message));
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+
+    if (error) {
+      redirect(buildLoginRedirect({ error: error.message }));
+    }
+
+    redirect('/create-pet');
+  } catch {
+    redirect(buildLoginRedirect({ error: 'Unexpected sign-in error.' }));
   }
-
-  redirect('/account');
 }
 
 export async function signUpWithPassword(formData: FormData) {
   if (!hasSupabaseEnv()) {
-    redirect(toMessage('/login', 'error', 'Please configure Supabase environment variables first.'));
+    redirect(buildLoginRedirect({ error: 'Please configure Supabase Auth first.' }));
   }
 
   const email = String(formData.get('email') || '').trim();
@@ -40,54 +108,35 @@ export async function signUpWithPassword(formData: FormData) {
   const nickname = String(formData.get('nickname') || '').trim();
 
   if (!email || !password) {
-    redirect(toMessage('/login', 'error', 'Email and password are required to sign up.'));
+    redirect(buildLoginRedirect({ error: 'Please enter both email and password.' }));
   }
 
-  const supabase = createServerSupabaseClient();
-  const { error } = await supabase.auth.signUp({
-    email,
-    password,
-    options: {
-      emailRedirectTo: `${getSiteUrl()}/auth/callback?next=/account`,
-      data: {
-        display_name: nickname,
+  try {
+    const supabase = createServerSupabaseClient();
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: nickname ? { nickname } : undefined,
+        emailRedirectTo: `${getSiteUrl()}/auth/callback`,
       },
-    },
-  });
+    });
 
-  if (error) {
-    redirect(toMessage('/login', 'error', error.message));
+    if (error) {
+      redirect(buildLoginRedirect({ error: error.message }));
+    }
+
+    if (data.session) {
+      redirect('/create-pet');
+    }
+
+    redirect(
+      buildLoginRedirect({
+        message: 'Account created. Please check your email to confirm your sign-in.',
+      }),
+    );
+  } catch {
+    redirect(buildLoginRedirect({ error: 'Unexpected sign-up error.' }));
   }
-
-  redirect(toMessage('/login', 'message', 'Account created! Please check your email to verify your account.'));
-}
-
-export async function signInWithGoogle() {
-  if (!hasSupabaseEnv()) {
-    redirect(toMessage('/login', 'error', 'Please configure Supabase environment variables first.'));
-  }
-
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      redirectTo: `${getSiteUrl()}/auth/callback?next=/account`,
-    },
-  });
-
-  if (error || !data.url) {
-    redirect(toMessage('/login', 'error', error?.message || 'Failed to start Google sign-in.'));
-  }
-
-  redirect(data.url);
-}
-
-export async function signOut() {
-  if (!hasSupabaseEnv()) {
-    redirect('/login');
-  }
-
-  const supabase = createServerSupabaseClient();
-  await supabase.auth.signOut();
-  redirect('/login?message=You have been signed out safely.');
 }

@@ -145,3 +145,19 @@ export async function signUpWithPassword(formData: FormData) {
     }),
   );
 }
+
+export async function signOut() {
+  if (!hasSupabaseEnv()) {
+    redirect('/login');
+  }
+
+  const supabase = createServerSupabaseClient();
+
+  try {
+    await supabase.auth.signOut();
+  } catch {
+    // 即使 signOut 抛错，也尽量把用户送回登录页
+  }
+
+  redirect('/login?message=You+have+been+signed+out.');
+}

@@ -1,16 +1,17 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createPetAction } from '@/app/actions/pets';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-type CreatePetSearchParams = Promise<{
+type SearchParamsShape = {
   message?: string | string[];
   error?: string | string[];
-}>;
+};
 
 type CreatePetPageProps = {
-  searchParams?: CreatePetSearchParams;
+  searchParams?: Promise<SearchParamsShape> | SearchParamsShape;
 };
 
 function pickFirst(value: string | string[] | undefined) {
@@ -22,34 +23,29 @@ function pickFirst(value: string | string[] | undefined) {
 }
 
 export default async function CreatePetPage({ searchParams }: CreatePetPageProps) {
-  let message = '';
-  let error = '';
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : undefined;
 
-  try {
-    const resolvedSearchParams = (await searchParams) ?? {};
-    message = pickFirst(resolvedSearchParams.message);
-    error = pickFirst(resolvedSearchParams.error);
-  } catch {
-    message = '';
-    error = '';
-  }
+  const message = pickFirst(resolvedSearchParams?.message);
+  const error = pickFirst(resolvedSearchParams?.error);
 
   if (!hasSupabaseEnv()) {
     redirect('/login?error=Please+configure+Supabase+first.');
   }
 
   const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
 
-  try {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
-      redirect('/login?message=Please+log+in+to+continue.');
-    }
-  } catch {
+  if (userError) {
     redirect('/login?error=Unable+to+verify+your+session.+Please+sign+in+again.');
+  }
+
+  if (!user) {
+    redirect('/login?message=Please+log+in+to+continue.');
   }
 
   return (
@@ -169,12 +165,12 @@ export default async function CreatePetPage({ searchParams }: CreatePetPageProps
                 Save Pet Profile
               </button>
 
-              <a
+              <Link
                 href='/memories'
                 className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
               >
                 Back to Memories
-              </a>
+              </Link>
             </div>
           </form>
         </section>

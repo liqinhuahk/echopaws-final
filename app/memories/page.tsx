@@ -56,10 +56,7 @@ function normalizeText(value: string | null | undefined) {
   return (value || '').trim().toLowerCase();
 }
 
-function matchesPriority(
-  importance: number,
-  priority: string | undefined,
-) {
+function matchesPriority(importance: number, priority: string | undefined) {
   if (!priority || priority === 'all') return true;
   if (priority === 'high') return importance >= 4;
   if (priority === 'medium') return importance === 3;
@@ -166,10 +163,7 @@ export default async function MemoriesPage({
     const q = normalizeText(query);
 
     const queryMatch =
-      !q ||
-      text.includes(q) ||
-      petName.includes(q) ||
-      type.includes(q);
+      !q || text.includes(q) || petName.includes(q) || type.includes(q);
 
     const typeMatch =
       typeFilter === 'all' ? true : memory.type === typeFilter;
@@ -387,7 +381,7 @@ export default async function MemoriesPage({
                           >
                             <summary className='cursor-pointer list-none'>
                               <div className='flex items-start gap-3'>
-                                <div className='flex-1 min-w-0'>
+                                <div className='min-w-0 flex-1'>
                                   <div className='flex flex-wrap items-center gap-2'>
                                     <h3 className='text-base font-extrabold'>
                                       {summary.petName}
@@ -467,84 +461,86 @@ export default async function MemoriesPage({
                         Default rule: memory rows stay compact and collapsed. Tap a row to expand full content, metadata, and delete action. On mobile, filters stack vertically for easier use.
                       </p>
                     </div>
-
-                    <a
-                      href={buildResetHref(selectedPetId)}
-                      className='text-sm font-bold text-orange-700 hover:text-orange-900'
-                    >
-                      Reset view
-                    </a>
                   </div>
 
-                  <form
-                    method='GET'
-                    action='/memories'
-                    className='mt-5 rounded-[24px] border border-black/5 bg-card-gradient p-4'
-                  >
-                    {selectedPetId ? (
-                      <input type='hidden' name='pet_id' value={selectedPetId} />
-                    ) : null}
+                  <div className='mt-5 rounded-[24px] border border-black/5 bg-card-gradient p-4'>
+                    <form method='GET' action='/memories' className='grid gap-4'>
+                      {selectedPetId ? (
+                        <input type='hidden' name='pet_id' value={selectedPetId} />
+                      ) : null}
 
-                    <div className='grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(3,minmax(0,180px))_minmax(0,180px)]'>
-                      <label className='grid gap-2 text-sm font-bold'>
-                        Search
-                        <input
-                          name='q'
-                          defaultValue={query}
-                          placeholder='Search memories'
-                          className='input-shell'
-                        />
-                      </label>
+                      <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_140px]'>
+                        <label className='min-w-0 grid gap-2 text-sm font-bold'>
+                          <span>Search</span>
+                          <input
+                            name='q'
+                            defaultValue={query}
+                            placeholder='Search memories'
+                            className='input-shell w-full'
+                          />
+                        </label>
 
-                      <label className='grid gap-2 text-sm font-bold'>
-                        Type
-                        <select
-                          name='type'
-                          defaultValue={typeFilter}
-                          className='input-shell'
-                        >
-                          <option value='all'>All Types</option>
-                          <option value='emotion'>Emotional Clues</option>
-                          <option value='preference'>Interaction Preferences</option>
-                          <option value='fact'>Recent Events</option>
-                          <option value='profile'>Owner Profile</option>
-                        </select>
-                      </label>
-
-                      <label className='grid gap-2 text-sm font-bold'>
-                        Priority
-                        <select
-                          name='priority'
-                          defaultValue={priorityFilter}
-                          className='input-shell'
-                        >
-                          <option value='all'>All Priorities</option>
-                          <option value='high'>High (4-5)</option>
-                          <option value='medium'>Medium (3)</option>
-                          <option value='low'>Low (1-2)</option>
-                        </select>
-                      </label>
-
-                      <label className='grid gap-2 text-sm font-bold'>
-                        Sort
-                        <select
-                          name='sort'
-                          defaultValue={sort}
-                          className='input-shell'
-                        >
-                          <option value='latest'>Latest Updated</option>
-                          <option value='oldest'>Oldest First</option>
-                          <option value='priority_desc'>Highest Priority</option>
-                          <option value='priority_asc'>Lowest Priority</option>
-                          <option value='type'>Group by Type</option>
-                          <option value='pet'>Group by Pet</option>
-                        </select>
-                      </label>
-
-                      <div className='flex items-end gap-3'>
-                        <button className='brand-button w-full'>Apply</button>
+                        <div className='flex items-end'>
+                          <a
+                            href={buildResetHref(selectedPetId)}
+                            className='subtle-button w-full text-center'
+                          >
+                            Reset view
+                          </a>
+                        </div>
                       </div>
-                    </div>
+
+                      <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-[repeat(3,minmax(0,180px))_140px]'>
+                        <label className='min-w-0 grid gap-2 text-sm font-bold'>
+                          <span>Type</span>
+                          <select
+                            name='type'
+                            defaultValue={typeFilter}
+                            className='input-shell w-full'
+                          >
+                            <option value='all'>All Types</option>
+                            <option value='emotion'>Emotional Clues</option>
+                            <option value='preference'>Interaction Preferences</option>
+                            <option value='fact'>Recent Events</option>
+                            <option value='profile'>Owner Profile</option>
+                          </select>
+                        </label>
+
+                        <label className='min-w-0 grid gap-2 text-sm font-bold'>
+                          <span>Priority</span>
+                          <select
+                            name='priority'
+                            defaultValue={priorityFilter}
+                            className='input-shell w-full'
+                          >
+                            <option value='all'>All Priorities</option>
+                            <option value='high'>High (4-5)</option>
+                            <option value='medium'>Medium (3)</option>
+                            <option value='low'>Low (1-2)</option>
+                          </select>
+                        </label>
+
+                        <label className='min-w-0 grid gap-2 text-sm font-bold'>
+                          <span>Sort</span>
+                          <select
+                            name='sort'
+                            defaultValue={sort}
+                            className='input-shell w-full'
+                          >
+                            <option value='latest'>Latest Updated</option>
+                            <option value='oldest'>Oldest First</option>
+                            <option value='priority_desc'>Highest Priority</option>
+                            <option value='priority_asc'>Lowest Priority</option>
+                            <option value='type'>Group by Type</option>
+                            <option value='pet'>Group by Pet</option>
+                          </select>
+                        </label>
+
+                        <div className='flex items-end'>
+                          <button className='brand-button w-full'>Apply</button>
+                        </div>
+                      </div>
+                    </form>
 
                     <div className='mt-3 flex flex-wrap gap-2 text-xs text-muted'>
                       <span className='rounded-full bg-white px-3 py-1 ring-1 ring-black/5'>
@@ -557,7 +553,7 @@ export default async function MemoriesPage({
                         Mobile stacks filters automatically
                       </span>
                     </div>
-                  </form>
+                  </div>
 
                   <div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
                     <div className='text-sm text-muted'>
@@ -643,17 +639,9 @@ export default async function MemoriesPage({
                                 </div>
 
                                 <form action={deleteMemoryAction}>
-                                  <input
-                                    type='hidden'
-                                    name='memoryId'
-                                    value={memory.id}
-                                  />
+                                  <input type='hidden' name='memoryId' value={memory.id} />
                                   {selectedPetId ? (
-                                    <input
-                                      type='hidden'
-                                      name='petId'
-                                      value={selectedPetId}
-                                    />
+                                    <input type='hidden' name='petId' value={selectedPetId} />
                                   ) : null}
                                   <button className='rounded-full border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50'>
                                     Delete
@@ -671,10 +659,7 @@ export default async function MemoriesPage({
                         </PetNoticeBanner>
 
                         <div className='mt-4 flex flex-wrap gap-3'>
-                          <a
-                            href={buildResetHref(selectedPetId)}
-                            className='subtle-button'
-                          >
+                          <a href={buildResetHref(selectedPetId)} className='subtle-button'>
                             Clear Filters
                           </a>
                           <a href={backToChatHref} className='brand-button'>

@@ -119,15 +119,15 @@ export default async function AccountPage() {
     <>
       <SiteHeader
         ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
-        ctaHref={vipActive ? '/pricing' : '/pricing'}
+        ctaHref='/pricing'
       />
 
       <main className='container-shell py-10'>
         <div className='eyebrow'>My Account</div>
         <h1 className='page-title mt-4'>Welcome back, {displayName}</h1>
         <p className='page-subtitle mx-0 max-w-4xl'>
-          Review your current plan, Free versus VIP benefits, pet setup, and
-          membership controls in one place.
+          Review your current plan, Free versus VIP benefits, pet setup, and membership controls in
+          one place.
         </p>
 
         <section className='mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]'>
@@ -148,7 +148,6 @@ export default async function AccountPage() {
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <div className='rounded-2xl border border-black/5 bg-white p-4'>
                 <div className='text-sm font-bold text-muted'>Email</div>
-
                 <div className='mt-2 text-base font-semibold'>{maskedEmail}</div>
 
                 <div className='mt-1 flex items-center gap-2'>
@@ -204,8 +203,8 @@ export default async function AccountPage() {
                 <p className='mt-2 leading-7'>
                   Your account is currently on Free. Free includes{' '}
                   <strong>{FREE_TOTAL_CHAT_LIMIT} total lifetime chats</strong> and{' '}
-                  <strong>up to {FREE_TIER_MAX_PETS} pets</strong>. These chats are
-                  shared across your account and do not reset daily.
+                  <strong>up to {FREE_TIER_MAX_PETS} pets</strong>. These chats are shared across
+                  your account and do not reset daily.
                 </p>
               </div>
             ) : (
@@ -214,9 +213,9 @@ export default async function AccountPage() {
                   VIP membership active
                 </div>
                 <p className='mt-2 leading-7'>
-                  Your account currently has VIP access. You have unlimited chats,
-                  more pet capacity, deeper long-term memory, richer emotional
-                  continuity, and priority access to future voice features.
+                  Your account currently has VIP access. You have unlimited chats, more pet
+                  capacity, deeper long-term memory, richer emotional continuity, and priority
+                  access to future voice features.
                 </p>
               </div>
             )}
@@ -232,7 +231,7 @@ export default async function AccountPage() {
 
             <div className='mt-5 grid gap-3'>
               <form action={openBillingPortal}>
-                <button className='subtle-button w-full'>
+                <button type='submit' className='subtle-button w-full'>
                   Open Stripe Billing Portal
                 </button>
               </form>
@@ -252,13 +251,14 @@ export default async function AccountPage() {
               </Link>
 
               <form action={signOut}>
-                <button className='subtle-button w-full'>Sign Out Securely</button>
+                <button type='submit' className='subtle-button w-full'>
+                  Sign Out Securely
+                </button>
               </form>
             </div>
 
             <div className='mt-5 rounded-2xl border border-black/5 bg-stone-50 px-4 py-4 text-sm text-stone-700'>
-              If you just upgraded, your VIP status may take a moment to appear
-              here after checkout.
+              If you just upgraded, your VIP status may take a moment to appear here after checkout.
             </div>
           </div>
         </section>
@@ -293,9 +293,7 @@ export default async function AccountPage() {
             <h2 className='mt-2 text-2xl font-extrabold'>What VIP unlocks</h2>
 
             <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em]'>
-                $12.9
-              </strong>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em]'>$12.9</strong>
               <span className='mb-1 text-muted'>/ month</span>
             </div>
 
@@ -308,8 +306,8 @@ export default async function AccountPage() {
             </ul>
 
             <div className='mt-5 rounded-2xl bg-orange-100/70 px-4 py-3 text-sm text-orange-900'>
-              VIP is best for users who want uninterrupted companionship, more
-              pet capacity, and a pet that remembers with greater depth over time.
+              VIP is best for users who want uninterrupted companionship, more pet capacity, and a
+              pet that remembers with greater depth over time.
             </div>
           </article>
         </section>
@@ -320,10 +318,9 @@ export default async function AccountPage() {
               Plan rules
             </div>
             <p className='mt-3 text-sm leading-8 text-muted'>
-              Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats
-              and can keep up to {FREE_TIER_MAX_PETS} pets. VIP removes the{' '}
-              {FREE_TOTAL_CHAT_LIMIT}-chat limit, unlocks more pet capacity, and
-              gives your pet deeper long-term memory.
+              Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats and can keep up to{' '}
+              {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
+              unlocks more pet capacity, and gives your pet deeper long-term memory.
             </p>
           </article>
 
@@ -332,9 +329,8 @@ export default async function AccountPage() {
               Billing note
             </div>
             <p className='mt-3 text-sm leading-8 text-muted'>
-              If you subscribed recently, your membership status may take a short
-              moment to update. You can always manage billing from the Stripe
-              customer portal.
+              If you subscribed recently, your membership status may take a short moment to update.
+              You can always manage billing from the Stripe customer portal.
             </p>
           </article>
         </section>

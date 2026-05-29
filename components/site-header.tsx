@@ -1,53 +1,53 @@
 import Link from 'next/link';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
 type SiteHeaderProps = {
   ctaLabel?: string;
   ctaHref?: string;
 };
 
-const baseLinks = [
-  { href: '/', label: 'Home' },
-  { href: '/pets', label: 'Manage Pets' },
-  { href: '/create-pet', label: 'Create Pet' },
-  { href: '/chat', label: 'Chat' },
-  { href: '/memories', label: 'Memories' },
-  { href: '/pricing', label: 'Membership' },
-];
-
-export async function SiteHeader({ ctaLabel = 'Create My Pet', ctaHref = '/create-pet' }: SiteHeaderProps) {
-  let isLoggedIn = false;
-
-  if (hasSupabaseEnv()) {
-    const supabase = createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    isLoggedIn = Boolean(user);
-  }
-
-  const links = isLoggedIn ? [...baseLinks, { href: '/account', label: 'Account' }] : [{ href: '/login', label: 'Sign In' }, ...baseLinks];
-
+export function SiteHeader({
+  ctaLabel = 'Get Started',
+  ctaHref = '/create-pet',
+}: SiteHeaderProps) {
   return (
-    <div className='container-shell sticky top-4 z-20 pt-4'>
-      <header className='glass-card flex items-center justify-between rounded-[20px] px-4 py-3 md:px-5'>
-        <Link href='/' className='flex items-center gap-3 font-extrabold tracking-tight'>
-          <div className='grid h-10 w-10 place-items-center rounded-2xl bg-brand-gradient text-lg text-white shadow-lg shadow-orange-200'>🐾</div>
+    <header className='border-b border-black/5 bg-white/80 backdrop-blur'>
+      <div className='container-shell flex items-center justify-between gap-4 py-4'>
+        <Link href='/' className='flex items-center gap-2 text-sm font-black text-slate-900'>
+          <span className='text-lg'>🐾</span>
           <span>EchoPaws</span>
         </Link>
 
-        <nav className='hidden items-center gap-5 text-sm text-muted md:flex'>
-          {links.map((link) => (
-            <Link key={link.href} href={link.href} className='transition hover:text-ink'>
-              {link.label}
-            </Link>
-          ))}
+        <nav className='hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex'>
+          <Link href='/' className='transition hover:text-slate-900'>
+            Home
+          </Link>
+          <Link href='/chat' className='transition hover:text-slate-900'>
+            Chat
+          </Link>
+          <Link href='/memories' className='transition hover:text-slate-900'>
+            Memories
+          </Link>
+          <Link href='/account' className='transition hover:text-slate-900'>
+            Account
+          </Link>
         </nav>
 
-        <Link href={ctaHref} className='brand-button px-5 py-3 text-sm'>
-          {ctaLabel}
-        </Link>
-      </header>
-    </div>
+        <div className='flex items-center gap-3'>
+          <Link
+            href='/login'
+            className='rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+          >
+            Sign In
+          </Link>
+
+          <Link
+            href={ctaHref}
+            className='rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600'
+          >
+            {ctaLabel}
+          </Link>
+        </div>
+      </div>
+    </header>
   );
 }

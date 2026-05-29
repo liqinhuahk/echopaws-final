@@ -1,6 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { createPetAction } from '@/app/actions/pets';
+import { findSubscriptionByUserId } from '@/lib/subscriptions';
+import { getPetsForUser } from '@/lib/pets';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
@@ -13,6 +15,9 @@ type SearchParamsShape = {
 type CreatePetPageProps = {
   searchParams?: Promise<SearchParamsShape> | SearchParamsShape;
 };
+
+const FREE_TIER_MAX_PETS = 2;
+const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
 function pickFirst(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -48,6 +53,25 @@ export default async function CreatePetPage({ searchParams }: CreatePetPageProps
     redirect('/login?message=Please+log+in+to+continue.');
   }
 
+  const [petOverview, subscription] = await Promise.all([
+    getPetsForUser(user.id).catch(() => ({ pets: [], defaultPetId: null })),
+    findSubscriptionByUserId(user.id).catch(() => null),
+  ]);
+
+  const pets = petOverview?.pets ?? [];
+  const petCount = pets.length;
+  const vipActive =
+    subscription?.plan === 'vip' &&
+    ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
+
+  const hitFreePetLimit = !vipActive && petCount >= FREE_TIER_MAX_PETS;
+
+  const limitMessage =
+    error ||
+    (hitFreePetLimit
+      ? `Free plan supports up to ${FREE_TIER_MAX_PETS} pets. Upgrade to VIP to create more pets.`
+      : '');
+
   return (
     <>
       <SiteHeader ctaLabel='Open Memories' ctaHref='/memories' />
@@ -73,106 +97,140 @@ export default async function CreatePetPage({ searchParams }: CreatePetPageProps
             </div>
           ) : null}
 
-          {error ? (
+          {limitMessage ? (
             <div className='mt-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-              {error}
+              {limitMessage}
             </div>
           ) : null}
 
-          <form
-            action={createPetAction}
-            className='mt-6 grid gap-5'
-            encType='multipart/form-data'
-          >
-            <label className='grid gap-2 text-sm font-bold'>
-              Name
-              <input
-                className='input-shell'
-                name='name'
-                type='text'
-                placeholder='e.g. Max'
-                required
-                maxLength={30}
-              />
-            </label>
-
-            <label className='grid gap-2 text-sm font-bold'>
-              Breed
-              <input
-                className='input-shell'
-                name='breed'
-                type='text'
-                placeholder='e.g. Shiba Inu'
-                required
-                maxLength={80}
-              />
-            </label>
-
-            <label className='grid gap-2 text-sm font-bold'>
-              Personality
-              <input
-                className='input-shell'
-                name='personality'
-                type='text'
-                placeholder='e.g. Playful, clingy, loves belly rubs'
-                required
-                maxLength={120}
-              />
-            </label>
-
-            <label className='grid gap-2 text-sm font-bold'>
-              Favorite Food
-              <input
-                className='input-shell'
-                name='favoriteFood'
-                type='text'
-                placeholder='e.g. Chicken breast, freeze-dried treats'
-                maxLength={120}
-              />
-            </label>
-
-            <label className='grid gap-2 text-sm font-bold'>
-              Daily Habits
-              <textarea
-                className='input-shell min-h-[120px]'
-                name='dailyHabits'
-                placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
-                maxLength={500}
-              />
-            </label>
-
-            <label className='grid gap-2 text-sm font-bold'>
-              Upload Photo
-              <div className='rounded-[22px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
-                <div className='text-3xl'>📷</div>
-                <p className='mt-3 text-sm font-bold'>Supports JPG / PNG / WebP, max 5MB</p>
-                <p className='mt-1 text-xs font-normal text-slate-600'>
-                  The image will be stored with your pet profile and used to personalize the
-                  experience.
+          {hitFreePetLimit ? (
+            <>
+              <div className='mt-6 rounded-[24px] border border-orange-100 bg-gradient-to-r from-orange-50 to-amber-50 px-5 py-5 text-sm leading-7 text-slate-700'>
+                <div className='text-xs font-bold uppercase tracking-[0.16em] text-orange-700'>
+                  Pet limit reached
+                </div>
+                <p className='mt-2'>
+                  Your account currently has {petCount} pets on the Free plan. To create more pets,
+                  upgrade to VIP or manage your existing pets first.
                 </p>
-                <input
-                  className='input-shell mt-4'
-                  name='image'
-                  type='file'
-                  accept='image/png,image/jpeg,image/webp'
-                  required
-                />
               </div>
-            </label>
 
-            <div className='flex flex-wrap gap-3 pt-2'>
-              <button type='submit' className='brand-button'>
-                Save Pet Profile
-              </button>
+              <div className='mt-6 flex flex-wrap gap-3'>
+                <Link href='/pets' className='brand-button'>
+                  Manage Pets
+                </Link>
 
-              <Link
-                href='/memories'
-                className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-              >
-                Back to Memories
-              </Link>
-            </div>
-          </form>
+                <Link
+                  href='/pricing'
+                  className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+                >
+                  Upgrade to VIP
+                </Link>
+
+                <Link
+                  href='/memories'
+                  className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+                >
+                  Back to Memories
+                </Link>
+              </div>
+            </>
+          ) : (
+            <form
+              action={createPetAction}
+              className='mt-6 grid gap-5'
+              encType='multipart/form-data'
+            >
+              <label className='grid gap-2 text-sm font-bold'>
+                Name
+                <input
+                  className='input-shell'
+                  name='name'
+                  type='text'
+                  placeholder='e.g. Max'
+                  required
+                  maxLength={30}
+                />
+              </label>
+
+              <label className='grid gap-2 text-sm font-bold'>
+                Breed
+                <input
+                  className='input-shell'
+                  name='breed'
+                  type='text'
+                  placeholder='e.g. Shiba Inu'
+                  required
+                  maxLength={80}
+                />
+              </label>
+
+              <label className='grid gap-2 text-sm font-bold'>
+                Personality
+                <input
+                  className='input-shell'
+                  name='personality'
+                  type='text'
+                  placeholder='e.g. Playful, clingy, loves belly rubs'
+                  required
+                  maxLength={120}
+                />
+              </label>
+
+              <label className='grid gap-2 text-sm font-bold'>
+                Favorite Food
+                <input
+                  className='input-shell'
+                  name='favoriteFood'
+                  type='text'
+                  placeholder='e.g. Chicken breast, freeze-dried treats'
+                  maxLength={120}
+                />
+              </label>
+
+              <label className='grid gap-2 text-sm font-bold'>
+                Daily Habits
+                <textarea
+                  className='input-shell min-h-[120px]'
+                  name='dailyHabits'
+                  placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
+                  maxLength={500}
+                />
+              </label>
+
+              <label className='grid gap-2 text-sm font-bold'>
+                Upload Photo
+                <div className='rounded-[22px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
+                  <div className='text-3xl'>📷</div>
+                  <p className='mt-3 text-sm font-bold'>Supports JPG / PNG / WebP, max 5MB</p>
+                  <p className='mt-1 text-xs font-normal text-slate-600'>
+                    The image will be stored with your pet profile and used to personalize the
+                    experience.
+                  </p>
+                  <input
+                    className='input-shell mt-4'
+                    name='image'
+                    type='file'
+                    accept='image/png,image/jpeg,image/webp'
+                    required
+                  />
+                </div>
+              </label>
+
+              <div className='flex flex-wrap gap-3 pt-2'>
+                <button type='submit' className='brand-button'>
+                  Save Pet Profile
+                </button>
+
+                <Link
+                  href='/memories'
+                  className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+                >
+                  Back to Memories
+                </Link>
+              </div>
+            </form>
+          )}
         </section>
       </main>
 

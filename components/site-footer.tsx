@@ -1,8 +1,14 @@
-export function SiteFooter({ rightText }: { rightText: string }) {
+type SiteFooterProps = {
+  rightText?: string;
+};
+
+export function SiteFooter({
+  rightText = 'EchoPaws · Gentle AI companionship',
+}: SiteFooterProps) {
   return (
-    <footer className="pb-12 pt-8 text-sm text-muted">
-      <div className="container-shell flex flex-wrap items-center justify-between gap-4 rounded-[20px] border border-black/5 bg-white/70 px-5 py-4">
-        <div>EchoPaws</div>
+    <footer className='border-t border-black/5 bg-white/70'>
+      <div className='container-shell flex flex-col gap-3 py-6 text-sm text-slate-500 md:flex-row md:items-center md:justify-between'>
+        <div>© 2026 EchoPaws. Built for warm, memory-aware pet companionship.</div>
         <div>{rightText}</div>
       </div>
     </footer>

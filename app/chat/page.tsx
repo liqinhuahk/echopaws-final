@@ -1,8 +1,6 @@
 import Link from 'next/link';
 import {
-  PetChatContextCard,
   PetEmptyStateCard,
-  PetMemoryListCard,
   PetNoticeBanner,
   PetPageHeroCard,
   PetSidebarProfileCard,
@@ -13,23 +11,29 @@ import { PetSwitcher } from '@/components/pet-switcher';
 import { getPetOrderDescription } from '@/components/pet-ui-badges';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
-import { FREE_TOTAL_CHAT_LIMIT, getChatAccessState } from '@/lib/chat-access';
+import {
+  FREE_TOTAL_CHAT_LIMIT,
+  getChatAccessState,
+} from '@/lib/chat-access';
 import { getPrimaryPetAndContext } from '@/lib/chat-service';
 import { FREE_TIER_MAX_PETS, getPetsForUser } from '@/lib/pets';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import {
+  createServerSupabaseClient,
+  hasSupabaseEnv,
+} from '@/lib/supabase/server';
 
 const fallbackMessages = [
   { role: 'user' as const, content: 'Hey Max! What did you do today?' },
   {
     role: 'assistant' as const,
     content:
-      'I waited for you by the window again today. You seemed tired yesterday — I hope you can rest a bit sooner today 🐶',
+      "*purrrrrrr* I waited for you by the window again today. You seemed tired yesterday — I hope you can rest a bit sooner today.",
   },
   { role: 'user' as const, content: 'I am feeling a little down today.' },
   {
     role: 'assistant' as const,
     content:
-      'Then let me just stay close to you for a while. You always handle things on your own, and I remember that — so today I want to hold you a little tighter.',
+      "*nuzzles your hand* Then let me stay close to you for a while. You always handle things on your own, and I remember that — so today I want to hold you a little tighter.",
   },
 ];
 
@@ -40,6 +44,12 @@ type PetCard = {
   isPrimary?: boolean;
 };
 
+function truncateText(text: string, max = 150) {
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, max).trim()}…`;
+}
+
 export default async function ChatPage({
   searchParams,
 }: {
@@ -48,22 +58,21 @@ export default async function ChatPage({
   const selectedPetId = searchParams?.pet_id || null;
 
   let petId: string | null = selectedPetId;
-  let petName = 'Max';
-  let petBreed = 'Shiba Inu';
-  let petPersonality = 'Playful · Clingy · Afraid of thunder';
-  let favoriteFood = 'Chicken breast';
-  let dailyHabit = 'Waiting for you at the door';
+  let petName = 'Dog';
+  let petBreed = 'Ragdoll';
+  let petPersonality = 'Playful';
+  let favoriteFood = 'dried food';
+  let dailyHabit = 'Sleep and Chat';
   let petImageUrl: string | null = null;
   let memorySummary =
-    'Owner likes bedtime chats and has been a little tired lately at work.';
+    "You're feeling tired, and I'm here to offer comfort and companionship. I love when you scratch my ears, and I'm always happy to talk about my naps with you.";
   let emotionSummary =
-    'Recent emotional pattern: slightly tired and needs warm, comforting responses.';
+    'The pet expresses affection and a desire for companionship.';
   let usageLabel = `${FREE_TOTAL_CHAT_LIMIT} lifetime chats on Free`;
   let usageDetail = `Free includes ${FREE_TOTAL_CHAT_LIMIT} lifetime chats shared across your account. Chats do not reset daily.`;
   let vipHint = `Upgrade to VIP for unlimited chats, more than ${FREE_TIER_MAX_PETS} pets, deeper memory, and richer emotional continuity.`;
   let initialMessages = fallbackMessages;
   let hasPet = false;
-  let visibleMemories: Array<{ type: string; content: string }> = [];
   let pets: PetCard[] = [];
   let selectedPetIsPrimary = false;
   let selectedPetOrderLabel = getPetOrderDescription(false);
@@ -107,10 +116,6 @@ export default async function ChatPage({
           selectedPetOrderLabel = getPetOrderDescription(selectedPetIsPrimary);
         }
 
-        visibleMemories = context.memories
-          .slice(0, 4)
-          .map((item) => ({ type: item.type, content: item.content }));
-
         if (context.memorySummary?.summary) {
           memorySummary = context.memorySummary.summary;
         } else if (context.memories.length > 0) {
@@ -120,7 +125,9 @@ export default async function ChatPage({
             .join('. ');
         }
 
-        const emotionMemory = context.memories.find((item) => item.type === 'emotion');
+        const emotionMemory = context.memories.find(
+          (item) => item.type === 'emotion',
+        );
         if (emotionMemory?.content) {
           emotionSummary = emotionMemory.content;
         }
@@ -152,7 +159,9 @@ export default async function ChatPage({
           if (remaining <= 0) {
             freePlanWarning = `You have used all ${limit} lifetime Free chats. Upgrade to VIP to keep talking with your pets.`;
           } else if (remaining <= 5) {
-            freePlanWarning = `You only have ${remaining} lifetime Free chat${remaining === 1 ? '' : 's'} left. Upgrade to VIP for unlimited chats.`;
+            freePlanWarning = `You only have ${remaining} lifetime Free chat${
+              remaining === 1 ? '' : 's'
+            } left. Upgrade to VIP for unlimited chats.`;
           }
         }
       }
@@ -161,6 +170,10 @@ export default async function ChatPage({
     }
   }
 
+  const memoriesHref = petId
+    ? `/memories?pet_id=${encodeURIComponent(petId)}`
+    : '/memories';
+
   return (
     <>
       <SiteHeader ctaLabel={headerCtaLabel} ctaHref={headerCtaHref} />
@@ -168,8 +181,8 @@ export default async function ChatPage({
       <main className='container-shell py-10'>
         <PetPageHeroCard
           eyebrow='AI Pet Chat'
-          title='It does not just answer you — it stays with you.'
-          description={`Switch between pets on the same account. Each pet has its own profile, chat history, companionship summary, and memory. Free includes ${FREE_TOTAL_CHAT_LIMIT} lifetime chats shared across your account and up to ${FREE_TIER_MAX_PETS} pets.`}
+          title='Chat stays primary. Context stays close.'
+          description={`Switch between pets on the same account. Free includes ${FREE_TOTAL_CHAT_LIMIT} lifetime chats shared across your account and up to ${FREE_TIER_MAX_PETS} pets. This layout keeps pet context on the left and keeps the chat area cleaner on the right.`}
           notice={
             <>
               {searchParams?.pet_created === '1' ? (
@@ -196,7 +209,9 @@ export default async function ChatPage({
               selectedPetId={petId}
               basePath='/chat'
               title='Switch Chat Pet'
-              description={`You have ${pets.length} pet${pets.length !== 1 ? 's' : ''}. The primary pet stays at the top; others are ordered by recent activity. Switching loads that pet’s own chat context and memory.`}
+              description={`You have ${pets.length} pet${
+                pets.length !== 1 ? 's' : ''
+              }. The primary pet stays at the top; others are ordered by recent activity. On smaller screens, the layout stacks so chat remains the main focus.`}
             />
           </PetToolbarCard>
         ) : null}
@@ -205,12 +220,12 @@ export default async function ChatPage({
           <PetEmptyStateCard
             className='mt-8'
             title='No pet profile yet'
-            description={`Create your first pet to unlock a real profile, personality, preferences, and memory context. Free supports up to ${FREE_TIER_MAX_PETS} pets and ${FREE_TOTAL_CHAT_LIMIT} lifetime chats.`}
+            description={`Create your first pet to unlock a real profile, memory context, and long-term companionship. Free supports up to ${FREE_TIER_MAX_PETS} pets and ${FREE_TOTAL_CHAT_LIMIT} lifetime chats.`}
             primaryAction={{ label: 'Create Your First Pet', href: '/create-pet' }}
           />
         ) : (
-          <section className='grid gap-5 py-8 lg:grid-cols-[320px_1fr]'>
-            <aside className='glass-card p-5'>
+          <section className='mt-8 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]'>
+            <aside className='space-y-5'>
               <PetSidebarProfileCard
                 name={petName}
                 imageUrl={petImageUrl}
@@ -247,75 +262,110 @@ export default async function ChatPage({
                     title: 'Companionship Summary',
                     action: (
                       <Link
-                        href={petId ? `/memories?pet_id=${encodeURIComponent(petId)}` : '/memories'}
+                        href={memoriesHref}
                         className='text-xs font-bold text-orange-700 hover:text-orange-900'
                       >
                         Manage Memory →
                       </Link>
                     ),
-                    content: memorySummary,
-                    contentClassName: 'mt-2 whitespace-pre-line text-sm leading-7 text-muted',
+                    content: truncateText(memorySummary, 170),
+                    contentClassName:
+                      'mt-2 whitespace-pre-line text-sm leading-7 text-muted',
                   },
                   {
                     title: 'Emotional State',
-                    content: emotionSummary,
-                    contentClassName: 'mt-2 text-sm leading-7 text-muted',
-                  },
-                  {
-                    title: 'Chat Access',
-                    content: usageDetail,
+                    content: truncateText(emotionSummary, 120),
                     contentClassName: 'mt-2 text-sm leading-7 text-muted',
                   },
                 ]}
                 footer={
-                  <>
-                    <PetMemoryListCard
-                      title='Recent Active Memories'
-                      items={visibleMemories.map((item, index) => ({
-                        key: `${item.type}-${index}`,
-                        badges: (
-                          <span className='rounded-full bg-orange-100 px-3 py-1 text-xs font-bold text-orange-900'>
-                            {item.type}
-                          </span>
-                        ),
-                        content: item.content,
-                        className: 'bg-orange-50 border-none',
-                      }))}
-                      emptyState={
-                        <div className='text-sm leading-7 text-muted'>
-                          No active memories yet. Chat a few more times and the system
-                          will start building companionship context.
-                        </div>
-                      }
-                    />
-                    <PetNoticeBanner tone='warning'>{vipHint}</PetNoticeBanner>
-                  </>
+                  <PetNoticeBanner tone='warning'>{vipHint}</PetNoticeBanner>
                 }
               />
             </aside>
 
-            <PetChatContextCard
-              title={<>Chat with {petName}</>}
-              description={`You are viewing ${petName}'s dedicated chat context. Switching to another pet will also switch the conversation history and memory summary.`}
-              badge={
-                <div className='rounded-full bg-orange-50 px-4 py-2 text-xs font-bold text-orange-800'>
-                  {usageLabel}
+            <section className='min-w-0'>
+              <div className='glass-card p-6'>
+                <div className='flex flex-wrap items-start justify-between gap-4'>
+                  <div>
+                    <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
+                      Chat Workspace
+                    </div>
+                    <h2 className='mt-2 text-2xl font-extrabold'>
+                      Chat with {petName}
+                    </h2>
+                    <p className='mt-2 text-sm leading-7 text-muted'>
+                      You are viewing {petName}&apos;s dedicated chat context.
+                      Switching to another pet will also switch the conversation
+                      history and memory context. Summary stays collapsed by
+                      default so the chat area remains easier to read.
+                    </p>
+                  </div>
+
+                  <div className='rounded-full bg-orange-50 px-4 py-2 text-xs font-bold text-orange-800'>
+                    {usageLabel}
+                  </div>
                 </div>
-              }
-              chatNode={
-                <ChatPlayground
-                  petId={petId}
-                  initialMessages={initialMessages}
-                  initialRemainingLabel={usageLabel}
-                  initialMemorySummary={memorySummary}
-                />
-              }
-            />
+
+                <div className='mt-5 flex flex-wrap items-center gap-3'>
+                  <a href={memoriesHref} className='subtle-button'>
+                    Open Pet Memory Page
+                  </a>
+
+                  <details className='group'>
+                    <summary className='cursor-pointer list-none rounded-full border border-black/10 bg-white px-4 py-2 text-xs font-bold text-ink transition hover:bg-stone-50'>
+                      <span className='group-open:hidden'>View Companionship Summary</span>
+                      <span className='hidden group-open:inline'>
+                        Hide Companionship Summary
+                      </span>
+                    </summary>
+
+                    <div className='mt-3 rounded-[24px] border border-black/5 bg-card-gradient p-4'>
+                      <div className='flex flex-wrap items-start justify-between gap-3'>
+                        <div>
+                          <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
+                            Companionship Summary
+                          </div>
+                          <div className='mt-2 text-sm leading-8 text-ink'>
+                            {memorySummary}
+                          </div>
+                        </div>
+
+                        <Link
+                          href={memoriesHref}
+                          className='text-xs font-bold text-orange-700 hover:text-orange-900'
+                        >
+                          Open full memory view →
+                        </Link>
+                      </div>
+
+                      <div className='mt-4 rounded-2xl bg-white/80 px-4 py-3 text-sm leading-7 text-muted'>
+                        <span className='font-bold text-ink'>Emotional State: </span>
+                        {emotionSummary}
+                      </div>
+                    </div>
+                  </details>
+                </div>
+
+                <div className='mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700'>
+                  {usageDetail}
+                </div>
+
+                <div className='mt-6'>
+                  <ChatPlayground
+                    petId={petId}
+                    initialMessages={initialMessages}
+                    initialRemainingLabel={usageLabel}
+                    initialMemorySummary=''
+                  />
+                </div>
+              </div>
+            </section>
           </section>
         )}
       </main>
 
-      <SiteFooter rightText='20 Lifetime Chats · Free Max 2 Pets · Multi-Pet Switching · Memory Hints' />
+      <SiteFooter rightText='Collapsed Summary · Cleaner Chat Layout · Multi-Pet Switching · Unified with Memory Center' />
     </>
   );
 }

@@ -3,10 +3,6 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-function encodeMessage(value: string) {
-  return encodeURIComponent(value);
-}
-
 function buildLoginRedirect(params: { message?: string; error?: string }) {
   const search = new URLSearchParams();
 
@@ -44,9 +40,15 @@ export async function signInWithGoogle() {
     redirect(buildLoginRedirect({ error: 'Please configure Supabase Auth first.' }));
   }
 
-  try {
-    const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
+  let oauthData:
+    | {
+        url?: string;
+      }
+    | undefined;
+
+  try {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -58,14 +60,18 @@ export async function signInWithGoogle() {
       redirect(buildLoginRedirect({ error: error.message }));
     }
 
-    if (!data?.url) {
-      redirect(buildLoginRedirect({ error: 'Google sign-in could not be started.' }));
-    }
-
-    redirect(data.url);
-  } catch {
-    redirect(buildLoginRedirect({ error: 'Unexpected Google sign-in error.' }));
+    oauthData = data;
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unexpected Google sign-in error.';
+    redirect(buildLoginRedirect({ error: message }));
   }
+
+  if (!oauthData?.url) {
+    redirect(buildLoginRedirect({ error: 'Google sign-in could not be started.' }));
+  }
+
+  redirect(oauthData.url);
 }
 
 export async function signInWithPassword(formData: FormData) {
@@ -80,9 +86,9 @@ export async function signInWithPassword(formData: FormData) {
     redirect(buildLoginRedirect({ error: 'Please enter both email and password.' }));
   }
 
-  try {
-    const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
+  try {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -91,11 +97,12 @@ export async function signInWithPassword(formData: FormData) {
     if (error) {
       redirect(buildLoginRedirect({ error: error.message }));
     }
-
-    redirect('/create-pet');
-  } catch {
-    redirect(buildLoginRedirect({ error: 'Unexpected sign-in error.' }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected sign-in error.';
+    redirect(buildLoginRedirect({ error: message }));
   }
+
+  redirect('/create-pet');
 }
 
 export async function signUpWithPassword(formData: FormData) {
@@ -111,9 +118,15 @@ export async function signUpWithPassword(formData: FormData) {
     redirect(buildLoginRedirect({ error: 'Please enter both email and password.' }));
   }
 
-  try {
-    const supabase = createServerSupabaseClient();
+  const supabase = createServerSupabaseClient();
 
+  let signUpResult:
+    | {
+        session: unknown | null;
+      }
+    | undefined;
+
+  try {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -127,16 +140,19 @@ export async function signUpWithPassword(formData: FormData) {
       redirect(buildLoginRedirect({ error: error.message }));
     }
 
-    if (data.session) {
-      redirect('/create-pet');
-    }
-
-    redirect(
-      buildLoginRedirect({
-        message: 'Account created. Please check your email to confirm your sign-in.',
-      }),
-    );
-  } catch {
-    redirect(buildLoginRedirect({ error: 'Unexpected sign-up error.' }));
+    signUpResult = data;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'Unexpected sign-up error.';
+    redirect(buildLoginRedirect({ error: message }));
   }
+
+  if (signUpResult?.session) {
+    redirect('/create-pet');
+  }
+
+  redirect(
+    buildLoginRedirect({
+      message: 'Account created. Please check your email to confirm your sign-in.',
+    }),
+  );
 }

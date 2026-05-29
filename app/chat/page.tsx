@@ -15,13 +15,12 @@ type PetRow = {
   daily_habits: string | null;
   image_url: string | null;
   is_default: boolean | null;
-  created_at: string | null;
   updated_at: string | null;
 };
 
 type ChatMessageRow = {
   id: string;
-  role: 'user' | 'assistant' | string;
+  role: string;
   content: string;
   created_at: string | null;
 };
@@ -49,7 +48,6 @@ function formatUsageLabel(usage: {
 
   const remaining = usage.remaining ?? 0;
   const limit = usage.limit ?? 20;
-
   return `${remaining} / ${limit} lifetime chats left`;
 }
 
@@ -82,25 +80,25 @@ function buildFallbackGreeting(pet: PetRow) {
 function buildCompanionshipSummary(pet: PetRow, memories: MemoryRow[]) {
   const parts: string[] = [];
 
-  if (pet.personality) {
-    parts.push(`${pet.name} usually feels ${pet.personality.toLowerCase()}.`);
+  if (pet.personality?.trim()) {
+    parts.push(`${pet.name} usually feels ${pet.personality.trim().toLowerCase()}.`);
   }
 
-  if (pet.favorite_food) {
-    parts.push(`Favorite food: ${pet.favorite_food}.`);
+  if (pet.favorite_food?.trim()) {
+    parts.push(`Favorite food: ${pet.favorite_food.trim()}.`);
   }
 
-  if (pet.daily_habits) {
-    parts.push(`Daily habits: ${pet.daily_habits}.`);
+  if (pet.daily_habits?.trim()) {
+    parts.push(`Daily habits: ${pet.daily_habits.trim()}.`);
   }
 
-  const topMemories = memories
-    .filter((item) => item.content?.trim())
-    .slice(0, 3)
-    .map((item) => item.content.trim());
+  const recentMemories = memories
+    .map((item) => item.content?.trim())
+    .filter(Boolean)
+    .slice(0, 3) as string[];
 
-  if (topMemories.length) {
-    parts.push(`Recent companionship clues: ${topMemories.join(' ')}`);
+  if (recentMemories.length) {
+    parts.push(`Recent companionship clues: ${recentMemories.join(' ')}`);
   }
 
   if (!parts.length) {
@@ -112,6 +110,7 @@ function buildCompanionshipSummary(pet: PetRow, memories: MemoryRow[]) {
 
 function buildCompactTypeLabel(value: string | null) {
   if (!value) return 'Memory';
+
   return value
     .replace(/_/g, ' ')
     .replace(/\b\w/g, (char) => char.toUpperCase());
@@ -135,13 +134,13 @@ export default async function ChatPage({
     redirect('/login?message=Please sign in first to continue chatting.');
   }
 
-  const requestedPetId = pickParam(searchParams?.pet_id);
+  const requestedPetId = pickParam(searchParams?.pet_id).trim();
 
   const [{ data: petsData }, usageResult] = await Promise.all([
     supabase
       .from('pets')
       .select(
-        'id, name, breed, personality, favorite_food, daily_habits, image_url, is_default, created_at, updated_at',
+        'id, name, breed, personality, favorite_food, daily_habits, image_url, is_default, updated_at',
       )
       .eq('user_id', user.id)
       .order('is_default', { ascending: false })
@@ -188,7 +187,7 @@ export default async function ChatPage({
     pets[0];
 
   const [{ data: messagesData }, { data: memoriesData }] = await Promise.all([
-    // 如果你的项目聊天记录表不是 chat_messages，只改这里的表名即可。
+    // 如果你的表名不是 chat_messages，只改这一处即可。
     supabase
       .from('chat_messages')
       .select('id, role, content, created_at')
@@ -222,7 +221,9 @@ export default async function ChatPage({
       : [{ role: 'assistant' as const, content: buildFallbackGreeting(selectedPet) }];
 
   const recentMemories = (memoriesData ?? []) as MemoryRow[];
+
   const summaryText = buildCompanionshipSummary(selectedPet, recentMemories);
+
   const usageLabel = formatUsageLabel(
     usageResult ?? {
       vip: false,
@@ -237,14 +238,15 @@ export default async function ChatPage({
         <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
           Chat with Dog
         </div>
+
         <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
           <div>
             <h1 className='text-3xl font-black tracking-tight text-slate-900'>
               Chat with {selectedPet.name}
             </h1>
             <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-              The chat area now prioritizes conversation space. Long summaries are folded into a
-              lighter panel so the message stream stays readable as the companionship history grows.
+              This layout gives more space to the conversation itself, while keeping summaries and
+              memory shortcuts available without overwhelming the chat stream.
             </p>
           </div>
 
@@ -284,6 +286,7 @@ export default async function ChatPage({
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
                   <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
+
                   {selectedPet.is_default ? (
                     <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
                       Primary
@@ -297,6 +300,7 @@ export default async function ChatPage({
                       {selectedPet.breed}
                     </span>
                   ) : null}
+
                   <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
                     {usageLabel}
                   </span>
@@ -317,6 +321,7 @@ export default async function ChatPage({
                 </div>
                 <h3 className='mt-1 text-lg font-black text-slate-900'>Choose a pet</h3>
               </div>
+
               <Link href='/create-pet' className='text-sm font-bold text-orange-700 hover:underline'>
                 + New
               </Link>
@@ -324,7 +329,7 @@ export default async function ChatPage({
 
             <div className='mt-4 grid gap-3'>
               {pets.map((pet) => {
-                const active = pet.id === selectedPet.id;
+                const isActive = pet.id === selectedPet.id;
 
                 return (
                   <Link
@@ -332,7 +337,7 @@ export default async function ChatPage({
                     href={`/chat?pet_id=${encodeURIComponent(pet.id)}`}
                     className={[
                       'rounded-[22px] border px-4 py-3 transition',
-                      active
+                      isActive
                         ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm'
                         : 'border-slate-200 bg-white hover:bg-slate-50',
                     ].join(' ')}
@@ -345,7 +350,7 @@ export default async function ChatPage({
                         </div>
                       </div>
 
-                      {active ? (
+                      {isActive ? (
                         <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
                           Active
                         </span>
@@ -414,6 +419,7 @@ export default async function ChatPage({
                       Expand only when you need the longer context
                     </div>
                   </div>
+
                   <span className='rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-700'>
                     Expand
                   </span>

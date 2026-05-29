@@ -1,20 +1,20 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { revalidatePath } from 'next/cache';
+import { getPetsForUser } from '@/lib/pets';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-type SearchParams = Record<string, string | string[] | undefined>;
+type SearchParamsShape = {
+  pet_id?: string | string[];
+  q?: string | string[];
+  type?: string | string[];
+  priority?: string | string[];
+  sort?: string | string[];
+  expand?: string | string[];
+};
 
-type PetRow = {
-  id: string;
-  name: string;
-  breed: string | null;
-  personality: string | null;
-  favorite_food: string | null;
-  daily_habits: string | null;
-  image_url: string | null;
-  is_default: boolean | null;
-  updated_at: string | null;
+type MemoriesPageProps = {
+  searchParams?: Promise<SearchParamsShape> | SearchParamsShape;
 };
 
 type MemoryRow = {
@@ -27,8 +27,12 @@ type MemoryRow = {
   updated_at: string | null;
 };
 
-function pickParam(value: string | string[] | undefined) {
-  return Array.isArray(value) ? value[0] : value ?? '';
+type PetOverview = Awaited<ReturnType<typeof getPetsForUser>>;
+type PetItem = PetOverview['pets'][number];
+
+function pickFirst(value: string | string[] | undefined) {
+  if (Array.isArray(value)) return value[0] ?? '';
+  return value ?? '';
 }
 
 function buildTypeLabel(value: string | null) {
@@ -47,15 +51,9 @@ function buildPriorityLabel(priority: number | null) {
 function buildPriorityTone(priority: number | null) {
   const value = priority ?? 1;
 
-  if (value >= 4) {
-    return 'border-rose-200 bg-rose-50 text-rose-700';
-  }
-
-  if (value === 3) {
-    return 'border-amber-200 bg-amber-50 text-amber-700';
-  }
-
-  return 'border-slate-200 bg-slate-100 text-slate-700';
+  if (value >= 4) return 'bg-rose-50 text-rose-700 border-rose-200';
+  if (value === 3) return 'bg-amber-50 text-amber-700 border-amber-200';
+  return 'bg-slate-100 text-slate-700 border-slate-200';
 }
 
 function formatDateLabel(value: string | null) {
@@ -76,12 +74,11 @@ function formatDateLabel(value: string | null) {
 
 function buildExcerpt(value: string, maxLength = 140) {
   const normalized = value.replace(/\s+/g, ' ').trim();
-
   if (normalized.length <= maxLength) return normalized;
   return `${normalized.slice(0, maxLength).trim()}…`;
 }
 
-function buildSummaryFromPetAndMemories(pet: PetRow | null, memories: MemoryRow[]) {
+function buildSummaryFromPetAndMemories(pet: PetItem | null, memories: MemoryRow[]) {
   if (!pet) {
     if (!memories.length) {
       return 'No memory content yet. As chats accumulate, this page can become a searchable memory workspace for habits, emotional clues, and preferences.';
@@ -90,34 +87,16 @@ function buildSummaryFromPetAndMemories(pet: PetRow | null, memories: MemoryRow[
     return `You currently have ${memories.length} memory entries across your account. Use search, type, priority, and sort controls to keep the list manageable as it grows.`;
   }
 
-  const parts: string[] = [];
-
-  if (pet.personality?.trim()) {
-    parts.push(`${pet.name} usually feels ${pet.personality.trim().toLowerCase()}.`);
-  }
-
-  if (pet.favorite_food?.trim()) {
-    parts.push(`Favorite food: ${pet.favorite_food.trim()}.`);
-  }
-
-  if (pet.daily_habits?.trim()) {
-    parts.push(`Daily habits: ${pet.daily_habits.trim()}.`);
-  }
-
-  const recentClues = memories
+  const clues = memories
     .map((item) => item.content?.trim())
     .filter(Boolean)
     .slice(0, 3) as string[];
 
-  if (recentClues.length) {
-    parts.push(`Recent memory clues: ${recentClues.join(' ')}`);
+  if (!clues.length) {
+    return `${pet.name} does not have saved memories yet. Keep chatting and new companionship clues will start appearing here.`;
   }
 
-  if (!parts.length) {
-    return `${pet.name} does not have a rich summary yet. More chats and saved memories will make this panel more helpful over time.`;
-  }
-
-  return parts.join(' ');
+  return `${pet.name}'s recent memory clues: ${clues.join(' ')}`;
 }
 
 function buildReturnTo(params: {
@@ -141,16 +120,12 @@ function buildReturnTo(params: {
   return query ? `/memories?${query}` : '/memories';
 }
 
-export default async function MemoriesPage({
-  searchParams,
-}: {
-  searchParams?: SearchParams;
-}) {
+export default async function MemoriesPage({ searchParams }: MemoriesPageProps) {
   async function deleteMemoryAction(formData: FormData) {
     'use server';
 
     if (!hasSupabaseEnv()) {
-      redirect('/memories?error=Please configure Supabase first.');
+      redirect('/memories?error=Please+configure+Supabase+first.');
     }
 
     const supabase = createServerSupabaseClient();
@@ -159,7 +134,7 @@ export default async function MemoriesPage({
     } = await supabase.auth.getUser();
 
     if (!user) {
-      redirect('/login?message=Please sign in first to manage memories.');
+      redirect('/login?message=Please+sign+in+first+to+manage+memories.');
     }
 
     const memoryId = String(formData.get('memoryId') || '').trim();
@@ -169,51 +144,52 @@ export default async function MemoriesPage({
       redirect(returnTo || '/memories');
     }
 
-    await supabase.from('pet_memories').delete().eq('id', memoryId).eq('user_id', user.id);
+    await supabase
+      .from('pet_memories')
+      .delete()
+      .eq('id', memoryId)
+      .eq('user_id', user.id);
 
     revalidatePath('/memories');
     redirect(returnTo || '/memories');
   }
 
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : undefined;
+
+  const selectedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
+  const q = pickFirst(resolvedSearchParams?.q).trim();
+  const type = pickFirst(resolvedSearchParams?.type).trim() || 'all';
+  const priority = pickFirst(resolvedSearchParams?.priority).trim() || 'all';
+  const sort = pickFirst(resolvedSearchParams?.sort).trim() || 'latest';
+  const expand = pickFirst(resolvedSearchParams?.expand).trim();
+
   if (!hasSupabaseEnv()) {
-    redirect('/login?message=Please configure Supabase first.');
+    redirect('/login?message=Please+configure+Supabase+first.');
   }
 
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    redirect('/login?message=Please sign in first to open memories.');
+  if (userError) {
+    redirect('/login?error=Unable+to+verify+your+session.+Please+sign+in+again.');
   }
 
-  const selectedPetId = pickParam(searchParams?.pet_id).trim();
-  const q = pickParam(searchParams?.q).trim();
-  const type = pickParam(searchParams?.type).trim() || 'all';
-  const priority = pickParam(searchParams?.priority).trim() || 'all';
-  const sort = pickParam(searchParams?.sort).trim() || 'latest';
-  const expand = pickParam(searchParams?.expand).trim();
+  if (!user) {
+    redirect('/login?message=Please+sign+in+first+to+open+memories.');
+  }
 
-  const [{ data: petsData }, { data: memoriesData }] = await Promise.all([
-    supabase
-      .from('pets')
-      .select(
-        'id, name, breed, personality, favorite_food, daily_habits, image_url, is_default, updated_at',
-      )
-      .eq('user_id', user.id)
-      .order('is_default', { ascending: false })
-      .order('updated_at', { ascending: false }),
-    supabase
-      .from('pet_memories')
-      .select('id, pet_id, content, memory_type, priority, created_at, updated_at')
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(500),
-  ]);
+  const petOverview = await getPetsForUser(user.id).catch(() => ({
+    pets: [],
+    defaultPetId: null,
+  }));
 
-  const pets = (petsData ?? []) as PetRow[];
-  const allMemories = (memoriesData ?? []) as MemoryRow[];
+  const pets = petOverview?.pets ?? [];
+  const defaultPetId = petOverview?.defaultPetId ?? null;
 
   if (!pets.length) {
     return (
@@ -246,13 +222,28 @@ export default async function MemoriesPage({
     );
   }
 
-  const defaultPet = pets.find((pet) => pet.is_default) ?? pets[0];
-  const scopedPet = selectedPetId ? pets.find((pet) => pet.id === selectedPetId) ?? defaultPet : null;
-  const chatPet = scopedPet ?? defaultPet;
+  const selectedPet =
+    pets.find((pet) => pet.id === selectedPetId) ??
+    pets.find((pet) => pet.id === defaultPetId) ??
+    pets[0] ??
+    null;
+
+  const baseQuery = supabase
+    .from('pet_memories')
+    .select('id, pet_id, content, memory_type, priority, created_at, updated_at')
+    .eq('user_id', user.id);
+
+  const scopedQuery = selectedPet
+    ? baseQuery.eq('pet_id', selectedPet.id)
+    : baseQuery;
+
+  const { data: memoriesData } = await scopedQuery
+    .order('updated_at', { ascending: false })
+    .limit(500);
+
+  const allMemories = (memoriesData ?? []) as MemoryRow[];
 
   let filteredMemories = allMemories.filter((item) => {
-    if (selectedPetId && item.pet_id !== selectedPetId) return false;
-
     if (q) {
       const haystack = `${item.content} ${item.memory_type ?? ''}`.toLowerCase();
       if (!haystack.includes(q.toLowerCase())) return false;
@@ -295,14 +286,10 @@ export default async function MemoriesPage({
     new Set(allMemories.map((item) => item.memory_type).filter(Boolean) as string[]),
   ).sort();
 
-  const scopeMemories = selectedPetId
-    ? allMemories.filter((item) => item.pet_id === selectedPetId)
-    : allMemories;
-
   const openAll = expand === 'all';
 
   const returnTo = buildReturnTo({
-    petId: selectedPetId,
+    petId: selectedPet?.id,
     q,
     type: type !== 'all' ? type : '',
     priority: priority !== 'all' ? priority : '',
@@ -330,7 +317,7 @@ export default async function MemoriesPage({
 
           <div className='flex flex-wrap gap-3'>
             <Link
-              href={`/chat?pet_id=${encodeURIComponent(chatPet.id)}`}
+              href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
               className='rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-orange-900 transition hover:bg-orange-50'
             >
               Back to Chat
@@ -349,25 +336,15 @@ export default async function MemoriesPage({
         <aside className='space-y-5'>
           <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
             <div className='flex items-start gap-4'>
-              {chatPet.image_url ? (
-                <img
-                  src={chatPet.image_url}
-                  alt={chatPet.name}
-                  className='h-20 w-20 rounded-[22px] object-cover'
-                />
-              ) : (
-                <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
-                  🐶
-                </div>
-              )}
+              <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
+                🐾
+              </div>
 
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
-                  <h2 className='truncate text-xl font-black text-slate-900'>
-                    {scopedPet ? scopedPet.name : 'All Pets'}
-                  </h2>
+                  <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
 
-                  {scopedPet?.is_default ? (
+                  {selectedPet.id === defaultPetId ? (
                     <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
                       Primary
                     </span>
@@ -375,23 +352,13 @@ export default async function MemoriesPage({
                 </div>
 
                 <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
-                  {scopedPet?.breed ? (
-                    <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
-                      {scopedPet.breed}
-                    </span>
-                  ) : (
-                    <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
-                      Cross-pet scope
-                    </span>
-                  )}
-
                   <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
-                    {scopeMemories.length} memories
+                    {allMemories.length} memories
                   </span>
                 </div>
 
                 <p className='mt-3 text-sm leading-7 text-slate-600'>
-                  Updated {formatDateLabel(scopedPet?.updated_at ?? chatPet.updated_at)}
+                  Updated {formatDateLabel(allMemories[0]?.updated_at ?? null)}
                 </p>
               </div>
             </div>
@@ -404,31 +371,8 @@ export default async function MemoriesPage({
             <h3 className='mt-1 text-lg font-black text-slate-900'>Memory scope</h3>
 
             <div className='mt-4 grid gap-3'>
-              <Link
-                href='/memories'
-                className={[
-                  'rounded-[22px] border px-4 py-3 transition',
-                  !selectedPetId
-                    ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm'
-                    : 'border-slate-200 bg-white hover:bg-slate-50',
-                ].join(' ')}
-              >
-                <div className='flex items-center justify-between gap-3'>
-                  <div>
-                    <div className='text-sm font-black text-slate-900'>All Pets</div>
-                    <div className='mt-1 text-xs text-slate-500'>Cross-pet memory list</div>
-                  </div>
-
-                  {!selectedPetId ? (
-                    <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
-                      Active
-                    </span>
-                  ) : null}
-                </div>
-              </Link>
-
               {pets.map((pet) => {
-                const isActive = pet.id === selectedPetId;
+                const isActive = pet.id === selectedPet.id;
 
                 return (
                   <Link
@@ -445,17 +389,13 @@ export default async function MemoriesPage({
                       <div className='min-w-0'>
                         <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
                         <div className='mt-1 truncate text-xs text-slate-500'>
-                          {pet.breed || 'Pet profile'}
+                          {pet.id === defaultPetId ? 'Primary pet' : 'Available scope'}
                         </div>
                       </div>
 
                       {isActive ? (
                         <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
                           Active
-                        </span>
-                      ) : pet.is_default && !selectedPetId ? (
-                        <span className='rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600'>
-                          Default
                         </span>
                       ) : null}
                     </div>
@@ -472,7 +412,7 @@ export default async function MemoriesPage({
             <h3 className='mt-1 text-lg font-black text-slate-900'>Summary panel</h3>
 
             <div className='mt-4 rounded-[22px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700'>
-              {buildSummaryFromPetAndMemories(scopedPet, scopeMemories)}
+              {buildSummaryFromPetAndMemories(selectedPet, allMemories)}
             </div>
 
             <div className='mt-4 flex flex-wrap gap-2'>
@@ -504,7 +444,7 @@ export default async function MemoriesPage({
               <div className='flex flex-wrap gap-2'>
                 <Link
                   href={buildReturnTo({
-                    petId: selectedPetId,
+                    petId: selectedPet.id,
                     q,
                     type: type !== 'all' ? type : '',
                     priority: priority !== 'all' ? priority : '',
@@ -518,7 +458,7 @@ export default async function MemoriesPage({
 
                 <Link
                   href={buildReturnTo({
-                    petId: selectedPetId,
+                    petId: selectedPet.id,
                     q,
                     type: type !== 'all' ? type : '',
                     priority: priority !== 'all' ? priority : '',
@@ -532,7 +472,7 @@ export default async function MemoriesPage({
             </div>
 
             <form action='/memories' method='get' className='mt-5 space-y-4'>
-              {selectedPetId ? <input type='hidden' name='pet_id' value={selectedPetId} /> : null}
+              <input type='hidden' name='pet_id' value={selectedPet.id} />
 
               <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]'>
                 <label className='grid gap-2 min-w-0'>
@@ -551,7 +491,7 @@ export default async function MemoriesPage({
                   </button>
 
                   <Link
-                    href={selectedPetId ? `/memories?pet_id=${encodeURIComponent(selectedPetId)}` : '/memories'}
+                    href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
                     className='rounded-full border border-slate-200 bg-white px-5 py-3 text-center text-sm font-bold text-slate-700 transition hover:bg-slate-50'
                   >
                     Reset view
@@ -629,7 +569,32 @@ export default async function MemoriesPage({
               </div>
             </div>
 
-            {!filteredMemories.length ? (
+            {!allMemories.length ? (
+              <div className='mt-5 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center'>
+                <div className='text-lg font-black text-slate-900'>
+                  No memories yet for {selectedPet.name}
+                </div>
+                <p className='mt-2 text-sm leading-7 text-slate-600'>
+                  Start chatting with {selectedPet.name} and memory entries will appear here as the
+                  companionship history grows.
+                </p>
+
+                <div className='mt-5 flex flex-wrap justify-center gap-3'>
+                  <Link
+                    href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                    className='brand-button'
+                  >
+                    Go to Chat
+                  </Link>
+                  <Link
+                    href='/pets'
+                    className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+                  >
+                    Manage Pets
+                  </Link>
+                </div>
+              </div>
+            ) : !filteredMemories.length ? (
               <div className='mt-5 rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center'>
                 <div className='text-lg font-black text-slate-900'>No memories match this view</div>
                 <p className='mt-2 text-sm leading-7 text-slate-600'>
@@ -639,7 +604,6 @@ export default async function MemoriesPage({
             ) : (
               <div className='mt-5 space-y-3'>
                 {filteredMemories.map((memory) => {
-                  const memoryPet = pets.find((item) => item.id === memory.pet_id);
                   const expandedByDefault = openAll;
 
                   return (
@@ -665,13 +629,7 @@ export default async function MemoriesPage({
                                 {buildPriorityLabel(memory.priority)}
                               </span>
 
-                              {memoryPet ? (
-                                <span className='rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700'>
-                                  {memoryPet.name}
-                                </span>
-                              ) : null}
-
-                              {memoryPet?.is_default ? (
+                              {selectedPet.id === defaultPetId ? (
                                 <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
                                   Primary
                                 </span>

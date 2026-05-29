@@ -23,8 +23,15 @@ type ChatMessageRow = {
 type MemoryRow = {
   id: string;
   content: string;
-  memory_type: string | null;
-  priority: number | null;
+  type: string;
+  importance: number | null;
+  updated_at: string | null;
+};
+
+type MemorySummaryRow = {
+  pet_id: string;
+  summary: string;
+  memory_count: number | null;
   updated_at: string | null;
 };
 
@@ -69,7 +76,25 @@ function buildFallbackGreeting(pet: PetItem) {
   return `*blinks slowly* Hi, I'm ${pet.name}. I'm here with you. Tell me what's on your mind, and let's chat for a while.`;
 }
 
-function buildCompanionshipSummary(pet: PetItem, memories: MemoryRow[]) {
+function buildMemoryTypeLabel(value: string | null | undefined) {
+  if (!value) return 'Memory';
+
+  return value
+    .replace(/_/g, ' ')
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function buildCompanionshipSummary(
+  pet: PetItem,
+  summaryRow: MemorySummaryRow | null,
+  memories: MemoryRow[],
+) {
+  const summaryText = summaryRow?.summary?.trim();
+
+  if (summaryText) {
+    return summaryText;
+  }
+
   const clues = memories
     .map((item) => item.content?.trim())
     .filter(Boolean)
@@ -82,19 +107,8 @@ function buildCompanionshipSummary(pet: PetItem, memories: MemoryRow[]) {
   return `${pet.name}'s recent companionship clues: ${clues.join(' ')}`;
 }
 
-function buildMemoryTypeLabel(value: string | null) {
-  if (!value) return 'Memory';
-
-  return value
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
 export default async function ChatPage({ searchParams }: ChatPageProps) {
-  const resolvedSearchParams = searchParams
-    ? await Promise.resolve(searchParams)
-    : undefined;
-
+  const resolvedSearchParams = searchParams ? await Promise.resolve(searchParams) : undefined;
   const requestedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
 
   if (!hasSupabaseEnv()) {
@@ -159,22 +173,28 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
     pets.find((pet) => pet.id === defaultPetId) ??
     pets[0];
 
-  const [{ data: messagesData }, { data: memoriesData }] = await Promise.all([
+  const [{ data: messagesData }, { data: memoriesData }, { data: summaryData }] = await Promise.all([
     supabase
       .from('chat_messages')
       .select('id, role, content, created_at')
       .eq('user_id', user.id)
       .eq('pet_id', selectedPet.id)
       .order('created_at', { ascending: true })
-      .limit(40),
+      .limit(60),
     supabase
-      .from('pet_memories')
-      .select('id, content, memory_type, priority, updated_at')
+      .from('memories')
+      .select('id, content, type, importance, updated_at')
       .eq('user_id', user.id)
       .eq('pet_id', selectedPet.id)
-      .order('priority', { ascending: false })
+      .order('importance', { ascending: false })
       .order('updated_at', { ascending: false })
       .limit(6),
+    supabase
+      .from('memory_summaries')
+      .select('pet_id, summary, memory_count, updated_at')
+      .eq('user_id', user.id)
+      .eq('pet_id', selectedPet.id)
+      .maybeSingle(),
   ]);
 
   const rawMessages = ((messagesData ?? []) as ChatMessageRow[]).filter(
@@ -193,7 +213,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
       : [{ role: 'assistant' as const, content: buildFallbackGreeting(selectedPet) }];
 
   const recentMemories = (memoriesData ?? []) as MemoryRow[];
-  const summaryText = buildCompanionshipSummary(selectedPet, recentMemories);
+  const memorySummary = (summaryData as MemorySummaryRow | null) ?? null;
+  const summaryText = buildCompanionshipSummary(selectedPet, memorySummary, recentMemories);
 
   const usageLabel = formatUsageLabel(
     usageResult ?? {
@@ -261,11 +282,13 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                   <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
                     {usageLabel}
                   </span>
+                  <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
+                    {memorySummary?.memory_count ?? recentMemories.length} memories
+                  </span>
                 </div>
 
                 <p className='mt-3 text-sm leading-7 text-slate-600'>
-                  Memory updated{' '}
-                  {formatDateLabel(recentMemories[0]?.updated_at ?? null)}
+                  Memory updated {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
                 </p>
               </div>
             </div>
@@ -338,7 +361,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                     className='rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-900'
                     title={memory.content}
                   >
-                    {buildMemoryTypeLabel(memory.memory_type)}
+                    {buildMemoryTypeLabel(memory.type)}
                   </span>
                 ))}
               </div>
@@ -357,9 +380,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                 <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                   Conversation Area
                 </div>
-                <h2 className='mt-1 text-2xl font-black text-slate-900'>
-                  Focused chat layout
-                </h2>
+                <h2 className='mt-1 text-2xl font-black text-slate-900'>Focused chat layout</h2>
               </div>
 
               <div className='flex flex-wrap gap-2 text-xs text-slate-600'>
@@ -396,9 +417,11 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
           <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
             <ChatPlayground
+              key={selectedPet.id}
               petId={selectedPet.id}
               initialMessages={initialMessages}
               initialRemainingLabel={usageLabel}
+              initialMemorySummary={summaryText}
             />
           </section>
         </main>

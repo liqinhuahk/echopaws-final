@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, FormEvent, ReactNode, useMemo, useState } from 'react';
+import { Fragment, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
 
 type ChatPlaygroundProps = {
   petId?: string | null;
@@ -276,6 +276,16 @@ export function ChatPlayground({
   const [usageDetail, setUsageDetail] = useState<string | null>(null);
   const [memoryHints, setMemoryHints] = useState<string[]>([]);
 
+  useEffect(() => {
+    setMessages(initialMessages);
+    setInput('');
+    setLoading(false);
+    setError(null);
+    setUsageLabel(initialRemainingLabel);
+    setUsageDetail(null);
+    setMemoryHints([]);
+  }, [petId, initialMessages, initialRemainingLabel]);
+
   const trimmedLength = input.trim().length;
 
   const canSubmit = useMemo(() => {
@@ -320,7 +330,7 @@ export function ChatPlayground({
       setMessages((current) => [
         ...current,
         { role: 'user', content: message },
-        { role: 'assistant', content: data!.reply! },
+        { role: 'assistant', content: data.reply! },
       ]);
 
       if (data.usage) {
@@ -366,7 +376,7 @@ export function ChatPlayground({
       <div className='mt-5 grid gap-3'>
         {messages.map((message, index) => (
           <div
-            key={`${message.role}-${index}`}
+            key={`${message.role}-${index}-${message.content.slice(0, 24)}`}
             className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
           >
             {message.role === 'assistant' ? (

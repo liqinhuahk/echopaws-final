@@ -1,232 +1,186 @@
-import Link from 'next/link';
-import { CreatePetForm } from '@/components/create-pet-form';
+import { redirect } from 'next/navigation';
+import { createPetAction } from '@/app/actions/pets';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
-import { FREE_TOTAL_CHAT_LIMIT, isVipActive } from '@/lib/chat-access';
-import { FREE_TIER_MAX_PETS, getPetsForUser } from '@/lib/pets';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
-export default async function CreatePetPage({
-  searchParams,
-}: {
-  searchParams?: { error?: string; message?: string };
-}) {
-  let petCount = 0;
-  let vip = false;
-  let freeSlotsLeft = FREE_TIER_MAX_PETS;
-  let canCreate = true;
-  let showLimitNotice = false;
-  let headerCtaLabel = 'Preview Chat';
-  let headerCtaHref = '/chat';
+type CreatePetSearchParams = Promise<{
+  message?: string | string[];
+  error?: string | string[];
+}>;
 
-  if (hasSupabaseEnv()) {
-    try {
-      const supabase = createServerSupabaseClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
+type CreatePetPageProps = {
+  searchParams?: CreatePetSearchParams;
+};
 
-      if (user) {
-        const [petsData, subscription] = await Promise.all([
-          getPetsForUser(user.id),
-          findSubscriptionByUserId(user.id),
-        ]);
+function pickFirst(value: string | string[] | undefined) {
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
+  }
 
-        petCount = petsData.pets.length;
-        vip = isVipActive(subscription);
-        freeSlotsLeft = Math.max(FREE_TIER_MAX_PETS - petCount, 0);
-        canCreate = vip || freeSlotsLeft > 0;
-        showLimitNotice = !vip && petCount >= FREE_TIER_MAX_PETS;
+  return value ?? '';
+}
 
-        if (showLimitNotice) {
-          headerCtaLabel = 'Upgrade to VIP';
-          headerCtaHref = '/pricing';
-        } else if (petCount > 0) {
-          headerCtaLabel = 'Manage Pets';
-          headerCtaHref = '/pets';
-        }
-      }
-    } catch {
-      // Keep graceful fallback UI if data cannot be loaded.
+export default async function CreatePetPage({ searchParams }: CreatePetPageProps) {
+  let message = '';
+  let error = '';
+
+  try {
+    const resolvedSearchParams = (await searchParams) ?? {};
+    message = pickFirst(resolvedSearchParams.message);
+    error = pickFirst(resolvedSearchParams.error);
+  } catch {
+    message = '';
+    error = '';
+  }
+
+  if (!hasSupabaseEnv()) {
+    redirect('/login?error=Please+configure+Supabase+first.');
+  }
+
+  const supabase = createServerSupabaseClient();
+
+  try {
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      redirect('/login?message=Please+log+in+to+continue.');
     }
+  } catch {
+    redirect('/login?error=Unable+to+verify+your+session.+Please+sign+in+again.');
   }
 
   return (
     <>
-      <SiteHeader ctaLabel={headerCtaLabel} ctaHref={headerCtaHref} />
+      <SiteHeader ctaLabel='Open Memories' ctaHref='/memories' />
 
       <main className='container-shell py-10'>
-        <div className='eyebrow'>Create Your Pet</div>
-        <h1 className='page-title mt-4'>Give your pet a soul that remembers you</h1>
-        <p className='page-subtitle mx-0 max-w-4xl'>
-          Build a pet profile with a real photo, personality, daily habits, and a
-          chat-ready identity. Free includes up to {FREE_TIER_MAX_PETS} pets and{' '}
-          {FREE_TOTAL_CHAT_LIMIT} lifetime chats shared across your account.
-        </p>
-
-        {searchParams?.message ? (
-          <div className='mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
-            {searchParams.message}
-          </div>
-        ) : null}
-
-        {searchParams?.error ? (
-          <div className='mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-            {searchParams.error}
-          </div>
-        ) : null}
-
-        {!vip ? (
-          <div className='mt-6 rounded-2xl bg-amber-50 px-4 py-4 text-sm text-amber-900'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-amber-800'>
-              Free plan limits
-            </div>
-            <p className='mt-2 leading-7'>
-              Free supports up to <strong>{FREE_TIER_MAX_PETS} pets</strong> and{' '}
-              <strong>{FREE_TOTAL_CHAT_LIMIT} lifetime chats</strong>. Chats are
-              shared across your account and do not reset daily.
-            </p>
-            <p className='mt-2 leading-7'>
-              {showLimitNotice
-                ? `You already have ${petCount} pets on Free. Upgrade to VIP if you want to create more pets.`
-                : `You currently have ${petCount} pet${petCount !== 1 ? 's' : ''}. You can still create ${freeSlotsLeft} more on Free.`}
-            </p>
-          </div>
-        ) : (
-          <div className='mt-6 rounded-2xl bg-orange-50 px-4 py-4 text-sm text-orange-900'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-orange-800'>
-              VIP active
-            </div>
-            <p className='mt-2 leading-7'>
-              Your account is on VIP. You can create more than {FREE_TIER_MAX_PETS}{' '}
-              pets and chat without the Free plan limit.
-            </p>
-          </div>
-        )}
-
-        <section className='grid gap-6 py-8 lg:grid-cols-[380px_1fr]'>
-          <div className='glass-card p-6'>
-            <div>
-              <h2 className='text-2xl font-bold tracking-tight'>Pet Profile</h2>
-              <p className='mt-1 text-sm text-muted'>
-                Required fields are validated server-side to keep the pets table
-                clean and consistent.
-              </p>
-            </div>
-
-            {showLimitNotice ? (
-              <div className='mt-5 rounded-[24px] border border-orange-200 bg-gradient-to-b from-orange-50 to-amber-50 p-5'>
-                <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-                  Free pet limit reached
-                </div>
-                <h3 className='mt-2 text-xl font-bold tracking-tight'>
-                  You have reached the Free pet limit
-                </h3>
-                <p className='mt-3 text-sm leading-8 text-muted'>
-                  Free supports up to {FREE_TIER_MAX_PETS} pets. Upgrade to VIP to
-                  create more pets, unlock unlimited chats, and keep building deeper
-                  long-term memory.
-                </p>
-
-                <div className='mt-5 grid gap-3'>
-                  <Link href='/pricing' className='brand-button w-full text-center'>
-                    Upgrade to VIP
-                  </Link>
-                  <Link href='/pets' className='subtle-button w-full text-center'>
-                    Manage Existing Pets
-                  </Link>
-                  <Link href='/chat' className='subtle-button w-full text-center'>
-                    Back to Chat
-                  </Link>
-                </div>
-              </div>
-            ) : (
-              <>
-                <CreatePetForm />
-
-                {!vip ? (
-                  <div className='mt-5 rounded-2xl bg-stone-50 px-4 py-3 text-sm text-stone-700'>
-                    You can create {freeSlotsLeft} more{' '}
-                    {freeSlotsLeft === 1 ? 'pet' : 'pets'} on Free.
-                  </div>
-                ) : (
-                  <div className='mt-5 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-900'>
-                    VIP active. Your account can create more than {FREE_TIER_MAX_PETS}{' '}
-                    pets.
-                  </div>
-                )}
-              </>
-            )}
+        <section className='mx-auto max-w-3xl rounded-[32px] border border-orange-100 bg-white p-7 shadow-sm md:p-8'>
+          <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+            Create Pet
           </div>
 
-          <div className='glass-card p-6'>
-            <div>
-              <h2 className='text-2xl font-bold tracking-tight'>
-                What happens after you submit
-              </h2>
-              <p className='mt-1 text-sm text-muted'>
-                This flow matches the current live logic for pet creation.
-              </p>
-            </div>
+          <h1 className='mt-3 text-3xl font-black tracking-tight text-slate-900 md:text-5xl'>
+            Create your AI pet profile
+          </h1>
 
-            <div className='mt-5 rounded-[24px] border border-black/5 bg-card-gradient p-6'>
-              <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-                Create Pet Flow
-              </div>
-              <ol className='mt-3 grid gap-3 text-sm leading-8 text-ink'>
-                <li>1. Server validates name, breed, personality, image format, and image size</li>
-                <li>2. Free accounts are checked against the {FREE_TIER_MAX_PETS}-pet limit</li>
-                <li>3. Image uploads to the Supabase Storage bucket: pet-images</li>
-                <li>4. A system prompt is generated and written to the pets table</li>
-                <li>5. The page redirects to chat with the newly created pet selected</li>
-              </ol>
-            </div>
+          <p className='mt-3 max-w-2xl text-sm leading-7 text-slate-600'>
+            Fill in a few details so EchoPaws can start building memory, personality, and a warmer
+            companionship style around your pet.
+          </p>
 
-            <div className='mt-5 grid gap-3 md:grid-cols-3'>
-              <div className='rounded-2xl border border-black/5 bg-white p-4'>
-                <strong className='block text-2xl'>5MB</strong>
-                <span className='text-sm text-muted'>Max image size</span>
-              </div>
-              <div className='rounded-2xl border border-black/5 bg-white p-4'>
-                <strong className='block text-2xl'>3</strong>
-                <span className='text-sm text-muted'>Formats: JPG / PNG / WebP</span>
-              </div>
-              <div className='rounded-2xl border border-black/5 bg-white p-4'>
-                <strong className='block text-2xl'>{FREE_TIER_MAX_PETS}</strong>
-                <span className='text-sm text-muted'>Free max pets</span>
-              </div>
-            </div>
-
-            <div className='mt-5 grid gap-4 md:grid-cols-2'>
-              <div className='rounded-[24px] border border-black/5 bg-white p-5'>
-                <div className='feature-icon'>🧠</div>
-                <h3 className='text-lg font-bold'>Auto-Generated Personality</h3>
-                <p className='mt-2 text-sm leading-8 text-muted'>
-                  Based on breed, personality, food, and habits, the system
-                  auto-generates a ready-to-use pet prompt for chat.
-                </p>
-              </div>
-
-              <div className='rounded-[24px] border border-black/5 bg-white p-5'>
-                <div className='feature-icon'>☁️</div>
-                <h3 className='text-lg font-bold'>Image Stored in Database</h3>
-                <p className='mt-2 text-sm leading-8 text-muted'>
-                  After upload, the public image URL is saved in pets.image_url and
-                  shown directly on the chat and pets pages.
-                </p>
-              </div>
-            </div>
-
+          {message ? (
             <div className='mt-5 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
-              Free includes {FREE_TOTAL_CHAT_LIMIT} lifetime chats. VIP unlocks
-              unlimited chats, more pet capacity, and deeper long-term memory.
+              {message}
             </div>
-          </div>
+          ) : null}
+
+          {error ? (
+            <div className='mt-5 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+              {error}
+            </div>
+          ) : null}
+
+          <form
+            action={createPetAction}
+            className='mt-6 grid gap-5'
+            encType='multipart/form-data'
+          >
+            <label className='grid gap-2 text-sm font-bold'>
+              Name
+              <input
+                className='input-shell'
+                name='name'
+                type='text'
+                placeholder='e.g. Max'
+                required
+                maxLength={30}
+              />
+            </label>
+
+            <label className='grid gap-2 text-sm font-bold'>
+              Breed
+              <input
+                className='input-shell'
+                name='breed'
+                type='text'
+                placeholder='e.g. Shiba Inu'
+                required
+                maxLength={80}
+              />
+            </label>
+
+            <label className='grid gap-2 text-sm font-bold'>
+              Personality
+              <input
+                className='input-shell'
+                name='personality'
+                type='text'
+                placeholder='e.g. Playful, clingy, loves belly rubs'
+                required
+                maxLength={120}
+              />
+            </label>
+
+            <label className='grid gap-2 text-sm font-bold'>
+              Favorite Food
+              <input
+                className='input-shell'
+                name='favoriteFood'
+                type='text'
+                placeholder='e.g. Chicken breast, freeze-dried treats'
+                maxLength={120}
+              />
+            </label>
+
+            <label className='grid gap-2 text-sm font-bold'>
+              Daily Habits
+              <textarea
+                className='input-shell min-h-[120px]'
+                name='dailyHabits'
+                placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
+                maxLength={500}
+              />
+            </label>
+
+            <label className='grid gap-2 text-sm font-bold'>
+              Upload Photo
+              <div className='rounded-[22px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
+                <div className='text-3xl'>📷</div>
+                <p className='mt-3 text-sm font-bold'>Supports JPG / PNG / WebP, max 5MB</p>
+                <p className='mt-1 text-xs font-normal text-slate-600'>
+                  The image will be stored with your pet profile and used to personalize the
+                  experience.
+                </p>
+                <input
+                  className='input-shell mt-4'
+                  name='image'
+                  type='file'
+                  accept='image/png,image/jpeg,image/webp'
+                  required
+                />
+              </div>
+            </label>
+
+            <div className='flex flex-wrap gap-3 pt-2'>
+              <button type='submit' className='brand-button'>
+                Save Pet Profile
+              </button>
+
+              <a
+                href='/memories'
+                className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+              >
+                Back to Memories
+              </a>
+            </div>
+          </form>
         </section>
       </main>
 
-      <SiteFooter rightText='Free Max 2 Pets · 20 Lifetime Chats · Storage Upload · Server Validation · VIP Upgrade Path' />
+      <SiteFooter rightText='EchoPaws · Create your first pet profile' />
     </>
   );
 }

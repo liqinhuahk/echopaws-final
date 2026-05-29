@@ -5,13 +5,18 @@ export const FREE_TOTAL_CHAT_LIMIT = 20;
 
 const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-export function isVipActive(subscription: { plan?: string | null; status?: string | null } | null | undefined) {
+export function isVipActive(
+  subscription: { plan?: string | null; status?: string | null } | null | undefined,
+) {
   return subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
 }
 
 export async function getTotalUsage(userId: string) {
   const supabase = createSupabaseAdminClient();
-  const { data, error } = await supabase.from('usage_logs').select('message_count').eq('user_id', userId);
+  const { data, error } = await supabase
+    .from('usage_logs')
+    .select('message_count')
+    .eq('user_id', userId);
 
   if (error) {
     throw error;
@@ -25,7 +30,10 @@ export async function getTotalUsage(userId: string) {
 }
 
 export async function getChatAccessState(userId: string) {
-  const [subscription, usage] = await Promise.all([findSubscriptionByUserId(userId), getTotalUsage(userId)]);
+  const [subscription, usage] = await Promise.all([
+    findSubscriptionByUserId(userId),
+    getTotalUsage(userId),
+  ]);
 
   const vip = isVipActive(subscription);
   const limit = vip ? null : FREE_TOTAL_CHAT_LIMIT;
@@ -37,6 +45,22 @@ export async function getChatAccessState(userId: string) {
     limit,
     used: usage.used,
     remaining,
+  };
+}
+
+/**
+ * 兼容 app/chat/page.tsx 当前使用的导出名
+ */
+export async function getChatAccessStatus(userId: string) {
+  const state = await getChatAccessState(userId);
+
+  return {
+    plan: state.vip ? 'vip' : 'free',
+    vip: state.vip,
+    used: state.used,
+    limit: state.limit,
+    remaining: state.remaining,
+    subscription: state.subscription,
   };
 }
 

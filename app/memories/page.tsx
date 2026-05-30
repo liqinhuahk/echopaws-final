@@ -378,7 +378,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
     <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
       <div className='mb-6 rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm'>
         <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-          Memories List
+          Memories
         </div>
 
         <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
@@ -391,12 +391,12 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
             <div>
               <h1 className='text-3xl font-black tracking-tight text-slate-900'>
-                Searchable memory management
+                Memories of {selectedPet.name}
               </h1>
               <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-                You are currently viewing {selectedPet.name}&apos;s memory workspace. This version keeps
-                rows compact by default, separates the toolbar into stable sections, and makes
-                long memory history easier to scan on both desktop and mobile.
+                This workspace gives more room to searchable memories, while keeping summary,
+                filters, and pet switching close at hand so {selectedPet.name}&apos;s history stays
+                easy to scan on both desktop and mobile.
               </p>
             </div>
           </div>

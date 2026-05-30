@@ -274,7 +274,7 @@ function PetReplyAvatar({
 }) {
   if (petImageUrl) {
     return (
-      <div className='h-10 w-10 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50 shadow-sm'>
+      <div className='h-10 w-10 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50 shadow-sm sm:h-11 sm:w-11'>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={petImageUrl}
@@ -287,10 +287,21 @@ function PetReplyAvatar({
 
   return (
     <div
-      className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-100 text-base text-orange-900 shadow-sm'
+      className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-100 text-base text-orange-900 shadow-sm sm:h-11 sm:w-11'
       aria-label={`${petName} avatar placeholder`}
     >
       🐾
+    </div>
+  );
+}
+
+function UserBubbleAvatar() {
+  return (
+    <div
+      className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-xs font-black text-slate-700 shadow-sm sm:h-11 sm:w-11'
+      aria-label='Your avatar'
+    >
+      YOU
     </div>
   );
 }
@@ -407,50 +418,70 @@ export function ChatPlayground({
         </a>
       </div>
 
-      <div className='mt-5 grid gap-3'>
-        {messages.map((message, index) => {
-          const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
+      <div className='mt-5 rounded-[28px] border border-slate-200 bg-gradient-to-b from-slate-50 to-white p-3 shadow-inner sm:p-4'>
+        <div className='grid gap-3'>
+          {messages.map((message, index) => {
+            const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
-          if (message.role === 'assistant') {
+            if (message.role === 'assistant') {
+              return (
+                <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
+                  <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+                  <div className='min-w-0 max-w-[84%] sm:max-w-[78%] md:max-w-[72%]'>
+                    <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
+                      {petName}
+                    </div>
+
+                    <div className='rounded-[22px] rounded-bl-md border border-orange-100 bg-[linear-gradient(135deg,#fff6ea_0%,#ffe9cf_100%)] px-4 py-3 text-[15px] text-slate-800 shadow-sm'>
+                      {renderAssistantContent(message.content)}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
             return (
-              <div key={messageKey} className='flex items-end gap-3'>
-                <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+              <div key={messageKey} className='flex justify-end'>
+                <div className='flex max-w-[92%] items-end gap-2.5 sm:max-w-[86%] sm:gap-3 md:max-w-[78%]'>
+                  <div className='min-w-0 flex-1'>
+                    <div className='mb-1 px-1 text-right text-[11px] font-bold tracking-wide text-slate-500'>
+                      You
+                    </div>
 
-                <div className='min-w-0 max-w-[85%]'>
-                  <div className='chat-bubble-ai'>
-                    {renderAssistantContent(message.content)}
+                    <div className='rounded-[22px] rounded-br-md bg-[linear-gradient(135deg,#f7fafc_0%,#eef2f7_100%)] px-4 py-3 text-[15px] text-slate-800 shadow-sm ring-1 ring-slate-200/80'>
+                      <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
+                    </div>
+                  </div>
+
+                  <div className='hidden sm:block'>
+                    <UserBubbleAvatar />
                   </div>
                 </div>
               </div>
             );
-          }
+          })}
 
-          return (
-            <div key={messageKey} className='flex justify-end'>
-              <div className='max-w-[85%]'>
-                <div className='chat-bubble-user'>
-                  <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
+          {loading ? (
+            <div className='flex items-end gap-2.5 sm:gap-3'>
+              <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+              <div className='min-w-0 max-w-[84%] sm:max-w-[78%] md:max-w-[72%]'>
+                <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
+                  {petName}
+                </div>
+
+                <div className='rounded-[22px] rounded-bl-md border border-orange-100 bg-[linear-gradient(135deg,#fff6ea_0%,#ffe9cf_100%)] px-4 py-3 shadow-sm'>
+                  <div className='flex items-center gap-2 text-slate-500'>
+                    <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300' />
+                    <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
+                    <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:240ms]' />
+                  </div>
                 </div>
               </div>
             </div>
-          );
-        })}
-
-        {loading ? (
-          <div className='flex items-end gap-3'>
-            <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-
-            <div className='min-w-0 max-w-[85%]'>
-              <div className='chat-bubble-ai'>
-                <div className='flex items-center gap-2 text-slate-500'>
-                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300' />
-                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
-                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:240ms]' />
-                </div>
-              </div>
-            </div>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
 
       {error ? (
@@ -478,27 +509,32 @@ export function ChatPlayground({
       ) : null}
 
       <form className='mt-5' onSubmit={handleSubmit}>
-        <div className='flex flex-col gap-3 sm:flex-row'>
-          <input
-            className='input-shell rounded-full'
-            type='text'
-            placeholder='Type a message, e.g. I am feeling a little tired today'
-            value={input}
-            maxLength={800}
-            onChange={(event) => setInput(event.target.value)}
-          />
-          <button
-            type='submit'
-            className='brand-button whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60'
-            disabled={!canSubmit}
-          >
-            {loading ? 'Sending...' : 'Send'}
-          </button>
-        </div>
+        <div className='rounded-[26px] border border-slate-200 bg-white p-3 shadow-sm'>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-end'>
+            <div className='min-w-0 flex-1'>
+              <input
+                className='input-shell rounded-full'
+                type='text'
+                placeholder='Type a message, e.g. I am feeling a little tired today'
+                value={input}
+                maxLength={800}
+                onChange={(event) => setInput(event.target.value)}
+              />
+            </div>
 
-        <div className='mt-3 flex flex-col gap-2 px-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between'>
-          <span>{usageDetail || 'Free chats are shared across your account.'}</span>
-          <span>{input.length} / 800</span>
+            <button
+              type='submit'
+              className='brand-button whitespace-nowrap disabled:cursor-not-allowed disabled:opacity-60'
+              disabled={!canSubmit}
+            >
+              {loading ? 'Sending...' : 'Send'}
+            </button>
+          </div>
+
+          <div className='mt-3 flex flex-col gap-2 px-2 text-xs text-muted sm:flex-row sm:items-center sm:justify-between'>
+            <span>{usageDetail || 'Free chats are shared across your account.'}</span>
+            <span>{input.length} / 800</span>
+          </div>
         </div>
       </form>
     </div>

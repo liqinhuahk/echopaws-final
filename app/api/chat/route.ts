@@ -1,15 +1,17 @@
-import { NextResponse } from 'next/server';
-import { consumeFreeChatQuota, getChatAccessStatus } from '@/lib/chat-access';
-import { extractAndStoreMemories } from '@/lib/memory-service';
-import { createSupabaseAdminClient } from '@/lib/supabase/admin';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import { NextRequest, NextResponse } from 'next/server';
 
-export const runtime = 'nodejs';
-export const dynamic = 'force-dynamic';
+import {
+  createSupabaseAdminClient,
+  createSupabaseServerClient,
+  hasSupabaseAdminEnv,
+  hasSupabaseEnv,
+} from '@/lib/auth';
+import { consumeFreeChatQuota, getChatAccessState } from '@/lib/chat-access';
+import { extractAndStoreMemories } from '@/lib/memory-service';
 
 type ChatRequestBody = {
-  message?: unknown;
-  petId?: unknown;
+  message?: string;
+  petId?: string | null;
 };
 
 type PetRow = {
@@ -22,471 +24,415 @@ type PetRow = {
   system_prompt: string | null;
 };
 
-type ChatMessageRow = {
-  role: 'user' | 'assistant';
-  content: string;
+type UsagePayload = {
+  plan: string;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  vip: boolean;
 };
 
-type MemoryRow = {
-  content: string;
-  type: string | null;
-  importance: number | null;
-};
+const MAX_MESSAGE_LENGTH = 800;
+const HISTORY_LIMIT = 12;
+const MEMORY_LIMIT = 6;
+const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
-type MemorySummaryRow = {
-  summary: string;
-  memory_count: number | null;
-};
-
-function normalizeText(value: unknown) {
-  return typeof value === 'string' ? value.trim() : '';
+function jsonError(message: string, status = 400, usage?: UsagePayload) {
+  return NextResponse.json(
+    usage ? { error: message, usage } : { error: message },
+    { status },
+  );
 }
 
-function defaultSystemPrompt(pet: PetRow) {
+function buildFallbackSystemPrompt(pet: PetRow) {
+  if (pet.system_prompt?.trim()) {
+    return pet.system_prompt.trim();
+  }
+
   return [
     `You are a ${pet.breed || 'pet'} named ${pet.name}.`,
     pet.personality ? `Your personality is: ${pet.personality}.` : null,
     pet.favorite_food ? `You love eating: ${pet.favorite_food}.` : null,
     pet.daily_habits ? `Your daily habits: ${pet.daily_habits}.` : null,
-    'You love your owner deeply and respond in a warm, affectionate, short, and comforting way.',
-    'Act like a real pet — not a customer service bot or encyclopedia.',
-    'Keep replies concise, emotionally warm, and natural for a pet companion app.',
-    'When suitable, you may include gentle pet-like action text such as *blinks slowly* or *nuzzles your hand*.',
+    'You love your owner deeply and respond in a warm, short, and comforting way.',
+    'Act like a real pet — not a customer service bot or an encyclopedia.',
+    'You remember important things your owner has told you and gently bring them up at the right moments.',
+    'Keep each reply concise, affectionate, and natural for a chat bubble.',
   ]
     .filter(Boolean)
     .join('\n');
 }
 
-function buildFallbackReply(pet: PetRow, userMessage: string) {
-  const text = userMessage.toLowerCase();
-
-  if (/(tired|sleepy|exhausted|fatigued|worn out)/i.test(text)) {
-    return `*blinks slowly* Oh, you sound tired. Come here—let's stay close for a while, and you can rest with me, okay?`;
-  }
-
-  if (/(sad|upset|down|heartbroken|unhappy)/i.test(text)) {
-    return `*nuzzles your hand* I'm here with you. You don't have to carry it all alone—stay with me for a bit, okay?`;
-  }
-
-  if (/(happy|excited|great|wonderful|amazing)/i.test(text)) {
-    return `*wags happily* That makes me so happy too! Tell me more—I want to share the good feeling with you.`;
-  }
-
-  if (/(hello|hi|hey)/i.test(text)) {
-    return `*blinks slowly* Hi, I'm ${pet.name}. I'm so happy you're here. Tell me what's on your mind, and let's chat for a while.`;
-  }
-
-  return `*blinks slowly* I'm here with you. Tell me more, and I'll stay close and listen.`;
-}
-
-async function callGemini(params: {
-  systemInstruction: string;
-  prompt: string;
-}) {
-  const apiKey = process.env.GEMINI_API_KEY;
-  const model = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
-
-  if (!apiKey) {
-    return '';
-  }
-
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      cache: 'no-store',
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: params.systemInstruction }],
-          },
-          {
-            role: 'user',
-            parts: [{ text: params.prompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.8,
-          maxOutputTokens: 512,
-        },
-      }),
-    },
-  );
-
-  if (!response.ok) {
-    const text = await response.text();
-    throw new Error(`Gemini API failed: ${text}`);
-  }
-
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{
-          text?: string;
-        }>;
-      };
-    }>;
-  };
-
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
-}
-
-async function resolveSelectedPet(params: {
-  userId: string;
-  requestedPetId: string;
-}) {
-  const admin = createSupabaseAdminClient();
-
-  if (params.requestedPetId) {
-    const { data, error } = await admin
-      .from('pets')
-      .select('id, name, breed, personality, favorite_food, daily_habits, system_prompt')
-      .eq('user_id', params.userId)
-      .eq('id', params.requestedPetId)
-      .maybeSingle();
-
-    if (error) throw error;
-    if (data) return data as PetRow;
-  }
-
-  const [{ data: profile, error: profileError }, { data: pets, error: petsError }] = await Promise.all([
-    admin.from('profiles').select('default_pet_id').eq('id', params.userId).maybeSingle(),
-    admin
-      .from('pets')
-      .select('id, name, breed, personality, favorite_food, daily_habits, system_prompt')
-      .eq('user_id', params.userId)
-      .order('created_at', { ascending: false })
-      .limit(20),
-  ]);
-
-  if (profileError) throw profileError;
-  if (petsError) throw petsError;
-
-  const petList = (pets ?? []) as PetRow[];
-  if (!petList.length) {
-    return null;
-  }
-
-  const defaultPetId =
-    profile && typeof profile === 'object' && 'default_pet_id' in profile
-      ? String(profile.default_pet_id || '')
-      : '';
-
-  return petList.find((pet) => pet.id === defaultPetId) ?? petList[0];
-}
-
-async function fetchChatContext(params: {
-  userId: string;
-  petId: string;
-}) {
-  const admin = createSupabaseAdminClient();
-
-  const [{ data: messages }, { data: memories }, { data: summary }] = await Promise.all([
-    admin
-      .from('chat_messages')
-      .select('role, content')
-      .eq('user_id', params.userId)
-      .eq('pet_id', params.petId)
-      .order('created_at', { ascending: false })
-      .limit(12),
-    admin
-      .from('memories')
-      .select('content, type, importance')
-      .eq('user_id', params.userId)
-      .eq('pet_id', params.petId)
-      .order('importance', { ascending: false })
-      .order('updated_at', { ascending: false })
-      .limit(6),
-    admin
-      .from('memory_summaries')
-      .select('summary, memory_count')
-      .eq('user_id', params.userId)
-      .eq('pet_id', params.petId)
-      .maybeSingle(),
-  ]);
-
-  return {
-    recentMessages: ((messages ?? []) as ChatMessageRow[]).reverse(),
-    recentMemories: (memories ?? []) as MemoryRow[],
-    summaryRow: (summary as MemorySummaryRow | null) ?? null,
-  };
-}
-
-function buildPrompt(params: {
-  pet: PetRow;
-  userMessage: string;
-  recentMessages: ChatMessageRow[];
-  recentMemories: MemoryRow[];
-  summaryText: string;
-}) {
-  const conversationBlock = params.recentMessages.length
-    ? params.recentMessages
-        .map((item) => `${item.role === 'assistant' ? params.pet.name : 'User'}: ${item.content}`)
-        .join('\n')
-    : 'No recent chat history.';
-
-  const memoryBlock = params.recentMemories.length
-    ? params.recentMemories
-        .map(
-          (item, index) =>
-            `${index + 1}. [${item.type || 'memory'} | priority ${item.importance ?? 1}] ${item.content}`,
-        )
-        .join('\n')
-    : 'No saved memories yet.';
-
-  return [
-    `Pet name: ${params.pet.name}`,
-    `Pet breed: ${params.pet.breed || 'Unknown'}`,
-    `Pet personality: ${params.pet.personality || 'Warm and affectionate'}`,
-    '',
-    'Companionship summary:',
-    params.summaryText || 'No current summary.',
-    '',
-    'Recent memory clues:',
-    memoryBlock,
-    '',
-    'Recent conversation:',
-    conversationBlock,
-    '',
-    `Latest user message: ${params.userMessage}`,
-    '',
-    'Reply as the pet in English.',
-    'Requirements:',
-    '- Stay in character as a loving pet companion.',
-    '- Keep it concise, natural, affectionate, and emotionally supportive.',
-    '- Avoid sounding like an assistant, therapist, or encyclopedia.',
-    '- Prefer 1 short paragraph, optionally with one gentle pet action like *blinks slowly*.',
-  ].join('\n');
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
 }
 
 async function generatePetReply(params: {
   pet: PetRow;
   userMessage: string;
-  recentMessages: ChatMessageRow[];
-  recentMemories: MemoryRow[];
-  summaryText: string;
+  recentHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
+  summary: string;
+  recentMemories: Array<{ type: string; content: string }>;
 }) {
-  const systemInstruction = params.pet.system_prompt?.trim() || defaultSystemPrompt(params.pet);
-  const prompt = buildPrompt(params);
-
-  try {
-    const aiReply = await callGemini({
-      systemInstruction,
-      prompt,
-    });
-
-    if (aiReply) {
-      return aiReply;
-    }
-  } catch (error) {
-    console.error('AI reply generation failed, using fallback reply:', error);
+  if (!process.env.GEMINI_API_KEY) {
+    throw new Error('GEMINI_API_KEY is not configured.');
   }
 
-  return buildFallbackReply(params.pet, params.userMessage);
-}
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent`;
 
-function buildUsagePayload(value: {
-  vip: boolean;
-  used: number;
-  limit: number | null;
-  remaining: number | null;
-}) {
-  return {
-    plan: value.vip ? 'vip' : 'free',
-    vip: value.vip,
-    used: value.used,
-    limit: value.limit,
-    remaining: value.remaining,
-  };
-}
+  const historyBlock = params.recentHistory.length
+    ? params.recentHistory
+        .map((item) => `${item.role === 'assistant' ? params.pet.name : 'User'}: ${item.content}`)
+        .join('\n')
+    : '(no previous chat history)';
 
-export async function POST(request: Request) {
-  try {
-    if (!hasSupabaseEnv()) {
-      return NextResponse.json(
+  const summaryBlock = params.summary?.trim() || 'No summary yet.';
+  const memoryBlock = params.recentMemories.length
+    ? params.recentMemories.map((item) => `- [${item.type}] ${item.content}`).join('\n')
+    : '- No stored memories yet.';
+
+  const systemPrompt = buildFallbackSystemPrompt(params.pet);
+
+  const prompt = [
+    `Pet name: ${params.pet.name}`,
+    '',
+    'Companionship summary:',
+    summaryBlock,
+    '',
+    'Relevant memories:',
+    memoryBlock,
+    '',
+    'Recent conversation:',
+    historyBlock,
+    '',
+    `User: ${params.userMessage}`,
+    '',
+    'Write the pet reply in English.',
+    'Requirements:',
+    '- Stay in character as the pet.',
+    '- Be warm, emotionally aware, and affectionate.',
+    '- Keep it short: 1 to 3 sentences.',
+    '- Do not use markdown or bullet points.',
+    '- Do not mention being an AI.',
+    '- If relevant, gently reference stored memories naturally.',
+  ].join('\n');
+
+  const response = await fetch(`${endpoint}?key=${process.env.GEMINI_API_KEY}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    cache: 'no-store',
+    body: JSON.stringify({
+      contents: [
         {
-          error: 'Please configure Supabase first.',
+          role: 'user',
+          parts: [{ text: systemPrompt }],
         },
-        { status: 500 },
-      );
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.8,
+        maxOutputTokens: 220,
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Gemini API failed: ${errorText}`);
+  }
+
+  const data = (await response.json()) as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
+    }>;
+  };
+
+  const reply =
+    data.candidates?.[0]?.content?.parts
+      ?.map((part) => part.text || '')
+      .join('')
+      .trim() || '';
+
+  if (!reply) {
+    throw new Error('Model returned an empty reply.');
+  }
+
+  return normalizeText(reply);
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    if (!hasSupabaseEnv() || !hasSupabaseAdminEnv()) {
+      return jsonError('Server is not configured for chat yet.', 500);
     }
 
-    const supabase = createServerSupabaseClient();
+    const serverSupabase = createSupabaseServerClient();
     const {
       data: { user },
-      error: authError,
-    } = await supabase.auth.getUser();
+      error: userError,
+    } = await serverSupabase.auth.getUser();
 
-    if (authError) {
-      return NextResponse.json(
-        {
-          error: 'Unable to verify your session. Please sign in again.',
-        },
-        { status: 401 },
-      );
+    if (userError || !user) {
+      return jsonError('Please sign in again.', 401);
     }
 
-    if (!user) {
-      return NextResponse.json(
-        {
-          error: 'Please sign in first.',
-        },
-        { status: 401 },
-      );
-    }
+    const body = ((await request.json().catch(() => null)) || {}) as ChatRequestBody;
 
-    const body = (await request.json()) as ChatRequestBody;
-    const message = normalizeText(body.message);
-    const requestedPetId = normalizeText(body.petId);
+    const message = typeof body.message === 'string' ? body.message.trim() : '';
+    const petId =
+      typeof body.petId === 'string' && body.petId.trim() ? body.petId.trim() : null;
 
     if (!message) {
-      return NextResponse.json(
-        {
-          error: 'Message is required.',
-        },
-        { status: 400 },
+      return jsonError('Message is required.', 400);
+    }
+
+    if (message.length > MAX_MESSAGE_LENGTH) {
+      return jsonError(`Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`, 400);
+    }
+
+    if (!petId) {
+      return jsonError('Pet is required.', 400);
+    }
+
+    const supabase = createSupabaseAdminClient();
+
+    const { data: pet, error: petError } = await supabase
+      .from('pets')
+      .select(
+        'id, name, breed, personality, favorite_food, daily_habits, system_prompt',
+      )
+      .eq('id', petId)
+      .eq('user_id', user.id)
+      .single<PetRow>();
+
+    if (petError || !pet) {
+      return jsonError('Pet not found.', 404);
+    }
+
+    const access = await getChatAccessState(user.id);
+    const usageBefore: UsagePayload = {
+      plan: access.vip ? 'vip' : 'free',
+      used: Number(access.used ?? 0),
+      limit: access.vip ? null : Number(access.limit ?? 20),
+      remaining: access.vip ? null : Number(access.remaining ?? 0),
+      vip: Boolean(access.vip),
+    };
+
+    if (!access.vip && Number(access.remaining ?? 0) <= 0) {
+      return jsonError(
+        'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.',
+        429,
+        usageBefore,
       );
     }
 
-    if (message.length > 800) {
-      return NextResponse.json(
-        {
-          error: 'Message must be 800 characters or less.',
-        },
-        { status: 400 },
+    const [
+      historyResult,
+      memoriesResult,
+      summaryResult,
+    ] = await Promise.all([
+      supabase
+        .from('chat_messages')
+        .select('role, content, created_at')
+        .eq('user_id', user.id)
+        .eq('pet_id', pet.id)
+        .in('role', ['user', 'assistant'])
+        .order('created_at', { ascending: false })
+        .limit(HISTORY_LIMIT),
+      supabase
+        .from('memories')
+        .select('type, content, importance, updated_at, created_at')
+        .eq('user_id', user.id)
+        .or(`pet_id.is.null,pet_id.eq.${pet.id}`)
+        .order('importance', { ascending: false })
+        .order('updated_at', { ascending: false })
+        .limit(MEMORY_LIMIT),
+      supabase
+        .from('memory_summaries')
+        .select('summary, memory_count, updated_at')
+        .eq('user_id', user.id)
+        .eq('pet_id', pet.id)
+        .maybeSingle(),
+    ]);
+
+    if (historyResult.error) {
+      return jsonError(
+        `Failed to load chat history: ${historyResult.error.message}`,
+        500,
+        usageBefore,
       );
     }
 
-    const pet = await resolveSelectedPet({
-      userId: user.id,
-      requestedPetId,
-    });
-
-    if (!pet) {
-      return NextResponse.json(
-        {
-          error: 'Please create a pet first before chatting.',
-        },
-        { status: 400 },
+    if (memoriesResult.error) {
+      return jsonError(
+        `Failed to load memories: ${memoriesResult.error.message}`,
+        500,
+        usageBefore,
       );
     }
 
-    const accessState = await getChatAccessStatus(user.id);
-
-    let usage = buildUsagePayload({
-      vip: accessState.vip,
-      used: accessState.used,
-      limit: accessState.limit,
-      remaining: accessState.remaining,
-    });
-
-    if (!accessState.vip) {
-      const quota = await consumeFreeChatQuota(user.id);
-
-      if (!quota.allowed) {
-        return NextResponse.json(
-          {
-            error:
-              'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.',
-            usage: buildUsagePayload({
-              vip: false,
-              used: quota.used,
-              limit: quota.limit,
-              remaining: quota.remaining,
-            }),
-          },
-          { status: 403 },
-        );
-      }
-
-      usage = buildUsagePayload({
-        vip: false,
-        used: quota.used,
-        limit: quota.limit,
-        remaining: quota.remaining,
-      });
+    if (summaryResult.error) {
+      return jsonError(
+        `Failed to load memory summary: ${summaryResult.error.message}`,
+        500,
+        usageBefore,
+      );
     }
 
-    const context = await fetchChatContext({
-      userId: user.id,
-      petId: pet.id,
-    });
+    const recentHistory = (historyResult.data || [])
+      .slice()
+      .reverse()
+      .map((item) => ({
+        role: item.role as 'user' | 'assistant',
+        content: String(item.content || '').trim(),
+      }))
+      .filter((item) => (item.role === 'user' || item.role === 'assistant') && item.content);
 
-    const summaryText = context.summaryRow?.summary?.trim() || '';
+    const recentMemories = (memoriesResult.data || []).map((item) => ({
+      type: String(item.type || 'fact'),
+      content: String(item.content || '').trim(),
+    }));
+
+    const summaryText = summaryResult.data?.summary?.trim() || '';
 
     const reply = await generatePetReply({
       pet,
       userMessage: message,
-      recentMessages: context.recentMessages,
-      recentMemories: context.recentMemories,
-      summaryText,
+      recentHistory,
+      summary: summaryText,
+      recentMemories,
     });
 
-    const now = new Date().toISOString();
-    const admin = createSupabaseAdminClient();
+    const userCreatedAt = new Date().toISOString();
+    const assistantCreatedAt = new Date(Date.now() + 1).toISOString();
 
-    const { error: messageInsertError } = await admin.from('chat_messages').insert([
+    const { error: persistError } = await supabase.from('chat_messages').insert([
       {
         user_id: user.id,
         pet_id: pet.id,
         role: 'user',
         content: message,
-        created_at: now,
+        created_at: userCreatedAt,
       },
       {
         user_id: user.id,
         pet_id: pet.id,
         role: 'assistant',
         content: reply,
-        created_at: now,
+        created_at: assistantCreatedAt,
       },
     ]);
 
-    if (messageInsertError) {
-      throw new Error(`Failed to persist chat messages: ${messageInsertError.message}`);
+    if (persistError) {
+      return jsonError(
+        `Failed to persist chat messages: ${persistError.message}`,
+        500,
+        usageBefore,
+      );
     }
 
-    const { error: conversationInsertError } = await admin.from('conversations').insert({
-      user_id: user.id,
-      pet_id: pet.id,
-      created_at: now,
-    });
+    let memoryPayload: {
+      storedCount: number;
+      emotionTag: string | null;
+      hints: string[];
+      summary: string;
+    } = {
+      storedCount: 0,
+      emotionTag: null,
+      hints: [],
+      summary: summaryText,
+    };
 
-    if (conversationInsertError) {
-      console.error('Failed to persist conversations row:', conversationInsertError);
+    try {
+      const memoryResult = await extractAndStoreMemories({
+        userId: user.id,
+        petId: pet.id,
+        petName: pet.name,
+        userMessage: message,
+        assistantMessage: reply,
+      });
+
+      memoryPayload = {
+        storedCount: Number(memoryResult?.storedCount ?? 0),
+        emotionTag: memoryResult?.emotionTag ?? null,
+        hints: Array.isArray(memoryResult?.memoryHints)
+          ? memoryResult.memoryHints
+              .map((item: unknown) => {
+                if (typeof item === 'string') return item;
+                if (
+                  item &&
+                  typeof item === 'object' &&
+                  'content' in item &&
+                  typeof (item as { content?: unknown }).content === 'string'
+                ) {
+                  return (item as { content: string }).content;
+                }
+                return '';
+              })
+              .filter(Boolean)
+              .slice(0, 3)
+          : [],
+        summary: memoryResult?.summary || summaryText,
+      };
+    } catch (memoryError) {
+      console.error('Memory extraction failed after chat persist:', memoryError);
     }
 
-    const memory = await extractAndStoreMemories({
-      userId: user.id,
-      petId: pet.id,
-      petName: pet.name,
-      userMessage: message,
-      assistantMessage: reply,
-    });
+    let usageAfter: UsagePayload = usageBefore;
+
+    if (access.vip) {
+      usageAfter = {
+        plan: 'vip',
+        used: Number(access.used ?? 0),
+        limit: null,
+        remaining: null,
+        vip: true,
+      };
+    } else {
+      try {
+        const consumed = await consumeFreeChatQuota(user.id, Number(access.limit ?? 20));
+
+        usageAfter = {
+          plan: 'free',
+          used: Number(consumed.used ?? 0),
+          limit: Number(consumed.limit ?? access.limit ?? 20),
+          remaining: Number(consumed.remaining ?? 0),
+          vip: false,
+        };
+      } catch (quotaError) {
+        console.error('Quota consume failed after chat persist:', quotaError);
+
+        usageAfter = {
+          plan: 'free',
+          used: Number(access.used ?? 0),
+          limit: Number(access.limit ?? 20),
+          remaining: Math.max(Number(access.remaining ?? 1) - 1, 0),
+          vip: false,
+        };
+      }
+    }
 
     return NextResponse.json({
       reply,
-      usage,
-      memory: {
-        storedCount: memory.storedCount,
-        emotionTag: memory.emotionTag,
-        hints: memory.memoryHints ?? [],
-        summary: memory.summary ?? '',
-      },
+      usage: usageAfter,
+      memory: memoryPayload,
     });
   } catch (error) {
     console.error('POST /api/chat failed:', error);
 
-    const message =
-      error instanceof Error ? error.message : 'Chat request failed. Please try again.';
-
     return NextResponse.json(
       {
-        error: message,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unexpected chat error. Please try again.',
       },
       { status: 500 },
     );

@@ -4,6 +4,8 @@ import { Fragment, FormEvent, ReactNode, useEffect, useMemo, useState } from 're
 
 type ChatPlaygroundProps = {
   petId?: string | null;
+  petName: string;
+  petImageUrl?: string | null;
   initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
   initialRemainingLabel: string;
   initialMemorySummary?: string;
@@ -263,8 +265,40 @@ function renderAssistantContent(content: string): ReactNode {
   );
 }
 
+function PetReplyAvatar({
+  petName,
+  petImageUrl,
+}: {
+  petName: string;
+  petImageUrl?: string | null;
+}) {
+  if (petImageUrl) {
+    return (
+      <div className='h-10 w-10 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50 shadow-sm'>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={petImageUrl}
+          alt={`${petName} avatar`}
+          className='h-full w-full object-cover'
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-100 text-base text-orange-900 shadow-sm'
+      aria-label={`${petName} avatar placeholder`}
+    >
+      🐾
+    </div>
+  );
+}
+
 export function ChatPlayground({
   petId,
+  petName,
+  petImageUrl,
   initialMessages,
   initialRemainingLabel,
 }: ChatPlaygroundProps) {
@@ -284,7 +318,7 @@ export function ChatPlayground({
     setUsageLabel(initialRemainingLabel);
     setUsageDetail(null);
     setMemoryHints([]);
-  }, [petId, initialMessages, initialRemainingLabel]);
+  }, [petId, petName, petImageUrl, initialMessages, initialRemainingLabel]);
 
   const trimmedLength = input.trim().length;
 
@@ -374,25 +408,46 @@ export function ChatPlayground({
       </div>
 
       <div className='mt-5 grid gap-3'>
-        {messages.map((message, index) => (
-          <div
-            key={`${message.role}-${index}-${message.content.slice(0, 24)}`}
-            className={message.role === 'user' ? 'chat-bubble-user' : 'chat-bubble-ai'}
-          >
-            {message.role === 'assistant' ? (
-              renderAssistantContent(message.content)
-            ) : (
-              <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
-            )}
-          </div>
-        ))}
+        {messages.map((message, index) => {
+          const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
+
+          if (message.role === 'assistant') {
+            return (
+              <div key={messageKey} className='flex items-end gap-3'>
+                <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+                <div className='min-w-0 max-w-[85%]'>
+                  <div className='chat-bubble-ai'>
+                    {renderAssistantContent(message.content)}
+                  </div>
+                </div>
+              </div>
+            );
+          }
+
+          return (
+            <div key={messageKey} className='flex justify-end'>
+              <div className='max-w-[85%]'>
+                <div className='chat-bubble-user'>
+                  <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
+                </div>
+              </div>
+            </div>
+          );
+        })}
 
         {loading ? (
-          <div className='chat-bubble-ai'>
-            <div className='flex items-center gap-2 text-slate-500'>
-              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300' />
-              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
-              <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:240ms]' />
+          <div className='flex items-end gap-3'>
+            <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+            <div className='min-w-0 max-w-[85%]'>
+              <div className='chat-bubble-ai'>
+                <div className='flex items-center gap-2 text-slate-500'>
+                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300' />
+                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
+                  <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:240ms]' />
+                </div>
+              </div>
             </div>
           </div>
         ) : null}

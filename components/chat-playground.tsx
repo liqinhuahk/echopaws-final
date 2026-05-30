@@ -255,7 +255,7 @@ function renderAssistantContent(content: string): ReactNode {
         return (
           <span
             key={`action-${index}`}
-            className='mx-[2px] inline rounded-full border border-orange-200/70 bg-orange-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-orange-900'
+            className='mx-[2px] inline rounded-full border border-orange-200/80 bg-orange-50 px-2 py-0.5 align-baseline text-[0.95em] font-medium italic text-orange-900'
           >
             {segment.content}
           </span>
@@ -274,7 +274,7 @@ function PetReplyAvatar({
 }) {
   if (petImageUrl) {
     return (
-      <div className='h-10 w-10 shrink-0 overflow-hidden rounded-full border border-[#e5e7eb] bg-white shadow-sm sm:h-11 sm:w-11'>
+      <div className='h-11 w-11 shrink-0 overflow-hidden rounded-full border border-[#dddddd] bg-white shadow-sm'>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={petImageUrl}
@@ -287,7 +287,7 @@ function PetReplyAvatar({
 
   return (
     <div
-      className='flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-[#e5e7eb] bg-white text-base shadow-sm sm:h-11 sm:w-11'
+      className='flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#dddddd] bg-white text-base shadow-sm'
       aria-label={`${petName} avatar placeholder`}
     >
       🐾
@@ -407,23 +407,24 @@ export function ChatPlayground({
         </a>
       </div>
 
-      <div className='mt-5 rounded-[30px] border border-[#e5e7eb] bg-[#f5f5f7] p-3 shadow-inner sm:p-4'>
-        <div className='grid gap-3'>
+      <div className='mt-5 rounded-[28px] border border-[#e5e7eb] bg-[#f5f5f7] p-4 shadow-inner'>
+        <div className='grid gap-4'>
           {messages.map((message, index) => {
             const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
             if (message.role === 'assistant') {
               return (
-                <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
+                <div key={messageKey} className='flex items-end gap-3'>
                   <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
 
-                  <div className='min-w-0 max-w-[86%] sm:max-w-[78%] md:max-w-[72%]'>
+                  <div className='min-w-0 max-w-[78%]'>
                     <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
                       {petName}
                     </div>
 
-                    <div className='rounded-[20px] rounded-bl-md border border-[#e9e9ec] bg-white px-4 py-3 text-[15px] text-slate-800 shadow-sm'>
-                      {renderAssistantContent(message.content)}
+                    <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 text-[15px] text-slate-800 shadow-sm'>
+                      <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
+                      <div className='relative z-[1]'>{renderAssistantContent(message.content)}</div>
                     </div>
                   </div>
                 </div>
@@ -432,13 +433,16 @@ export function ChatPlayground({
 
             return (
               <div key={messageKey} className='flex justify-end'>
-                <div className='min-w-0 max-w-[86%] sm:max-w-[74%] md:max-w-[68%]'>
+                <div className='min-w-0 max-w-[68%]'>
                   <div className='mb-1 px-1 text-right text-[11px] font-bold tracking-wide text-slate-500'>
                     You
                   </div>
 
-                  <div className='rounded-[20px] rounded-br-md bg-[#95ec69] px-4 py-3 text-[15px] text-slate-900 shadow-sm'>
-                    <div className='whitespace-pre-wrap break-words leading-7'>{message.content}</div>
+                  <div className='relative rounded-[18px] rounded-br-md bg-[#95ec69] px-4 py-3 text-[15px] text-slate-900 shadow-sm'>
+                    <span className='absolute -right-[6px] bottom-3 h-3 w-3 rotate-45 bg-[#95ec69]' />
+                    <div className='relative z-[1] whitespace-pre-wrap break-words leading-7'>
+                      {message.content}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -446,16 +450,17 @@ export function ChatPlayground({
           })}
 
           {loading ? (
-            <div className='flex items-end gap-2.5 sm:gap-3'>
+            <div className='flex items-end gap-3'>
               <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
 
-              <div className='min-w-0 max-w-[86%] sm:max-w-[78%] md:max-w-[72%]'>
+              <div className='min-w-0 max-w-[78%]'>
                 <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
                   {petName}
                 </div>
 
-                <div className='rounded-[20px] rounded-bl-md border border-[#e9e9ec] bg-white px-4 py-3 shadow-sm'>
-                  <div className='flex items-center gap-2 text-slate-500'>
+                <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 shadow-sm'>
+                  <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
+                  <div className='relative z-[1] flex items-center gap-2 text-slate-500'>
                     <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300' />
                     <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:120ms]' />
                     <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:240ms]' />

@@ -148,14 +148,16 @@ function PetAvatar({
 }: {
   name: string;
   imageUrl?: string | null;
-  size?: 'sm' | 'md' | 'lg';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }) {
   const sizeClass =
     size === 'sm'
       ? 'h-11 w-11 rounded-2xl text-lg'
       : size === 'lg'
         ? 'h-20 w-20 rounded-[22px] text-3xl'
-        : 'h-14 w-14 rounded-[20px] text-2xl';
+        : size === 'xl'
+          ? 'h-16 w-16 rounded-[20px] text-2xl'
+          : 'h-14 w-14 rounded-[20px] text-2xl';
 
   if (imageUrl) {
     return (
@@ -380,14 +382,23 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
         </div>
 
         <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
-          <div>
-            <h1 className='text-3xl font-black tracking-tight text-slate-900'>
-              Searchable memory management
-            </h1>
-            <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-              This version keeps rows compact by default, separates the toolbar into stable
-              sections, and makes long memory history easier to scan on both desktop and mobile.
-            </p>
+          <div className='flex items-center gap-4'>
+            <PetAvatar
+              name={selectedPet.name}
+              imageUrl={selectedPet.image_url}
+              size='xl'
+            />
+
+            <div>
+              <h1 className='text-3xl font-black tracking-tight text-slate-900'>
+                Searchable memory management
+              </h1>
+              <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
+                You are currently viewing {selectedPet.name}&apos;s memory workspace. This version keeps
+                rows compact by default, separates the toolbar into stable sections, and makes
+                long memory history easier to scan on both desktop and mobile.
+              </p>
+            </div>
           </div>
 
           <div className='flex flex-wrap gap-3'>

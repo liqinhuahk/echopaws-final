@@ -1,6 +1,6 @@
 'use client';
 
-import { Fragment, FormEvent, ReactNode, useEffect, useMemo, useState } from 'react';
+import { Fragment, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type ChatPlaygroundProps = {
   petId?: string | null;
@@ -37,13 +37,9 @@ type ParsedSegment =
   | { type: 'emphasis'; content: string };
 
 function formatUsageLabel(usage: UsagePayload) {
-  if (usage.vip) {
-    return 'VIP — Unlimited Chat';
-  }
-
+  if (usage.vip) return 'VIP — Unlimited Chat';
   const remaining = usage.remaining ?? 0;
   const limit = usage.limit ?? 20;
-
   return `${remaining} / ${limit} lifetime chats left`;
 }
 
@@ -54,7 +50,6 @@ function formatUsageDetail(usage: UsagePayload) {
 
   const used = usage.used ?? 0;
   const limit = usage.limit ?? 20;
-
   return `Used ${used} of ${limit} lifetime chats. Free chats are shared across your account and do not reset daily.`;
 }
 
@@ -81,30 +76,9 @@ function isLikelyPetAction(raw: string) {
   if (!value) return false;
   if (value.length > 90) return false;
 
-  const normalized = value.replace(/[^\p{L}\p{N}\s,'’-]/gu, ' ');
+  const normalized = value.replace(/[^\p{L}\p{N}\s,'’!-]/gu, ' ');
   const words = normalized.split(/\s+/).filter(Boolean);
-
-  if (words.length === 0) return false;
-
-  const simpleEmphasisWords = new Set([
-    'just',
-    'love',
-    'really',
-    'very',
-    'so',
-    'always',
-    'never',
-    'truly',
-    'literally',
-    'super',
-    'best',
-    'okay',
-    'ok',
-  ]);
-
-  if (words.length === 1 && simpleEmphasisWords.has(words[0])) {
-    return false;
-  }
+  if (!words.length) return false;
 
   const actionRoots = [
     'blink',
@@ -141,24 +115,54 @@ function isLikelyPetAction(raw: string) {
     'sway',
     'swish',
     'nestle',
+    'bark',
+    'yip',
+    'arf',
   ];
 
+  const emotionPrefixes = [
+    'happy bark',
+    'happy bark!',
+    'soft bark',
+    'soft bark!',
+    'excited bark',
+    'excited bark!',
+    'playful bark',
+    'playful bark!',
+    'gentle bark',
+    'gentle bark!',
+    'wiggle wiggle',
+    'wag wag wag',
+    'mrow',
+    'mrow!',
+    'meow',
+    'meow!',
+    'purr',
+    'purr!',
+  ];
+
+  if (emotionPrefixes.some((prefix) => value.startsWith(prefix))) {
+    return true;
+  }
+
+  const compact = value.replace(/\s+/g, '');
   const soundPatterns = [
     /^p+u+r+r+/,
     /^m+e+o+w+/,
     /^w+o+o+f+/,
     /^a+r+f+/,
-    /^r+u+f+f+/,
-    /^m+r+r+p+/,
+    /^b+a+r+k+/,
+    /^y+i+p+/,
+    /^m+r+o+w+/,
+    /^w+a+g+/,
     /^c+h+i+r+p+/,
   ];
 
-  const compact = value.replace(/\s+/g, '');
   if (soundPatterns.some((pattern) => pattern.test(compact))) {
     return true;
   }
 
-  const hasActionWord = words.some((word) =>
+  return words.some((word) =>
     actionRoots.some(
       (root) =>
         word === root ||
@@ -167,24 +171,39 @@ function isLikelyPetAction(raw: string) {
         word === `${root}ing`,
     ),
   );
+}
 
-  const hasStageDirectionShape =
-    /\b(softly|slowly|gently|sleepily|happily|at you|toward you|towards you|your hand|your face|and|then)\b/.test(
-      value,
-    ) || /,/.test(value);
+function splitLeadingActionPrefix(content: string): ParsedSegment[] | null {
+  const trimmed = content.trim();
+  if (!trimmed) return null;
 
-  if (words.length >= 2 && hasActionWord) {
-    return true;
+  const patterns = [
+    /^([A-Z][A-Za-z\s]{1,28}![ ]+)(.+)$/s,
+    /^([A-Za-z]+(?:\s+[A-Za-z]+){0,3}![ ]+)(.+)$/s,
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (!match) continue;
+
+    const prefix = normalizeActionText(match[1].replace(/\s+$/, ''));
+    const rest = match[2];
+
+    if (isLikelyPetAction(prefix)) {
+      return [
+        { type: 'action', content: prefix },
+        { type: 'text', content: ` ${rest}` },
+      ];
+    }
   }
 
-  if (words.length >= 4 && hasActionWord && hasStageDirectionShape) {
-    return true;
-  }
-
-  return false;
+  return null;
 }
 
 function parseAssistantMessage(content: string): ParsedSegment[] {
+  const prefixed = splitLeadingActionPrefix(content);
+  if (prefixed) return prefixed;
+
   const segments: ParsedSegment[] = [];
   const regex = /\*([^*]+)\*/g;
 
@@ -197,10 +216,13 @@ function parseAssistantMessage(content: string): ParsedSegment[] {
     const start = match.index;
 
     if (start > lastIndex) {
-      segments.push({
-        type: 'text',
-        content: content.slice(lastIndex, start),
-      });
+      const leading = content.slice(lastIndex, start);
+      if (leading) {
+        segments.push({
+          type: 'text',
+          content: leading,
+        });
+      }
     }
 
     const cleaned = normalizeActionText(inner);
@@ -309,6 +331,7 @@ export function ChatPlayground({
   const [usageLabel, setUsageLabel] = useState(initialRemainingLabel);
   const [usageDetail, setUsageDetail] = useState<string | null>(null);
   const [memoryHints, setMemoryHints] = useState<string[]>([]);
+  const messageViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setMessages(initialMessages);
@@ -320,6 +343,12 @@ export function ChatPlayground({
     setMemoryHints([]);
   }, [petId, petName, petImageUrl, initialMessages, initialRemainingLabel]);
 
+  useEffect(() => {
+    const el = messageViewportRef.current;
+    if (!el) return;
+    el.scrollTop = el.scrollHeight;
+  }, [messages, loading]);
+
   const trimmedLength = input.trim().length;
 
   const canSubmit = useMemo(() => {
@@ -330,7 +359,6 @@ export function ChatPlayground({
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-
     if (!canSubmit) return;
 
     const message = input.trim();
@@ -393,8 +421,8 @@ export function ChatPlayground({
   }
 
   return (
-    <div className='flex min-h-0 flex-col'>
-      <div className='flex flex-wrap items-center gap-3'>
+    <div className='flex min-h-0 flex-col xl:h-full xl:min-h-0'>
+      <div className='flex flex-wrap items-center gap-3 xl:shrink-0'>
         <div className='rounded-full border border-black/5 bg-white px-3 py-2 text-xs font-bold text-slate-800 shadow-sm'>
           {usageLabel}
         </div>
@@ -407,79 +435,84 @@ export function ChatPlayground({
         </a>
       </div>
 
-      <div className='mt-5 rounded-[28px] border border-[#e5e7eb] bg-[#f5f5f7] p-4 shadow-inner'>
-        <div className='grid gap-4'>
-          {messages.map((message, index) => {
-            const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
+      <div className='mt-5 flex min-h-0 flex-1 flex-col rounded-[28px] border border-[#e5e7eb] bg-[#f5f5f7] p-4 shadow-inner'>
+        <div
+          ref={messageViewportRef}
+          className='min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain'
+        >
+          <div className='grid gap-4'>
+            {messages.map((message, index) => {
+              const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
-            if (message.role === 'assistant') {
+              if (message.role === 'assistant') {
+                return (
+                  <div key={messageKey} className='flex items-end gap-3'>
+                    <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+                    <div className='min-w-0 max-w-[78%]'>
+                      <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
+                        {petName}
+                      </div>
+
+                      <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 text-[15px] text-slate-800 shadow-sm'>
+                        <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
+                        <div className='relative z-[1]'>{renderAssistantContent(message.content)}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
-                <div key={messageKey} className='flex items-end gap-3'>
-                  <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-
-                  <div className='min-w-0 max-w-[78%]'>
-                    <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
-                      {petName}
+                <div key={messageKey} className='flex justify-end'>
+                  <div className='min-w-0 max-w-[68%]'>
+                    <div className='mb-1 px-1 text-right text-[11px] font-bold tracking-wide text-slate-500'>
+                      You
                     </div>
 
-                    <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 text-[15px] text-slate-800 shadow-sm'>
-                      <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
-                      <div className='relative z-[1]'>{renderAssistantContent(message.content)}</div>
+                    <div className='relative rounded-[18px] rounded-br-md bg-[#95ec69] px-4 py-3 text-[15px] text-slate-900 shadow-sm'>
+                      <span className='absolute -right-[6px] bottom-3 h-3 w-3 rotate-45 bg-[#95ec69]' />
+                      <div className='relative z-[1] whitespace-pre-wrap break-words leading-7'>
+                        {message.content}
+                      </div>
                     </div>
                   </div>
                 </div>
               );
-            }
+            })}
 
-            return (
-              <div key={messageKey} className='flex justify-end'>
-                <div className='min-w-0 max-w-[68%]'>
-                  <div className='mb-1 px-1 text-right text-[11px] font-bold tracking-wide text-slate-500'>
-                    You
+            {loading ? (
+              <div className='flex items-end gap-3'>
+                <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+
+                <div className='min-w-0 max-w-[78%]'>
+                  <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
+                    {petName}
                   </div>
 
-                  <div className='relative rounded-[18px] rounded-br-md bg-[#95ec69] px-4 py-3 text-[15px] text-slate-900 shadow-sm'>
-                    <span className='absolute -right-[6px] bottom-3 h-3 w-3 rotate-45 bg-[#95ec69]' />
-                    <div className='relative z-[1] whitespace-pre-wrap break-words leading-7'>
-                      {message.content}
+                  <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 shadow-sm'>
+                    <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
+                    <div className='relative z-[1] flex items-center gap-2 text-slate-500'>
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300' />
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:120ms]' />
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:240ms]' />
                     </div>
                   </div>
                 </div>
               </div>
-            );
-          })}
-
-          {loading ? (
-            <div className='flex items-end gap-3'>
-              <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-
-              <div className='min-w-0 max-w-[78%]'>
-                <div className='mb-1 px-1 text-[11px] font-bold tracking-wide text-slate-500'>
-                  {petName}
-                </div>
-
-                <div className='relative rounded-[18px] rounded-bl-md border border-[#e6e6ea] bg-white px-4 py-3 shadow-sm'>
-                  <span className='absolute -left-[6px] bottom-3 h-3 w-3 rotate-45 border-b border-l border-[#e6e6ea] bg-white' />
-                  <div className='relative z-[1] flex items-center gap-2 text-slate-500'>
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300' />
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:120ms]' />
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:240ms]' />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
+            ) : null}
+          </div>
         </div>
       </div>
 
       {error ? (
-        <div className='mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+        <div className='mt-4 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 xl:shrink-0'>
           {error}
         </div>
       ) : null}
 
       {memoryHints.length ? (
-        <div className='mt-4 rounded-[24px] border border-emerald-100 bg-emerald-50 px-4 py-3'>
+        <div className='mt-4 rounded-[24px] border border-emerald-100 bg-emerald-50 px-4 py-3 xl:shrink-0'>
           <div className='text-xs font-bold uppercase tracking-[0.18em] text-emerald-700'>
             New Memory Triggers
           </div>
@@ -496,7 +529,7 @@ export function ChatPlayground({
         </div>
       ) : null}
 
-      <form className='mt-5' onSubmit={handleSubmit}>
+      <form className='mt-5 shrink-0' onSubmit={handleSubmit}>
         <div className='rounded-[26px] border border-[#e5e7eb] bg-white p-3 shadow-sm'>
           <div className='flex flex-col gap-3 sm:flex-row sm:items-end'>
             <div className='min-w-0 flex-1'>

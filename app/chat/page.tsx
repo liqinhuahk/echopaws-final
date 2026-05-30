@@ -107,6 +107,55 @@ function buildCompanionshipSummary(
   return `${pet.name}'s recent companionship clues: ${clues.join(' ')}`;
 }
 
+function PetAvatar({
+  name,
+  imageUrl,
+  size = 'md',
+}: {
+  name: string;
+  imageUrl?: string | null;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+}) {
+  const sizeClass =
+    size === 'sm'
+      ? 'h-11 w-11 rounded-2xl text-lg'
+      : size === 'md'
+        ? 'h-14 w-14 rounded-[20px] text-2xl'
+        : size === 'lg'
+          ? 'h-20 w-20 rounded-[22px] text-3xl'
+          : 'h-16 w-16 rounded-[20px] text-2xl';
+
+  if (imageUrl) {
+    return (
+      <div
+        className={[
+          'overflow-hidden border border-orange-100 bg-orange-50 shadow-sm',
+          sizeClass,
+        ].join(' ')}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={`${name} avatar`}
+          className='h-full w-full object-cover'
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={[
+        'flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm',
+        sizeClass,
+      ].join(' ')}
+      aria-label={`${name} avatar placeholder`}
+    >
+      🐾
+    </div>
+  );
+}
+
 export default async function ChatPage({ searchParams }: ChatPageProps) {
   const resolvedSearchParams = searchParams ? await Promise.resolve(searchParams) : undefined;
   const requestedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
@@ -232,14 +281,22 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         </div>
 
         <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
-          <div>
-            <h1 className='text-3xl font-black tracking-tight text-slate-900'>
-              Chat with {selectedPet.name}
-            </h1>
-            <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-              This layout gives more space to the conversation itself, while keeping summaries and
-              memory shortcuts available without overwhelming the chat stream.
-            </p>
+          <div className='flex items-center gap-4'>
+            <PetAvatar
+              name={selectedPet.name}
+              imageUrl={selectedPet.image_url}
+              size='xl'
+            />
+
+            <div>
+              <h1 className='text-3xl font-black tracking-tight text-slate-900'>
+                Chat with {selectedPet.name}
+              </h1>
+              <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
+                This layout gives more space to the conversation itself, while keeping summaries and
+                memory shortcuts available without overwhelming the chat stream.
+              </p>
+            </div>
           </div>
 
           <div className='flex flex-wrap gap-3'>
@@ -263,9 +320,11 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
         <aside className='space-y-5'>
           <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
             <div className='flex items-start gap-4'>
-              <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
-                🐾
-              </div>
+              <PetAvatar
+                name={selectedPet.name}
+                imageUrl={selectedPet.image_url}
+                size='lg'
+              />
 
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
@@ -288,7 +347,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                 </div>
 
                 <p className='mt-3 text-sm leading-7 text-slate-600'>
-                  Memory updated {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
+                  Memory updated{' '}
+                  {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
                 </p>
               </div>
             </div>
@@ -324,10 +384,14 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                     ].join(' ')}
                   >
                     <div className='flex items-center justify-between gap-3'>
-                      <div className='min-w-0'>
-                        <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
-                        <div className='mt-1 truncate text-xs text-slate-500'>
-                          {pet.id === defaultPetId ? 'Primary pet' : 'Available for chat'}
+                      <div className='flex min-w-0 items-center gap-3'>
+                        <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
+
+                        <div className='min-w-0'>
+                          <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
+                          <div className='mt-1 truncate text-xs text-slate-500'>
+                            {pet.id === defaultPetId ? 'Primary pet' : 'Available for chat'}
+                          </div>
                         </div>
                       </div>
 

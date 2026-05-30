@@ -141,6 +141,53 @@ function buildReturnTo(params: {
   return query ? `/memories?${query}` : '/memories';
 }
 
+function PetAvatar({
+  name,
+  imageUrl,
+  size = 'md',
+}: {
+  name: string;
+  imageUrl?: string | null;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClass =
+    size === 'sm'
+      ? 'h-11 w-11 rounded-2xl text-lg'
+      : size === 'lg'
+        ? 'h-20 w-20 rounded-[22px] text-3xl'
+        : 'h-14 w-14 rounded-[20px] text-2xl';
+
+  if (imageUrl) {
+    return (
+      <div
+        className={[
+          'overflow-hidden border border-orange-100 bg-orange-50 shadow-sm',
+          sizeClass,
+        ].join(' ')}
+      >
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={imageUrl}
+          alt={`${name} avatar`}
+          className='h-full w-full object-cover'
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className={[
+        'flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm',
+        sizeClass,
+      ].join(' ')}
+      aria-label={`${name} avatar placeholder`}
+    >
+      🐾
+    </div>
+  );
+}
+
 export default async function MemoriesPage({ searchParams }: MemoriesPageProps) {
   async function deleteMemoryAction(formData: FormData) {
     'use server';
@@ -364,9 +411,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
         <aside className='space-y-5'>
           <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
             <div className='flex items-start gap-4'>
-              <div className='flex h-20 w-20 items-center justify-center rounded-[22px] bg-orange-100 text-3xl'>
-                🐾
-              </div>
+              <PetAvatar
+                name={selectedPet.name}
+                imageUrl={selectedPet.image_url}
+                size='lg'
+              />
 
               <div className='min-w-0 flex-1'>
                 <div className='flex flex-wrap items-center gap-2'>
@@ -414,10 +463,14 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                     ].join(' ')}
                   >
                     <div className='flex items-center justify-between gap-3'>
-                      <div className='min-w-0'>
-                        <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
-                        <div className='mt-1 truncate text-xs text-slate-500'>
-                          {pet.id === defaultPetId ? 'Primary pet' : 'Available scope'}
+                      <div className='flex min-w-0 items-center gap-3'>
+                        <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
+
+                        <div className='min-w-0'>
+                          <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
+                          <div className='mt-1 truncate text-xs text-slate-500'>
+                            {pet.id === defaultPetId ? 'Primary pet' : 'Available scope'}
+                          </div>
                         </div>
                       </div>
 
@@ -520,7 +573,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
                   <Link
                     href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                    className='rounded-full border border-slate-200 bg-white px-5 py-3 text-center text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+                    className='inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
                   >
                     Reset view
                   </Link>

@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-import {
-  createSupabaseAdminClient,
-  createSupabaseServerClient,
-  hasSupabaseAdminEnv,
-  hasSupabaseEnv,
-} from '@/lib/auth';
+import { createSupabaseAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
+import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import { consumeFreeChatQuota, getChatAccessState } from '@/lib/chat-access';
 import { extractAndStoreMemories } from '@/lib/memory-service';
 
@@ -22,6 +18,26 @@ type PetRow = {
   favorite_food: string | null;
   daily_habits: string | null;
   system_prompt: string | null;
+};
+
+type ChatMessageRow = {
+  role: string | null;
+  content: string | null;
+  created_at: string | null;
+};
+
+type MemoryRow = {
+  type: string | null;
+  content: string | null;
+  importance?: number | null;
+  updated_at?: string | null;
+  created_at?: string | null;
+};
+
+type MemorySummaryRow = {
+  summary: string | null;
+  memory_count?: number | null;
+  updated_at?: string | null;
 };
 
 type UsagePayload = {
@@ -44,6 +60,10 @@ function jsonError(message: string, status = 400, usage?: UsagePayload) {
   );
 }
 
+function normalizeText(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
 function buildFallbackSystemPrompt(pet: PetRow) {
   if (pet.system_prompt?.trim()) {
     return pet.system_prompt.trim();
@@ -61,10 +81,6 @@ function buildFallbackSystemPrompt(pet: PetRow) {
   ]
     .filter(Boolean)
     .join('\n');
-}
-
-function normalizeText(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
 }
 
 async function generatePetReply(params: {
@@ -173,7 +189,7 @@ export async function POST(request: NextRequest) {
       return jsonError('Server is not configured for chat yet.', 500);
     }
 
-    const serverSupabase = createSupabaseServerClient();
+    const serverSupabase = createServerSupabaseClient();
     const {
       data: { user },
       error: userError,
@@ -203,16 +219,16 @@ export async function POST(request: NextRequest) {
 
     const supabase = createSupabaseAdminClient();
 
-    const { data: pet, error: petError } = await supabase
+    const petQuery = await supabase
       .from('pets')
-      .select(
-        'id, name, breed, personality, favorite_food, daily_habits, system_prompt',
-      )
+      .select('id, name, breed, personality, favorite_food, daily_habits, system_prompt')
       .eq('id', petId)
       .eq('user_id', user.id)
-      .single<PetRow>();
+      .maybeSingle();
 
-    if (petError || !pet) {
+    const pet = (petQuery.data as PetRow | null) ?? null;
+
+    if (petQuery.error || !pet) {
       return jsonError('Pet not found.', 404);
     }
 
@@ -233,11 +249,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const [
-      historyResult,
-      memoriesResult,
-      summaryResult,
-    ] = await Promise.all([
+    const [historyResult, memoriesResult, summaryResult] = await Promise.all([
       supabase
         .from('chat_messages')
         .select('role, content, created_at')
@@ -286,21 +298,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const recentHistory = (historyResult.data || [])
+    const recentHistory = ((historyResult.data || []) as ChatMessageRow[])
       .slice()
       .reverse()
       .map((item) => ({
-        role: item.role as 'user' | 'assistant',
+        role: item.role === 'assistant' ? 'assistant' : 'user',
         content: String(item.content || '').trim(),
       }))
-      .filter((item) => (item.role === 'user' || item.role === 'assistant') && item.content);
+      .filter((item) => item.content) as Array<{ role: 'user' | 'assistant'; content: string }>;
 
-    const recentMemories = (memoriesResult.data || []).map((item) => ({
-      type: String(item.type || 'fact'),
-      content: String(item.content || '').trim(),
-    }));
+    const recentMemories = ((memoriesResult.data || []) as MemoryRow[])
+      .map((item) => ({
+        type: String(item.type || 'fact'),
+        content: String(item.content || '').trim(),
+      }))
+      .filter((item) => item.content);
 
-    const summaryText = summaryResult.data?.summary?.trim() || '';
+    const summaryRow = (summaryResult.data as MemorySummaryRow | null) ?? null;
+    const summaryText = summaryRow?.summary?.trim() || '';
 
     const reply = await generatePetReply({
       pet,
@@ -310,10 +325,11 @@ export async function POST(request: NextRequest) {
       recentMemories,
     });
 
-    const userCreatedAt = new Date().toISOString();
-    const assistantCreatedAt = new Date(Date.now() + 1).toISOString();
+    const baseTime = Date.now();
+    const userCreatedAt = new Date(baseTime).toISOString();
+    const assistantCreatedAt = new Date(baseTime + 1).toISOString();
 
-    const { error: persistError } = await supabase.from('chat_messages').insert([
+    const persistResult = await supabase.from('chat_messages').insert([
       {
         user_id: user.id,
         pet_id: pet.id,
@@ -330,9 +346,9 @@ export async function POST(request: NextRequest) {
       },
     ]);
 
-    if (persistError) {
+    if (persistResult.error) {
       return jsonError(
-        `Failed to persist chat messages: ${persistError.message}`,
+        `Failed to persist chat messages: ${persistResult.error.message}`,
         500,
         usageBefore,
       );
@@ -365,7 +381,10 @@ export async function POST(request: NextRequest) {
         hints: Array.isArray(memoryResult?.memoryHints)
           ? memoryResult.memoryHints
               .map((item: unknown) => {
-                if (typeof item === 'string') return item;
+                if (typeof item === 'string') {
+                  return item;
+                }
+
                 if (
                   item &&
                   typeof item === 'object' &&
@@ -374,6 +393,7 @@ export async function POST(request: NextRequest) {
                 ) {
                   return (item as { content: string }).content;
                 }
+
                 return '';
               })
               .filter(Boolean)

@@ -437,8 +437,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           </section>
         </aside>
 
-        <main className='min-w-0 space-y-5'>
-          <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+        <main className='min-w-0 space-y-5 xl:flex xl:h-[calc(100vh-220px)] xl:min-h-0 xl:flex-col'>
+          <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:shrink-0'>
             <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
               <div>
                 <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
@@ -479,10 +479,12 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             </details>
           </section>
 
-          <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+          <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:min-h-0 xl:flex-1'>
             <ChatPlayground
               key={selectedPet.id}
               petId={selectedPet.id}
+              petName={selectedPet.name}
+              petImageUrl={selectedPet.image_url}
               initialMessages={initialMessages}
               initialRemainingLabel={usageLabel}
               initialMemorySummary={summaryText}

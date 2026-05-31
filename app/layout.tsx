@@ -1,18 +1,17 @@
-import type { Metadata } from 'next';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
-import { SupabaseProvider } from '@/components/supabase-provider';
-import './globals.css';
+// app/layout.tsx
+import { FixedBottomNav } from '@/components/FixedBottomNav';
 
-export const metadata: Metadata = {
-  title: 'EchoPaws — Your Pet, Always By Your Side',
-  description: 'Create an AI companion from your pet. It remembers you, understands you, and grows closer with every conversation.',
-};
-
-export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang='en'>
-      <body>
-        <SupabaseProvider>{children}</SupabaseProvider>
+    <html lang="en">
+      <body className="bg-[#FFFBF5]"> {/* 这里建议全局背景色改为奶油白 */}
+        {/* 原有的 Header */}
+        <div className="pb-16 lg:pb-0"> {/* 给移动端底部导航留出空间 */}
+          {children}
+        </div>
+        
+        {/* 插入新组件 */}
+        <FixedBottomNav />
       </body>
     </html>
   );

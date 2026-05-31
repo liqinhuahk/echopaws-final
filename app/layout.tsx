@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { MobileAppChrome } from '@/components/mobile-app-chrome';
 import { SupabaseProvider } from '@/components/supabase-provider';
 import './globals.css';
 
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang='en'>
       <body>
-        <SupabaseProvider>{children}</SupabaseProvider>
+        <SupabaseProvider>
+          <MobileAppChrome />
+          <div className='mobile-app-content'>{children}</div>
+        </SupabaseProvider>
       </body>
     </html>
   );

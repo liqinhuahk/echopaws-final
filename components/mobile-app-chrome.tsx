@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { usePathname } from 'next/navigation';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 type ChatPetItem = {
   id: string;
@@ -80,14 +80,11 @@ function PetThumb({
   imageUrl?: string | null;
   size?: 'sm' | 'md';
 }) {
-  const className =
-    size === 'md'
-      ? 'h-9 w-9 rounded-full'
-      : 'h-8 w-8 rounded-full';
+  const boxClass = size === 'md' ? 'h-9 w-9 rounded-full' : 'h-8 w-8 rounded-full';
 
   if (imageUrl) {
     return (
-      <div className={`${className} overflow-hidden border border-orange-100 bg-orange-50`}>
+      <div className={`${boxClass} overflow-hidden border border-orange-100 bg-orange-50`}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageUrl} alt={`${name} avatar`} className='h-full w-full object-cover' />
       </div>
@@ -96,7 +93,7 @@ function PetThumb({
 
   return (
     <div
-      className={`${className} flex items-center justify-center border border-orange-100 bg-orange-100 text-[13px] text-orange-900`}
+      className={`${boxClass} flex items-center justify-center border border-orange-100 bg-orange-100 text-[13px] text-orange-900`}
       aria-label={`${name} avatar placeholder`}
     >
       🐾
@@ -129,16 +126,24 @@ function readChatPetsFromDom(): ChatPetPayload | null {
   }
 }
 
+function extractPetIdFromHref(href: string) {
+  try {
+    const url = new URL(href, 'https://echopaws.local');
+    return url.searchParams.get('pet_id');
+  } catch {
+    return null;
+  }
+}
+
 export function MobileAppChrome() {
   const pathname = usePathname();
-  const searchParams = useSearchParams();
   const shouldShow = isCoreMobileAppRoute(pathname);
   const isChatPage = pathname.startsWith('/chat');
 
+  const containerRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [chatPetPayload, setChatPetPayload] = useState<ChatPetPayload | null>(null);
-
-  const queryKey = searchParams?.toString() ?? '';
+  const [optimisticPetId, setOptimisticPetId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!shouldShow) {
@@ -153,51 +158,79 @@ export function MobileAppChrome() {
     };
   }, [shouldShow]);
 
-  // 路由或 query 改变时，自动收回下拉
   useEffect(() => {
     setIsOpen(false);
-  }, [pathname, queryKey]);
+  }, [pathname]);
 
-  // 在 chat 页面上，路径或 pet_id 变化后重新读取当前 pet 数据
   useEffect(() => {
     if (!isChatPage) {
       setChatPetPayload(null);
+      setOptimisticPetId(null);
       return;
     }
 
-    let cancelled = false;
-    let attempts = 0;
+    let stopped = false;
 
     const syncFromDom = () => {
-      if (cancelled) return;
+      if (stopped) return;
 
       const payload = readChatPetsFromDom();
-      if (payload) {
-        setChatPetPayload(payload);
-        return;
-      }
+      if (!payload) return;
 
-      attempts += 1;
-      if (attempts < 24) {
-        window.setTimeout(syncFromDom, 120);
+      setChatPetPayload((prev) => {
+        const prevText = prev ? JSON.stringify(prev) : '';
+        const nextText = JSON.stringify(payload);
+        return prevText === nextText ? prev : payload;
+      });
+
+      if (payload.activePetId && optimisticPetId && payload.activePetId === optimisticPetId) {
+        setOptimisticPetId(null);
       }
     };
 
     syncFromDom();
 
-    return () => {
-      cancelled = true;
+    const timer = window.setInterval(syncFromDom, 500);
+
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') syncFromDom();
     };
-  }, [isChatPage, pathname, queryKey]);
+
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    return () => {
+      stopped = true;
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibility);
+    };
+  }, [isChatPage, pathname, optimisticPetId]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const node = containerRef.current;
+      if (!node) return;
+      if (node.contains(event.target as Node)) return;
+      setIsOpen(false);
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => {
+      document.removeEventListener('pointerdown', handlePointerDown);
+    };
+  }, [isOpen]);
+
+  const effectiveActivePetId = optimisticPetId ?? chatPetPayload?.activePetId ?? null;
 
   const activePet = useMemo(() => {
     if (!chatPetPayload?.pets?.length) return null;
 
     return (
-      chatPetPayload.pets.find((pet) => pet.id === chatPetPayload.activePetId) ??
+      chatPetPayload.pets.find((pet) => pet.id === effectiveActivePetId) ??
       chatPetPayload.pets[0]
     );
-  }, [chatPetPayload]);
+  }, [chatPetPayload, effectiveActivePetId]);
 
   const navItems = useMemo(
     () => [
@@ -236,11 +269,11 @@ export function MobileAppChrome() {
       <div className='mobile-app-topbar' aria-label='EchoPaws mobile top bar'>
         <Link href='/' className='mobile-app-topbar__brand'>
           <span className='mobile-app-topbar__paw'>🐾</span>
-          <span>EchoPaws V2</span>
+          <span>EchoPaws</span>
         </Link>
 
         {isChatPage && activePet ? (
-          <div className='mobile-app-pet-switcher'>
+          <div ref={containerRef} className='mobile-app-pet-switcher'>
             <button
               type='button'
               className='mobile-app-pet-switcher__trigger'
@@ -260,13 +293,13 @@ export function MobileAppChrome() {
               <>
                 <button
                   type='button'
-                  aria-label='Close pet switcher'
                   className='mobile-app-pet-switcher__backdrop'
+                  aria-label='Close pet switcher'
                   onClick={() => setIsOpen(false)}
                 />
                 <div className='mobile-app-pet-switcher__menu' role='menu'>
                   {chatPetPayload?.pets.map((pet) => {
-                    const isActive = pet.id === chatPetPayload.activePetId;
+                    const isActive = pet.id === effectiveActivePetId;
 
                     return (
                       <Link
@@ -279,16 +312,19 @@ export function MobileAppChrome() {
                             : 'mobile-app-pet-switcher__item'
                         }
                         onClick={() => {
+                          setOptimisticPetId(pet.id);
                           setIsOpen(false);
                         }}
                       >
                         <PetThumb name={pet.name} imageUrl={pet.imageUrl} size='md' />
+
                         <span className='mobile-app-pet-switcher__item-text'>
                           <span className='mobile-app-pet-switcher__item-name'>{pet.name}</span>
                           <span className='mobile-app-pet-switcher__item-sub'>
                             {isActive ? 'Current AI Pet' : 'Switch to this pet'}
                           </span>
                         </span>
+
                         {isActive ? (
                           <span className='mobile-app-pet-switcher__check'>✓</span>
                         ) : null}
@@ -307,7 +343,9 @@ export function MobileAppChrome() {
           <Link
             key={item.href}
             href={item.href}
-            className={item.active ? 'mobile-app-bottomnav__item is-active' : 'mobile-app-bottomnav__item'}
+            className={
+              item.active ? 'mobile-app-bottomnav__item is-active' : 'mobile-app-bottomnav__item'
+            }
           >
             <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
             <span className='mobile-app-bottomnav__label'>{item.label}</span>

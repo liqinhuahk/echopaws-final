@@ -16,7 +16,16 @@ type ChatPetPayload = {
   pets: ChatPetItem[];
 };
 
-function isMobileBottomNavRoute(path: string) {
+function shouldShowTopBar(path: string) {
+  return (
+    path.startsWith('/chat') ||
+    path.startsWith('/memories') ||
+    path.startsWith('/pets') ||
+    path.startsWith('/create-pet')
+  );
+}
+
+function shouldShowBottomNav(path: string) {
   return (
     path === '/' ||
     path.startsWith('/chat') ||
@@ -25,21 +34,11 @@ function isMobileBottomNavRoute(path: string) {
   );
 }
 
-function isMobileTopBarRoute(path: string) {
-  return (
-    path.startsWith('/chat') ||
-    path.startsWith('/memories') ||
-    path.startsWith('/account') ||
-    path.startsWith('/pets') ||
-    path.startsWith('/create-pet')
-  );
-}
-
 function getRouteBodyClass(path: string) {
   if (path === '/') return 'mobile-route-home';
   if (path.startsWith('/chat')) return 'mobile-route-chat';
-  if (path.startsWith('/account')) return 'mobile-route-account';
   if (path.startsWith('/memories')) return 'mobile-route-memories';
+  if (path.startsWith('/account')) return 'mobile-route-account';
   if (path.startsWith('/pets')) return 'mobile-route-pets';
   if (path.startsWith('/create-pet')) return 'mobile-route-create-pet';
   return 'mobile-route-generic';
@@ -132,7 +131,6 @@ function readChatPetsFromDom(): ChatPetPayload | null {
 
   try {
     const parsed = JSON.parse(el.textContent) as ChatPetPayload;
-
     if (!parsed || !Array.isArray(parsed.pets)) return null;
 
     return {
@@ -151,12 +149,11 @@ function readChatPetsFromDom(): ChatPetPayload | null {
 
 export function MobileAppChrome() {
   const pathname = usePathname();
-  const showTopBar = isMobileTopBarRoute(pathname);
-  const showBottomNav = isMobileBottomNavRoute(pathname);
-  const shouldShow = showTopBar || showBottomNav;
+  const showTopBar = shouldShowTopBar(pathname);
+  const showBottomNav = shouldShowBottomNav(pathname);
+  const shouldShowAnything = showTopBar || showBottomNav;
 
   const isChatPage = pathname.startsWith('/chat');
-  const isAccountPage = pathname.startsWith('/account');
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -170,8 +167,8 @@ export function MobileAppChrome() {
       'mobile-bottomnav-active',
       'mobile-route-home',
       'mobile-route-chat',
-      'mobile-route-account',
       'mobile-route-memories',
+      'mobile-route-account',
       'mobile-route-pets',
       'mobile-route-create-pet',
       'mobile-route-generic',
@@ -179,7 +176,7 @@ export function MobileAppChrome() {
 
     document.body.classList.remove(...allClasses);
 
-    if (!shouldShow) return;
+    if (!shouldShowAnything) return;
 
     document.body.classList.add('mobile-chrome-active');
     if (showTopBar) document.body.classList.add('mobile-topbar-active');
@@ -189,7 +186,7 @@ export function MobileAppChrome() {
     return () => {
       document.body.classList.remove(...allClasses);
     };
-  }, [pathname, shouldShow, showTopBar, showBottomNav]);
+  }, [pathname, showTopBar, showBottomNav, shouldShowAnything]);
 
   useEffect(() => {
     setIsOpen(false);
@@ -223,18 +220,11 @@ export function MobileAppChrome() {
 
     syncFromDom();
 
-    const timer = window.setInterval(syncFromDom, 500);
-
-    const handleVisibility = () => {
-      if (document.visibilityState === 'visible') syncFromDom();
-    };
-
-    document.addEventListener('visibilitychange', handleVisibility);
+    const timer = window.setInterval(syncFromDom, 600);
 
     return () => {
       stopped = true;
       window.clearInterval(timer);
-      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [isChatPage, pathname, optimisticPetId]);
 
@@ -295,7 +285,7 @@ export function MobileAppChrome() {
     [pathname]
   );
 
-  if (!shouldShow) return null;
+  if (!shouldShowAnything) return null;
 
   return (
     <>
@@ -368,17 +358,6 @@ export function MobileAppChrome() {
                   </div>
                 </>
               ) : null}
-            </div>
-          ) : null}
-
-          {isAccountPage ? (
-            <div className='mobile-app-topbar__actions'>
-              <Link href='/login' className='mobile-app-topbar__ghost-btn'>
-                Sign In
-              </Link>
-              <Link href='/pricing' className='mobile-app-topbar__cta-btn'>
-                Upgrade to VIP
-              </Link>
             </div>
           ) : null}
         </div>

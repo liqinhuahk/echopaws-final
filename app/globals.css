@@ -19,6 +19,7 @@ body {
 }
 
 * {
+  box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -102,6 +103,7 @@ textarea {
     @apply w-full rounded-2xl border border-black/10 bg-white/90 px-4 py-3.5 text-sm outline-none transition focus:border-orange-300 focus:ring-2 focus:ring-orange-100;
   }
 
+  /* 仅作为未来移动端导航预留，不强制影响当前页面 */
   .mobile-safe-bottom {
     padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
   }
@@ -109,11 +111,27 @@ textarea {
   .mobile-app-surface {
     @apply rounded-[24px] border border-black/5 bg-white/90 shadow-md;
   }
+
+  .mobile-page-shell {
+    width: 100%;
+  }
+
+  .mobile-chat-screen {
+    min-height: auto;
+  }
+
+  .mobile-scroll-panel {
+    overflow: visible;
+  }
+
+  .mobile-sticky-input {
+    position: static;
+  }
 }
 
-/* ------------------------------ */
-/* Mobile App 化：只影响 <=1024px */
-/* ------------------------------ */
+/* ---------------------------------- */
+/* Mobile 增强：只做保守优化，不改站点结构 */
+/* ---------------------------------- */
 @media (max-width: 1024px) {
   html,
   body {
@@ -126,36 +144,26 @@ textarea {
       linear-gradient(180deg, #fffaf3 0%, #fffdf8 100%);
   }
 
-  /* 全局页面容器更像 App，而不是网页 */
   .container-shell {
     width: min(calc(100% - 20px), 100%);
   }
 
-  /* 让常见页面主容器减少左右空白 */
-  body > div,
-  body > main {
-    min-width: 0;
-  }
-
-  main {
-    min-width: 0;
-  }
-
-  /* 手机端大标题收一点，避免太像桌面海报 */
   .page-title {
-    @apply text-3xl leading-tight;
+    font-size: clamp(2rem, 7vw, 2.75rem);
+    line-height: 1.02;
   }
 
   .page-subtitle,
   .section-subtitle {
-    @apply text-sm leading-7;
+    max-width: none;
+    font-size: 0.95rem;
+    line-height: 1.85rem;
   }
 
   .section-title {
-    @apply text-2xl;
+    font-size: clamp(1.75rem, 6vw, 2.25rem);
   }
 
-  /* 卡片、按钮、输入框统一更偏 App 手感 */
   .glass-card,
   .feature-card {
     border-radius: 24px;
@@ -166,27 +174,26 @@ textarea {
   .subtle-button,
   .plain-link-button {
     min-height: 48px;
-    border-radius: 9999px;
     padding-left: 20px;
     padding-right: 20px;
+    border-radius: 9999px;
   }
 
   .input-shell {
     min-height: 48px;
     border-radius: 18px;
-    font-size: 16px; /* 防止 iOS 自动放大 */
+    font-size: 16px; /* 避免 iPhone 自动放大 */
   }
 
-  /* 聊天气泡在手机上更好读 */
   .chat-bubble-user,
   .chat-bubble-ai {
     max-width: 88%;
     border-radius: 18px;
     font-size: 15px;
-    line-height: 1.7;
+    line-height: 1.75;
   }
 
-  /* 统一手机端常见页面的外边距观感 */
+  /* 仅优化常见页面外边距，不碰结构 */
   .mx-auto.max-w-7xl,
   .mx-auto.max-w-6xl,
   .mx-auto.max-w-5xl,
@@ -197,7 +204,6 @@ textarea {
     padding-right: 12px !important;
   }
 
-  /* 常见大圆角卡片收敛一点，更像 App */
   .rounded-\[32px\] {
     border-radius: 24px !important;
   }
@@ -222,47 +228,35 @@ textarea {
     border-radius: 18px !important;
   }
 
-  /* 让常见两栏/三栏区块在手机自动单栏 */
-  .xl\:grid-cols-\[320px_minmax\(0\,1fr\)\] {
-    grid-template-columns: minmax(0, 1fr) !important;
+  /* 新增的保守型移动端 helper class：只有你主动加 class 才会生效 */
+  .mobile-page-shell {
+    padding-left: 12px;
+    padding-right: 12px;
   }
 
-  /* 手机端把桌面侧栏隐藏，减少“网页感” */
-  aside {
-    display: none !important;
+  .mobile-chat-screen {
+    min-height: calc(100dvh - 84px);
   }
 
-  /* 主内容改为全宽 */
-  main {
-    width: 100% !important;
+  .mobile-scroll-panel {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
   }
 
-  /* 常见 sticky / summary / toolbar 卡片在手机上更贴近内容 */
-  .xl\:h-\[calc\(100vh-220px\)\],
-  .xl\:min-h-\[calc\(100vh-190px\)\] {
-    height: auto !important;
-    min-height: auto !important;
+  .mobile-sticky-input {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    background: inherit;
   }
 
-  .xl\:flex,
-  .xl\:flex-1,
-  .xl\:min-h-0,
-  .xl\:shrink-0 {
-    min-height: 0;
+  .mobile-app-surface {
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(15, 23, 42, 0.05);
+    box-shadow: 0 10px 30px rgba(31, 41, 55, 0.08);
   }
 
-  /* 聊天页 / 记忆页列表区：手机不强制固定高度，交给内容自然流动 */
-  .xl\:overflow-y-auto,
-  .xl\:overscroll-contain {
-    overflow: visible !important;
-  }
-
-  /* 预留未来底部导航空间，不影响桌面 */
-  body {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom));
-  }
-
-  /* 底部固定导航专用类 */
   .mobile-bottom-nav {
     position: fixed;
     left: 0;
@@ -276,13 +270,11 @@ textarea {
     border-top: 1px solid rgba(15, 23, 42, 0.08);
   }
 
-  /* 手机端头图/hero不要太高，避免首屏被吃掉 */
   .hero-mobile-compact {
     padding-top: 16px !important;
     padding-bottom: 16px !important;
   }
 
-  /* 让常见详情/列表/卡片在手机上触控更舒服 */
   summary,
   button,
   a {
@@ -291,7 +283,7 @@ textarea {
 }
 
 /* ------------------------------ */
-/* Small phones 进一步收紧 */
+/* Small phones 再收一点 */
 /* ------------------------------ */
 @media (max-width: 640px) {
   .container-shell {
@@ -327,14 +319,18 @@ textarea {
 }
 
 /* ------------------------------ */
-/* Desktop 保持原本网页观感 */
+/* Desktop 不受影响 */
 /* ------------------------------ */
 @media (min-width: 1025px) {
-  body {
-    padding-bottom: 0;
-  }
-
   .mobile-bottom-nav {
     display: none !important;
+  }
+
+  .mobile-page-shell,
+  .mobile-chat-screen,
+  .mobile-scroll-panel,
+  .mobile-sticky-input,
+  .mobile-safe-bottom {
+    all: revert-layer;
   }
 }

@@ -16,10 +16,33 @@ type ChatPetPayload = {
   pets: ChatPetItem[];
 };
 
-function isCoreMobileAppRoute(path: string) {
-  return ['/chat', '/memories', '/account', '/pets', '/create-pet'].some((route) =>
-    path.startsWith(route)
+function isMobileBottomNavRoute(path: string) {
+  return (
+    path === '/' ||
+    path.startsWith('/chat') ||
+    path.startsWith('/memories') ||
+    path.startsWith('/account')
   );
+}
+
+function isMobileTopBarRoute(path: string) {
+  return (
+    path.startsWith('/chat') ||
+    path.startsWith('/memories') ||
+    path.startsWith('/account') ||
+    path.startsWith('/pets') ||
+    path.startsWith('/create-pet')
+  );
+}
+
+function getRouteBodyClass(path: string) {
+  if (path === '/') return 'mobile-route-home';
+  if (path.startsWith('/chat')) return 'mobile-route-chat';
+  if (path.startsWith('/account')) return 'mobile-route-account';
+  if (path.startsWith('/memories')) return 'mobile-route-memories';
+  if (path.startsWith('/pets')) return 'mobile-route-pets';
+  if (path.startsWith('/create-pet')) return 'mobile-route-create-pet';
+  return 'mobile-route-generic';
 }
 
 function HomeIcon() {
@@ -126,19 +149,14 @@ function readChatPetsFromDom(): ChatPetPayload | null {
   }
 }
 
-function extractPetIdFromHref(href: string) {
-  try {
-    const url = new URL(href, 'https://echopaws.local');
-    return url.searchParams.get('pet_id');
-  } catch {
-    return null;
-  }
-}
-
 export function MobileAppChrome() {
   const pathname = usePathname();
-  const shouldShow = isCoreMobileAppRoute(pathname);
+  const showTopBar = isMobileTopBarRoute(pathname);
+  const showBottomNav = isMobileBottomNavRoute(pathname);
+  const shouldShow = showTopBar || showBottomNav;
+
   const isChatPage = pathname.startsWith('/chat');
+  const isAccountPage = pathname.startsWith('/account');
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [isOpen, setIsOpen] = useState(false);
@@ -146,17 +164,32 @@ export function MobileAppChrome() {
   const [optimisticPetId, setOptimisticPetId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!shouldShow) {
-      document.body.classList.remove('mobile-chrome-active');
-      return;
-    }
+    const allClasses = [
+      'mobile-chrome-active',
+      'mobile-topbar-active',
+      'mobile-bottomnav-active',
+      'mobile-route-home',
+      'mobile-route-chat',
+      'mobile-route-account',
+      'mobile-route-memories',
+      'mobile-route-pets',
+      'mobile-route-create-pet',
+      'mobile-route-generic',
+    ];
+
+    document.body.classList.remove(...allClasses);
+
+    if (!shouldShow) return;
 
     document.body.classList.add('mobile-chrome-active');
+    if (showTopBar) document.body.classList.add('mobile-topbar-active');
+    if (showBottomNav) document.body.classList.add('mobile-bottomnav-active');
+    document.body.classList.add(getRouteBodyClass(pathname));
 
     return () => {
-      document.body.classList.remove('mobile-chrome-active');
+      document.body.classList.remove(...allClasses);
     };
-  }, [shouldShow]);
+  }, [pathname, shouldShow, showTopBar, showBottomNav]);
 
   useEffect(() => {
     setIsOpen(false);
@@ -266,92 +299,107 @@ export function MobileAppChrome() {
 
   return (
     <>
-      <div className='mobile-app-topbar' aria-label='EchoPaws mobile top bar'>
-        <Link href='/' className='mobile-app-topbar__brand'>
-          <span className='mobile-app-topbar__paw'>🐾</span>
-          <span>EchoPaws</span>
-        </Link>
-
-        {isChatPage && activePet ? (
-          <div ref={containerRef} className='mobile-app-pet-switcher'>
-            <button
-              type='button'
-              className='mobile-app-pet-switcher__trigger'
-              aria-expanded={isOpen}
-              aria-haspopup='menu'
-              aria-label='Switch AI pet'
-              onClick={() => setIsOpen((prev) => !prev)}
-            >
-              <PetThumb name={activePet.name} imageUrl={activePet.imageUrl} size='sm' />
-              <span className='mobile-app-pet-switcher__name'>{activePet.name}</span>
-              <span className='mobile-app-pet-switcher__chevron'>
-                <ChevronDownIcon open={isOpen} />
-              </span>
-            </button>
-
-            {isOpen ? (
-              <>
-                <button
-                  type='button'
-                  className='mobile-app-pet-switcher__backdrop'
-                  aria-label='Close pet switcher'
-                  onClick={() => setIsOpen(false)}
-                />
-                <div className='mobile-app-pet-switcher__menu' role='menu'>
-                  {chatPetPayload?.pets.map((pet) => {
-                    const isActive = pet.id === effectiveActivePetId;
-
-                    return (
-                      <Link
-                        key={pet.id}
-                        href={pet.href}
-                        role='menuitem'
-                        className={
-                          isActive
-                            ? 'mobile-app-pet-switcher__item is-active'
-                            : 'mobile-app-pet-switcher__item'
-                        }
-                        onClick={() => {
-                          setOptimisticPetId(pet.id);
-                          setIsOpen(false);
-                        }}
-                      >
-                        <PetThumb name={pet.name} imageUrl={pet.imageUrl} size='md' />
-
-                        <span className='mobile-app-pet-switcher__item-text'>
-                          <span className='mobile-app-pet-switcher__item-name'>{pet.name}</span>
-                          <span className='mobile-app-pet-switcher__item-sub'>
-                            {isActive ? 'Current AI Pet' : 'Switch to this pet'}
-                          </span>
-                        </span>
-
-                        {isActive ? (
-                          <span className='mobile-app-pet-switcher__check'>✓</span>
-                        ) : null}
-                      </Link>
-                    );
-                  })}
-                </div>
-              </>
-            ) : null}
-          </div>
-        ) : null}
-      </div>
-
-      <nav className='mobile-app-bottomnav' aria-label='EchoPaws mobile navigation'>
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={
-              item.active ? 'mobile-app-bottomnav__item is-active' : 'mobile-app-bottomnav__item'
-            }
-          >
-            <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
-            <span className='mobile-app-bottomnav__label'>{item.label}</span>
+      {showTopBar ? (
+        <div className='mobile-app-topbar' aria-label='EchoPaws mobile top bar'>
+          <Link href='/' className='mobile-app-topbar__brand'>
+            <span className='mobile-app-topbar__paw'>🐾</span>
+            <span>EchoPaws</span>
           </Link>
-        ))}
-      </nav>
+
+          {isChatPage && activePet ? (
+            <div ref={containerRef} className='mobile-app-pet-switcher'>
+              <button
+                type='button'
+                className='mobile-app-pet-switcher__trigger'
+                aria-expanded={isOpen}
+                aria-haspopup='menu'
+                aria-label='Switch AI pet'
+                onClick={() => setIsOpen((prev) => !prev)}
+              >
+                <PetThumb name={activePet.name} imageUrl={activePet.imageUrl} size='sm' />
+                <span className='mobile-app-pet-switcher__name'>{activePet.name}</span>
+                <span className='mobile-app-pet-switcher__chevron'>
+                  <ChevronDownIcon open={isOpen} />
+                </span>
+              </button>
+
+              {isOpen ? (
+                <>
+                  <button
+                    type='button'
+                    className='mobile-app-pet-switcher__backdrop'
+                    aria-label='Close pet switcher'
+                    onClick={() => setIsOpen(false)}
+                  />
+                  <div className='mobile-app-pet-switcher__menu' role='menu'>
+                    {chatPetPayload?.pets.map((pet) => {
+                      const isActive = pet.id === effectiveActivePetId;
+
+                      return (
+                        <Link
+                          key={pet.id}
+                          href={pet.href}
+                          role='menuitem'
+                          className={
+                            isActive
+                              ? 'mobile-app-pet-switcher__item is-active'
+                              : 'mobile-app-pet-switcher__item'
+                          }
+                          onClick={() => {
+                            setOptimisticPetId(pet.id);
+                            setIsOpen(false);
+                          }}
+                        >
+                          <PetThumb name={pet.name} imageUrl={pet.imageUrl} size='md' />
+
+                          <span className='mobile-app-pet-switcher__item-text'>
+                            <span className='mobile-app-pet-switcher__item-name'>{pet.name}</span>
+                            <span className='mobile-app-pet-switcher__item-sub'>
+                              {isActive ? 'Current AI Pet' : 'Switch to this pet'}
+                            </span>
+                          </span>
+
+                          {isActive ? (
+                            <span className='mobile-app-pet-switcher__check'>✓</span>
+                          ) : null}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </>
+              ) : null}
+            </div>
+          ) : null}
+
+          {isAccountPage ? (
+            <div className='mobile-app-topbar__actions'>
+              <Link href='/login' className='mobile-app-topbar__ghost-btn'>
+                Sign In
+              </Link>
+              <Link href='/pricing' className='mobile-app-topbar__cta-btn'>
+                Upgrade to VIP
+              </Link>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
+      {showBottomNav ? (
+        <nav className='mobile-app-bottomnav' aria-label='EchoPaws mobile navigation'>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={
+                item.active ? 'mobile-app-bottomnav__item is-active' : 'mobile-app-bottomnav__item'
+              }
+            >
+              <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
+              <span className='mobile-app-bottomnav__label'>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </>
   );
 }

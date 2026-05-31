@@ -39,6 +39,9 @@
   --radius-xl: 34px;
 
   --max-width: 1200px;
+
+  --mobile-topbar-height: 64px;
+  --mobile-bottomnav-height: 74px;
 }
 
 /* =========================================
@@ -72,10 +75,6 @@
       "Segoe UI",
       sans-serif;
     text-rendering: optimizeLegibility;
-    overflow-x: hidden;
-  }
-
-  body.mobile-chrome-active {
     overflow-x: hidden;
   }
 
@@ -357,8 +356,7 @@ footer {
 }
 
 /* =========================================
-   Mobile app shell defaults
-   Desktop default: hidden
+   Mobile shell defaults
    ========================================= */
 
 .mobile-app-content {
@@ -373,6 +371,9 @@ footer {
 
 .mobile-app-topbar__brand,
 .mobile-app-topbar__paw,
+.mobile-app-topbar__actions,
+.mobile-app-topbar__ghost-btn,
+.mobile-app-topbar__cta-btn,
 .mobile-app-pet-switcher,
 .mobile-app-pet-switcher__trigger,
 .mobile-app-pet-switcher__name,
@@ -388,10 +389,6 @@ footer {
 .mobile-app-bottomnav__label {
   box-sizing: border-box;
 }
-
-/* =========================================
-   Chat viewport classes
-   ========================================= */
 
 .mobile-chat-shell,
 .mobile-chat-card,
@@ -423,13 +420,23 @@ footer {
   }
 
   body.mobile-chrome-active {
-    padding-top: calc(64px + env(safe-area-inset-top, 0px)) !important;
-    padding-bottom: calc(78px + env(safe-area-inset-bottom, 0px)) !important;
+    overflow-x: hidden;
+  }
+
+  body.mobile-topbar-active {
+    padding-top: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px)) !important;
+  }
+
+  body.mobile-bottomnav-active {
+    padding-bottom: calc(var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .mobile-app-content {
     min-height: 100dvh;
-    padding-bottom: calc(86px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  body.mobile-bottomnav-active .mobile-app-content {
+    padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   /* -------------------------
@@ -440,14 +447,13 @@ footer {
     position: fixed !important;
     inset: 0 0 auto 0 !important;
     z-index: 80 !important;
-    height: calc(64px + env(safe-area-inset-top, 0px)) !important;
+    height: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px)) !important;
     padding:
       calc(env(safe-area-inset-top, 0px) + 10px)
       14px
       10px
       14px !important;
     display: flex !important;
-    flex-direction: row !important;
     align-items: center !important;
     justify-content: space-between !important;
     gap: 12px !important;
@@ -459,7 +465,6 @@ footer {
 
   .mobile-app-topbar__brand {
     display: inline-flex !important;
-    flex-direction: row !important;
     align-items: center !important;
     justify-content: flex-start !important;
     gap: 8px !important;
@@ -478,11 +483,47 @@ footer {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    width: auto !important;
-    height: auto !important;
     font-size: 0.95rem !important;
     line-height: 1 !important;
     flex: 0 0 auto !important;
+  }
+
+  .mobile-app-topbar__actions {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    margin-left: auto !important;
+    flex: 0 0 auto !important;
+  }
+
+  .mobile-app-topbar__ghost-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 38px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    border: 1px solid rgba(15, 23, 42, 0.1) !important;
+    background: #fff !important;
+    color: #334155 !important;
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    white-space: nowrap !important;
+  }
+
+  .mobile-app-topbar__cta-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    min-height: 38px !important;
+    padding: 0 14px !important;
+    border-radius: 999px !important;
+    background: linear-gradient(135deg, #ff9f1a 0%, #f97316 100%) !important;
+    color: #fff !important;
+    font-size: 0.92rem !important;
+    font-weight: 900 !important;
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22) !important;
+    white-space: nowrap !important;
   }
 
   /* -------------------------
@@ -506,7 +547,6 @@ footer {
     height: 40px !important;
     padding: 0 10px !important;
     display: inline-flex !important;
-    flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 8px !important;
@@ -570,7 +610,6 @@ footer {
 
   .mobile-app-pet-switcher__item {
     display: flex !important;
-    flex-direction: row !important;
     align-items: center !important;
     gap: 10px !important;
     width: 100% !important;
@@ -624,7 +663,7 @@ footer {
     right: 0 !important;
     bottom: 0 !important;
     z-index: 80 !important;
-    height: calc(74px + env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px)) !important;
     padding:
       8px
       10px
@@ -682,21 +721,44 @@ footer {
   }
 
   /* -------------------------
-     Chat viewport hard-fix
+     Chat route: lock page, scroll only message area
      ------------------------- */
 
-  body.mobile-chrome-active .mobile-chat-shell {
-    min-height: calc(100dvh - 150px - env(safe-area-inset-bottom, 0px)) !important;
-    height: calc(100dvh - 150px - env(safe-area-inset-bottom, 0px)) !important;
+  body.mobile-route-chat {
+    overflow: hidden !important;
+  }
+
+  body.mobile-route-chat .mobile-app-content {
+    height: calc(
+      100dvh
+      - (var(--mobile-topbar-height) + env(safe-area-inset-top, 0px))
+      - (var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px))
+    ) !important;
+    min-height: calc(
+      100dvh
+      - (var(--mobile-topbar-height) + env(safe-area-inset-top, 0px))
+      - (var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px))
+    ) !important;
+    overflow: hidden !important;
+    padding-bottom: 0 !important;
+  }
+
+  body.mobile-route-chat .mobile-app-content > * {
+    height: 100% !important;
+  }
+
+  body.mobile-route-chat .mobile-chat-shell {
+    height: 100% !important;
+    min-height: 0 !important;
     display: flex !important;
     flex-direction: column !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-toolbar {
+  body.mobile-route-chat .mobile-chat-toolbar {
     flex: 0 0 auto !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-card {
+  body.mobile-route-chat .mobile-chat-card {
     min-height: 0 !important;
     flex: 1 1 auto !important;
     overflow: hidden !important;
@@ -704,16 +766,17 @@ footer {
     flex-direction: column !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-scroll {
+  body.mobile-route-chat .mobile-chat-scroll {
     min-height: 0 !important;
     flex: 1 1 auto !important;
     overflow-y: auto !important;
     overscroll-behavior: contain !important;
     -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
     padding-bottom: 8px !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-composer {
+  body.mobile-route-chat .mobile-chat-composer {
     position: sticky !important;
     bottom: 0 !important;
     z-index: 4 !important;
@@ -724,6 +787,20 @@ footer {
       rgba(245, 245, 247, 1) 44px
     ) !important;
     padding-top: 8px !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* -------------------------
+     Account route: hide duplicate page header
+     ------------------------- */
+
+  body.mobile-route-account .mobile-app-content > header,
+  body.mobile-route-account .mobile-app-content header:first-of-type {
+    display: none !important;
+  }
+
+  body.mobile-route-account .mobile-app-content {
+    padding-top: 0 !important;
   }
 }
 
@@ -757,6 +834,17 @@ footer {
     font-size: 0.88rem !important;
   }
 
+  .mobile-app-topbar__actions {
+    gap: 6px !important;
+  }
+
+  .mobile-app-topbar__ghost-btn,
+  .mobile-app-topbar__cta-btn {
+    min-height: 36px !important;
+    padding: 0 12px !important;
+    font-size: 0.84rem !important;
+  }
+
   .mobile-app-bottomnav {
     gap: 6px !important;
     padding-left: 8px !important;
@@ -772,22 +860,17 @@ footer {
     font-size: 0.76rem !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-shell {
-    min-height: calc(100dvh - 142px - env(safe-area-inset-bottom, 0px)) !important;
-    height: calc(100dvh - 142px - env(safe-area-inset-bottom, 0px)) !important;
-  }
-
-  body.mobile-chrome-active .mobile-chat-card {
+  body.mobile-route-chat .mobile-chat-card {
     border-radius: 20px !important;
     padding: 10px !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-composer > div {
+  body.mobile-route-chat .mobile-chat-composer > div {
     border-radius: 18px !important;
     padding: 8px !important;
   }
 
-  body.mobile-chrome-active .mobile-chat-composer input[type='text'] {
+  body.mobile-route-chat .mobile-chat-composer input[type='text'] {
     min-height: 44px !important;
     padding-top: 11px !important;
     padding-bottom: 11px !important;
@@ -804,7 +887,8 @@ footer {
     display: none !important;
   }
 
-  body.mobile-chrome-active {
+  body.mobile-topbar-active,
+  body.mobile-bottomnav-active {
     padding-top: 0 !important;
     padding-bottom: 0 !important;
   }
@@ -827,5 +911,6 @@ footer {
 
   .mobile-chat-scroll {
     overflow-y: auto;
+    touch-action: auto;
   }
 }

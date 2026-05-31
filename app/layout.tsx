@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
-import { MobileAppChrome } from '@/components/mobile-app-chrome';
+import { Suspense } from 'react';
 import { SupabaseProvider } from '@/components/supabase-provider';
+import { MobileAppChrome } from '@/components/mobile-app-chrome';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,7 +17,10 @@ export default function RootLayout({
     <html lang='en'>
       <body>
         <SupabaseProvider>
-          <MobileAppChrome />
+          <Suspense fallback={null}>
+            <MobileAppChrome />
+          </Suspense>
+
           <div className='mobile-app-content'>{children}</div>
         </SupabaseProvider>
       </body>

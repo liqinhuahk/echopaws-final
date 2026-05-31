@@ -17,9 +17,7 @@ function maskEmail(email: string | null | undefined) {
 
   const [localPart, domain] = email.split('@');
   const safeLocal =
-    localPart.length <= 3
-      ? `${localPart.slice(0, 1)}***`
-      : `${localPart.slice(0, 3)}***`;
+    localPart.length <= 3 ? `${localPart.slice(0, 1)}***` : `${localPart.slice(0, 3)}***`;
 
   return `${safeLocal}@${domain}`;
 }
@@ -97,19 +95,15 @@ export default async function AccountPage() {
   }
 
   const vipActive =
-    subscription?.plan === 'vip' &&
-    ACTIVE_VIP_STATUSES.includes(subscription.status);
+    subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.includes(subscription.status ?? '');
 
   const currentPlan = vipActive ? 'VIP Membership' : 'Free Plan';
   const planBadge = vipActive ? 'VIP Active' : 'Free Plan';
-  const planStatus = vipActive
-    ? getPlanStatusLabel(subscription?.status)
-    : 'Free plan active';
+  const planStatus = vipActive ? getPlanStatusLabel(subscription?.status) : 'Free plan active';
 
   const pets = petOverview?.pets ?? [];
   const petCount = pets.length;
-  const defaultPet =
-    pets.find((pet) => pet.id === petOverview?.defaultPetId) || null;
+  const defaultPet = pets.find((pet) => pet.id === petOverview?.defaultPetId) || null;
 
   const maskedEmail = maskEmail(user.email);
   const fullEmail = user.email ?? 'No email available';
@@ -117,10 +111,12 @@ export default async function AccountPage() {
 
   return (
     <>
-      <SiteHeader
-        ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
-        ctaHref='/pricing'
-      />
+      <div className='hidden md:block'>
+        <SiteHeader
+          ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
+          ctaHref='/pricing'
+        />
+      </div>
 
       <main className='container-shell py-10'>
         <div className='eyebrow'>My Account</div>
@@ -136,9 +132,7 @@ export default async function AccountPage() {
               <h2 className='text-2xl font-extrabold'>Account Status</h2>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] ${
-                  vipActive
-                    ? 'bg-orange-100 text-orange-800'
-                    : 'bg-stone-100 text-stone-700'
+                  vipActive ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-700'
                 }`}
               >
                 {planBadge}
@@ -188,9 +182,7 @@ export default async function AccountPage() {
                   {vipActive ? 'Unlimited' : `${FREE_TOTAL_CHAT_LIMIT} total`}
                 </div>
                 <div className='mt-1 text-xs text-muted'>
-                  {vipActive
-                    ? 'Unlimited chats with VIP'
-                    : 'Lifetime chats, not daily reset'}
+                  {vipActive ? 'Unlimited chats with VIP' : 'Lifetime chats, not daily reset'}
                 </div>
               </div>
             </div>
@@ -281,8 +273,8 @@ export default async function AccountPage() {
               {petCount >= FREE_TIER_MAX_PETS && !vipActive
                 ? `You currently have ${petCount} pets on the Free plan. You’ve reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
                 : !vipActive
-                ? `You can still create ${freeSlotsLeft} more ${freeSlotsLeft === 1 ? 'pet' : 'pets'} on Free.`
-                : 'Your account is not currently limited by the Free plan.'}
+                  ? `You can still create ${freeSlotsLeft} more ${freeSlotsLeft === 1 ? 'pet' : 'pets'} on Free.`
+                  : 'Your account is not currently limited by the Free plan.'}
             </div>
           </article>
 
@@ -320,25 +312,25 @@ export default async function AccountPage() {
             <p className='mt-3 text-sm leading-8 text-muted'>
               Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats and can keep up to{' '}
               {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
-              unlocks more pet capacity, and gives your pet deeper long-term memory.
+              unlocks more pet capacity, and gives your pet deeper memory continuity.
             </p>
           </article>
 
           <article className='glass-card p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
-              Billing note
+              Privacy & control
             </div>
             <p className='mt-3 text-sm leading-8 text-muted'>
-              If you subscribed recently, your membership status may take a short moment to update.
-              You can always manage billing from the Stripe customer portal.
+              You can manage pets, open billing, and sign out from this page. For the cleanest
+              mobile experience, Sign In and Upgrade actions are handled by the shared mobile top
+              bar, while the desktop site keeps the full site header.
             </p>
           </article>
         </section>
       </main>
 
+      <SiteFooter />
       <script dangerouslySetInnerHTML={{ __html: getCopyEmailScript() }} />
-
-      <SiteFooter rightText='Account · Membership · Default Pet · Sign Out' />
     </>
   );
 }

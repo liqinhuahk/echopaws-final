@@ -168,12 +168,8 @@ function isLikelyPetAction(raw: string) {
 
   return normalizedWords.some((word) =>
     actionRoots.some(
-      (root) =>
-        word === root ||
-        word === `${root}s` ||
-        word === `${root}ed` ||
-        word === `${root}ing`,
-    ),
+      (root) => word === root || word === `${root}s` || word === `${root}ed` || word === `${root}ing`
+    )
   );
 }
 
@@ -181,10 +177,7 @@ function splitLeadingActionPrefix(content: string): ParsedSegment[] | null {
   const trimmed = content.trim();
   if (!trimmed) return null;
 
-  const patterns = [
-    /^([A-Z][A-Za-z\s]{1,28}!\s+)(.+)$/s,
-    /^([A-Za-z]+(?:\s+[A-Za-z]+){0,3}!\s+)(.+)$/s,
-  ];
+  const patterns = [/^([A-Z][A-Za-z\s]{1,28}!\s+)(.+)$/s, /^([A-Za-z]+(?:\s+[A-Za-z]+){0,3}!\s+)(.+)$/s];
 
   for (const pattern of patterns) {
     const match = trimmed.match(pattern);
@@ -413,9 +406,8 @@ export function ChatPlayground({
   }
 
   return (
-    <div className='flex min-h-[56vh] flex-col sm:min-h-[620px] xl:h-full xl:min-h-0'>
-      {/* compact top bar */}
-      <div className='grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3'>
+    <div className='mobile-chat-shell flex min-h-[56vh] flex-col xl:h-full xl:min-h-0'>
+      <div className='mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3'>
         <div className='truncate rounded-full border border-black/5 bg-white px-3 py-2 text-center text-[11px] font-bold text-slate-800 shadow-sm sm:text-xs'>
           {usageLabel}
         </div>
@@ -428,13 +420,12 @@ export function ChatPlayground({
         </a>
       </div>
 
-      {/* message stream */}
-      <div className='mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] border border-[#e5e7eb] bg-[#f5f5f7] p-3 shadow-inner sm:mt-5 sm:rounded-[28px] sm:p-4'>
+      <div className='mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] border border-[#e5e7eb] bg-[#f5f5f7] p-3 shadow-inner sm:mt-5 sm:rounded-[28px] sm:p-4'>
         <div
           ref={messageViewportRef}
-          className='min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth'
+          className='mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth'
         >
-          <div className='grid gap-3 sm:gap-4'>
+          <div className='grid gap-3 pb-2 sm:gap-4'>
             {messages.map((message, index) => {
               const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
@@ -442,7 +433,6 @@ export function ChatPlayground({
                 return (
                   <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
                     <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-
                     <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
                       <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-slate-500 sm:text-[11px]'>
                         {petName}
@@ -478,7 +468,6 @@ export function ChatPlayground({
             {loading ? (
               <div className='flex items-end gap-2.5 sm:gap-3'>
                 <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-
                 <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
                   <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-slate-500 sm:text-[11px]'>
                     {petName}
@@ -497,64 +486,64 @@ export function ChatPlayground({
             ) : null}
           </div>
         </div>
-      </div>
 
-      {error ? (
-        <div className='mt-3 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800 sm:mt-4'>
-          {error}
-        </div>
-      ) : null}
-
-      {memoryHints.length ? (
-        <div className='mt-3 rounded-[20px] border border-emerald-100 bg-emerald-50 px-3 py-3 sm:mt-4 sm:rounded-[24px] sm:px-4'>
-          <div className='text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-xs'>
-            New Memory Triggers
+        {error ? (
+          <div className='mt-3 shrink-0 rounded-2xl border border-rose-100 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+            {error}
           </div>
-          <div className='mt-2.5 flex flex-wrap gap-2 sm:mt-3'>
-            {memoryHints.map((hint, index) => (
-              <span
-                key={`${hint}-${index}`}
-                className='rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm shadow-emerald-100 sm:px-3 sm:py-2 sm:text-xs'
-              >
-                Remembered: {hint}
-              </span>
-            ))}
-          </div>
-        </div>
-      ) : null}
+        ) : null}
 
-      {/* compact app-like input */}
-      <form className='mt-3 shrink-0 sm:mt-5' onSubmit={handleSubmit}>
-        <div className='rounded-[22px] border border-[#e5e7eb] bg-white p-2.5 shadow-sm sm:rounded-[26px] sm:p-3'>
-          <div className='flex items-end gap-2 sm:gap-3'>
-            <div className='min-w-0 flex-1'>
-              <input
-                className='w-full rounded-full border border-[#d9d9de] bg-[#fafafa] px-4 py-3 text-[15px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#b7b7bd] focus:bg-white'
-                type='text'
-                placeholder='Type a message...'
-                value={input}
-                maxLength={800}
-                onChange={(event) => setInput(event.target.value)}
-              />
+        {memoryHints.length ? (
+          <div className='mt-3 shrink-0 rounded-[20px] border border-emerald-100 bg-emerald-50 px-3 py-3 sm:rounded-[24px] sm:px-4'>
+            <div className='text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-xs'>
+              New Memory Triggers
             </div>
 
-            <button
-              type='submit'
-              className='inline-flex h-[46px] min-w-[72px] items-center justify-center rounded-full bg-[#95ec69] px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
-              disabled={!canSubmit}
-            >
-              {loading ? '...' : 'Send'}
-            </button>
+            <div className='mt-2.5 flex flex-wrap gap-2 sm:mt-3'>
+              {memoryHints.map((hint, index) => (
+                <span
+                  key={`${hint}-${index}`}
+                  className='rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm shadow-emerald-100 sm:px-3 sm:py-2 sm:text-xs'
+                >
+                  Remembered: {hint}
+                </span>
+              ))}
+            </div>
           </div>
+        ) : null}
 
-          <div className='mt-2.5 flex items-center justify-between px-1 text-[11px] text-slate-500 sm:mt-3 sm:px-2 sm:text-xs'>
-            <span className='truncate pr-3'>
-              {usageDetail || 'Free chats are shared across your account.'}
-            </span>
-            <span className='shrink-0'>{input.length} / 800</span>
+        <form className='mobile-chat-composer mt-3 shrink-0 sm:mt-4' onSubmit={handleSubmit}>
+          <div className='rounded-[22px] border border-[#e5e7eb] bg-white p-2.5 shadow-sm sm:rounded-[26px] sm:p-3'>
+            <div className='flex items-end gap-2 sm:gap-3'>
+              <div className='min-w-0 flex-1'>
+                <input
+                  className='w-full rounded-full border border-[#d9d9de] bg-[#fafafa] px-4 py-3 text-[15px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#b7b7bd] focus:bg-white'
+                  type='text'
+                  placeholder='Type a message...'
+                  value={input}
+                  maxLength={800}
+                  onChange={(event) => setInput(event.target.value)}
+                />
+              </div>
+
+              <button
+                type='submit'
+                className='inline-flex h-[46px] min-w-[72px] items-center justify-center rounded-full bg-[#95ec69] px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
+                disabled={!canSubmit}
+              >
+                {loading ? '...' : 'Send'}
+              </button>
+            </div>
+
+            <div className='mt-2.5 flex items-center justify-between px-1 text-[11px] text-slate-500 sm:mt-3 sm:px-2 sm:text-xs'>
+              <span className='truncate pr-3'>
+                {usageDetail || 'Free chats are shared across your account.'}
+              </span>
+              <span className='shrink-0'>{input.length} / 800</span>
+            </div>
           </div>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, useMemo, useState } from 'react';
 
 type ChatPetItem = {
@@ -16,142 +16,303 @@ type ChatPetPayload = {
   pets: ChatPetItem[];
 };
 
-function isCoreMobileAppRoute(pathname: string) {
-  return (
-    pathname.startsWith('/chat') ||
-    pathname.startsWith('/memories') ||
-    pathname.startsWith('/account') ||
-    pathname.startsWith('/pets') ||
-    pathname.startsWith('/create-pet')
+function isCoreMobileAppRoute(path: string) {
+  return ['/chat', '/memories', '/account', '/pets', '/create-pet'].some((route) =>
+    path.startsWith(route)
   );
 }
 
 function HomeIcon() {
   return (
-    <svg viewBox='0 0 24 24' className='h-[18px] w-[18px]' fill='none' stroke='currentColor' strokeWidth='2'>
-      <path d='M3 10.5 12 3l9 7.5' strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M5.25 9.75V20a1 1 0 0 0 1 1H9.5v-5.5a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1V21h3.25a1 1 0 0 0 1-1V9.75' strokeLinecap='round' strokeLinejoin='round' />
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.9' aria-hidden='true'>
+      <path d='M3 10.8 12 4l9 6.8' />
+      <path d='M5.5 9.8V20h13V9.8' />
     </svg>
   );
 }
 
 function ChatIcon() {
   return (
-    <svg viewBox='0 0 24 24' className='h-[18px] w-[18px]' fill='none' stroke='currentColor' strokeWidth='2'>
-      <path d='M7 18.25H4.75A1.75 1.75 0 0 1 3 16.5v-9A1.75 1.75 0 0 1 4.75 5.75h14.5A1.75 1.75 0 0 1 21 7.5v9a1.75 1.75 0 0 1-1.75 1.75H11l-4 3v-3Z' strokeLinecap='round' strokeLinejoin='round' />
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.9' aria-hidden='true'>
+      <path d='M6 18.5c-1.1 0-2-.9-2-2v-9c0-1.1.9-2 2-2h12c1.1 0 2 .9 2 2v9c0 1.1-.9 2-2 2H9l-4.5 3v-3H6Z' />
     </svg>
   );
 }
 
 function MemoryIcon() {
   return (
-    <svg viewBox='0 0 24 24' className='h-[18px] w-[18px]' fill='none' stroke='currentColor' strokeWidth='2'>
-      <path d='M12 3.5c4.97 0 9 3.36 9 7.5s-4.03 7.5-9 7.5S3 15.14 3 11 7.03 3.5 12 3.5Z' strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M12 8.25v3l2.25 1.25' strokeLinecap='round' strokeLinejoin='round' />
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.9' aria-hidden='true'>
+      <path d='M12 21s-6.8-4.35-9.15-8A5.55 5.55 0 0 1 12 6.2 5.55 5.55 0 0 1 21.15 13C18.8 16.65 12 21 12 21Z' />
     </svg>
   );
 }
 
 function AccountIcon() {
   return (
-    <svg viewBox='0 0 24 24' className='h-[18px] w-[18px]' fill='none' stroke='currentColor' strokeWidth='2'>
-      <path d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z' strokeLinecap='round' strokeLinejoin='round' />
-      <path d='M4.75 20a7.25 7.25 0 0 1 14.5 0' strokeLinecap='round' strokeLinejoin='round' />
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.9' aria-hidden='true'>
+      <path d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z' />
+      <path d='M4 20a8 8 0 0 1 16 0' />
     </svg>
   );
 }
 
-function PetThumb({ name, imageUrl }: { name: string; imageUrl?: string | null }) {
+function ChevronDownIcon({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox='0 0 20 20'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      aria-hidden='true'
+      className={open ? 'rotate-180 transition-transform' : 'transition-transform'}
+    >
+      <path d='m5 7.5 5 5 5-5' />
+    </svg>
+  );
+}
+
+function PetThumb({
+  name,
+  imageUrl,
+  size = 'sm',
+}: {
+  name: string;
+  imageUrl?: string | null;
+  size?: 'sm' | 'md';
+}) {
+  const className =
+    size === 'md'
+      ? 'h-9 w-9 rounded-full'
+      : 'h-8 w-8 rounded-full';
+
   if (imageUrl) {
     return (
-      <span className='inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50'>
-        <img src={imageUrl} alt={name} className='h-full w-full object-cover' />
-      </span>
+      <div className={`${className} overflow-hidden border border-orange-100 bg-orange-50`}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt={`${name} avatar`} className='h-full w-full object-cover' />
+      </div>
     );
   }
-  return <span className='inline-flex h-7 w-7 items-center justify-center rounded-full border border-orange-100 bg-orange-50 text-[13px]'>🐾</span>;
+
+  return (
+    <div
+      className={`${className} flex items-center justify-center border border-orange-100 bg-orange-100 text-[13px] text-orange-900`}
+      aria-label={`${name} avatar placeholder`}
+    >
+      🐾
+    </div>
+  );
+}
+
+function readChatPetsFromDom(): ChatPetPayload | null {
+  if (typeof document === 'undefined') return null;
+
+  const el = document.getElementById('mobile-chat-pets-data');
+  if (!el?.textContent) return null;
+
+  try {
+    const parsed = JSON.parse(el.textContent) as ChatPetPayload;
+
+    if (!parsed || !Array.isArray(parsed.pets)) return null;
+
+    return {
+      activePetId: parsed.activePetId ?? null,
+      pets: parsed.pets.map((pet) => ({
+        id: String(pet.id),
+        name: String(pet.name),
+        imageUrl: pet.imageUrl ?? null,
+        href: String(pet.href),
+      })),
+    };
+  } catch {
+    return null;
+  }
 }
 
 export function MobileAppChrome() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const shouldShow = isCoreMobileAppRoute(pathname);
   const isChatPage = pathname.startsWith('/chat');
+
   const [isOpen, setIsOpen] = useState(false);
-  const [payload, setPayload] = useState<ChatPetPayload | null>(null);
+  const [chatPetPayload, setChatPetPayload] = useState<ChatPetPayload | null>(null);
+
+  const queryKey = searchParams?.toString() ?? '';
 
   useEffect(() => {
-    if (shouldShow) document.body.classList.add('mobile-chrome-active');
-    else document.body.classList.remove('mobile-chrome-active');
+    if (!shouldShow) {
+      document.body.classList.remove('mobile-chrome-active');
+      return;
+    }
+
+    document.body.classList.add('mobile-chrome-active');
+
+    return () => {
+      document.body.classList.remove('mobile-chrome-active');
+    };
   }, [shouldShow]);
 
+  // 路由或 query 改变时，自动收回下拉
   useEffect(() => {
-    const el = document.getElementById('mobile-chat-pets-data');
-    if (el?.textContent) {
-      try { setPayload(JSON.parse(el.textContent)); } catch (e) {}
-    }
     setIsOpen(false);
-  }, [pathname]);
+  }, [pathname, queryKey]);
+
+  // 在 chat 页面上，路径或 pet_id 变化后重新读取当前 pet 数据
+  useEffect(() => {
+    if (!isChatPage) {
+      setChatPetPayload(null);
+      return;
+    }
+
+    let cancelled = false;
+    let attempts = 0;
+
+    const syncFromDom = () => {
+      if (cancelled) return;
+
+      const payload = readChatPetsFromDom();
+      if (payload) {
+        setChatPetPayload(payload);
+        return;
+      }
+
+      attempts += 1;
+      if (attempts < 24) {
+        window.setTimeout(syncFromDom, 120);
+      }
+    };
+
+    syncFromDom();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isChatPage, pathname, queryKey]);
 
   const activePet = useMemo(() => {
-    if (!payload?.pets) return null;
-    return payload.pets.find(p => p.id === payload.activePetId) || payload.pets[0];
-  }, [payload]);
+    if (!chatPetPayload?.pets?.length) return null;
+
+    return (
+      chatPetPayload.pets.find((pet) => pet.id === chatPetPayload.activePetId) ??
+      chatPetPayload.pets[0]
+    );
+  }, [chatPetPayload]);
+
+  const navItems = useMemo(
+    () => [
+      {
+        href: '/',
+        label: 'Home',
+        active: pathname === '/',
+        icon: <HomeIcon />,
+      },
+      {
+        href: '/chat',
+        label: 'Chat',
+        active: pathname.startsWith('/chat'),
+        icon: <ChatIcon />,
+      },
+      {
+        href: '/memories',
+        label: 'Memories',
+        active: pathname.startsWith('/memories'),
+        icon: <MemoryIcon />,
+      },
+      {
+        href: '/account',
+        label: 'Account',
+        active: pathname.startsWith('/account'),
+        icon: <AccountIcon />,
+      },
+    ],
+    [pathname]
+  );
 
   if (!shouldShow) return null;
 
   return (
     <>
-      <div className='mobile-app-topbar fixed inset-x-0 top-0 z-[100] border-b border-black/5 bg-white/90 backdrop-blur-xl md:hidden'>
-        <div className='mx-auto flex h-[60px] items-center justify-between px-4'>
-          <Link href='/' className='flex items-center gap-2 font-black text-slate-900'>
-            <span>🐾 EchoPaws</span>
-          </Link>
+      <div className='mobile-app-topbar' aria-label='EchoPaws mobile top bar'>
+        <Link href='/' className='mobile-app-topbar__brand'>
+          <span className='mobile-app-topbar__paw'>🐾</span>
+          <span>EchoPaws V2</span>
+        </Link>
 
-          {isChatPage && activePet && (
-            <div className='relative'>
-              <button 
-                onClick={() => setIsOpen(!isOpen)}
-                className='flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-800 shadow-sm'
-              >
-                <PetThumb name={activePet.name} imageUrl={activePet.imageUrl} />
-                <span className='max-w-[70px] truncate'>{activePet.name}</span>
-                <span className='text-[10px] opacity-40'>▼</span>
-              </button>
+        {isChatPage && activePet ? (
+          <div className='mobile-app-pet-switcher'>
+            <button
+              type='button'
+              className='mobile-app-pet-switcher__trigger'
+              aria-expanded={isOpen}
+              aria-haspopup='menu'
+              aria-label='Switch AI pet'
+              onClick={() => setIsOpen((prev) => !prev)}
+            >
+              <PetThumb name={activePet.name} imageUrl={activePet.imageUrl} size='sm' />
+              <span className='mobile-app-pet-switcher__name'>{activePet.name}</span>
+              <span className='mobile-app-pet-switcher__chevron'>
+                <ChevronDownIcon open={isOpen} />
+              </span>
+            </button>
 
-              {isOpen && (
-                <>
-                  <div className='fixed inset-0 z-10' onClick={() => setIsOpen(false)} />
-                  <div className='absolute right-0 top-full z-20 mt-2 w-[200px] overflow-hidden rounded-2xl border border-slate-200 bg-white p-1 shadow-2xl animate-in fade-in zoom-in-95 duration-200'>
-                    <div className='px-3 py-2 text-[10px] font-bold uppercase tracking-widest text-orange-600'>Switch Pet</div>
-                    {payload?.pets.map(pet => (
-                      <Link key={pet.id} href={pet.href} className={`flex items-center gap-3 rounded-xl px-3 py-2.5 transition ${pet.id === payload.activePetId ? 'bg-orange-50 text-orange-900' : 'hover:bg-slate-50 text-slate-700'}`}>
-                        <PetThumb name={pet.name} imageUrl={pet.imageUrl} />
-                        <span className='truncate text-sm font-bold'>{pet.name}</span>
-                        {pet.id === payload.activePetId && <span className='ml-auto h-1.5 w-1.5 rounded-full bg-orange-500' />}
+            {isOpen ? (
+              <>
+                <button
+                  type='button'
+                  aria-label='Close pet switcher'
+                  className='mobile-app-pet-switcher__backdrop'
+                  onClick={() => setIsOpen(false)}
+                />
+                <div className='mobile-app-pet-switcher__menu' role='menu'>
+                  {chatPetPayload?.pets.map((pet) => {
+                    const isActive = pet.id === chatPetPayload.activePetId;
+
+                    return (
+                      <Link
+                        key={pet.id}
+                        href={pet.href}
+                        role='menuitem'
+                        className={
+                          isActive
+                            ? 'mobile-app-pet-switcher__item is-active'
+                            : 'mobile-app-pet-switcher__item'
+                        }
+                        onClick={() => {
+                          setIsOpen(false);
+                        }}
+                      >
+                        <PetThumb name={pet.name} imageUrl={pet.imageUrl} size='md' />
+                        <span className='mobile-app-pet-switcher__item-text'>
+                          <span className='mobile-app-pet-switcher__item-name'>{pet.name}</span>
+                          <span className='mobile-app-pet-switcher__item-sub'>
+                            {isActive ? 'Current AI Pet' : 'Switch to this pet'}
+                          </span>
+                        </span>
+                        {isActive ? (
+                          <span className='mobile-app-pet-switcher__check'>✓</span>
+                        ) : null}
                       </Link>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-          )}
-        </div>
+                    );
+                  })}
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
-      <nav className='fixed inset-x-0 bottom-0 z-[100] border-t border-black/5 bg-white/95 backdrop-blur-lg md:hidden pb-[env(safe-area-inset-bottom)]'>
-        <div className='grid h-[64px] grid-cols-4'>
-          {[
-            { href: '/', label: 'Home', icon: <HomeIcon />, active: pathname === '/' },
-            { href: '/chat', label: 'Chat', icon: <ChatIcon />, active: pathname.startsWith('/chat') },
-            { href: '/memories', label: 'Memory', icon: <MemoryIcon />, active: pathname.startsWith('/memories') },
-            { href: '/account', label: 'Me', icon: <AccountIcon />, active: pathname.startsWith('/account') }
-          ].map(item => (
-            <Link key={item.href} href={item.href} className={`flex flex-col items-center justify-center gap-1 transition ${item.active ? 'text-orange-600' : 'text-slate-400'}`}>
-              {item.icon}
-              <span className='text-[10px] font-bold'>{item.label}</span>
-            </Link>
-          ))}
-        </div>
+      <nav className='mobile-app-bottomnav' aria-label='EchoPaws mobile navigation'>
+        {navItems.map((item) => (
+          <Link
+            key={item.href}
+            href={item.href}
+            className={item.active ? 'mobile-app-bottomnav__item is-active' : 'mobile-app-bottomnav__item'}
+          >
+            <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
+            <span className='mobile-app-bottomnav__label'>{item.label}</span>
+          </Link>
+        ))}
       </nav>
     </>
   );

@@ -2,7 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+
+type ChatPetItem = {
+  id: string;
+  name: string;
+  imageUrl?: string | null;
+  href: string;
+};
+
+type ChatPetPayload = {
+  activePetId: string | null;
+  pets: ChatPetItem[];
+};
 
 function isCoreMobileAppRoute(pathname: string) {
   return (
@@ -99,9 +111,48 @@ function AccountIcon() {
   );
 }
 
+function PetThumb({
+  name,
+  imageUrl,
+}: {
+  name: string;
+  imageUrl?: string | null;
+}) {
+  if (imageUrl) {
+    return (
+      <span className='inline-flex h-7 w-7 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50'>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={imageUrl} alt={`${name} avatar`} className='h-full w-full object-cover' />
+      </span>
+    );
+  }
+
+  return (
+    <span className='inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-50 text-[13px]'>
+      🐾
+    </span>
+  );
+}
+
+function readChatPetsFromDom(): ChatPetPayload | null {
+  const el = document.getElementById('mobile-chat-pets-data');
+  const raw = el?.textContent?.trim();
+
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as ChatPetPayload;
+  } catch {
+    return null;
+  }
+}
+
 export function MobileAppChrome() {
   const pathname = usePathname();
   const shouldShow = isCoreMobileAppRoute(pathname);
+  const isChatPage = pathname.startsWith('/chat');
+
+  const [chatPetPayload, setChatPetPayload] = useState<ChatPetPayload | null>(null);
 
   useEffect(() => {
     const body = document.body;
@@ -116,6 +167,39 @@ export function MobileAppChrome() {
       body.classList.remove('mobile-chrome-active');
     };
   }, [shouldShow]);
+
+  useEffect(() => {
+    if (!isChatPage) {
+      setChatPetPayload(null);
+      return;
+    }
+
+    let attempts = 0;
+    const maxAttempts = 20;
+
+    const timer = window.setInterval(() => {
+      const payload = readChatPetsFromDom();
+
+      if (payload || attempts >= maxAttempts) {
+        setChatPetPayload(payload);
+        window.clearInterval(timer);
+      }
+
+      attempts += 1;
+    }, 120);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [isChatPage, pathname]);
+
+  const activePet = useMemo(() => {
+    if (!chatPetPayload?.pets?.length) return null;
+    return (
+      chatPetPayload.pets.find((pet) => pet.id === chatPetPayload.activePetId) ??
+      chatPetPayload.pets[0]
+    );
+  }, [chatPetPayload]);
 
   const navItems = useMemo(
     () => [
@@ -160,7 +244,51 @@ export function MobileAppChrome() {
             <span>EchoPaws</span>
           </Link>
 
-          <div className='mobile-app-topbar__spacer' aria-hidden='true' />
+          {isChatPage && activePet ? (
+            <details className='relative'>
+              <summary className='flex list-none items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-2 text-[12px] font-bold text-slate-800 shadow-sm'>
+                <PetThumb name={activePet.name} imageUrl={activePet.imageUrl} />
+                <span className='max-w-[88px] truncate'>{activePet.name}</span>
+                <span className='text-[10px] text-slate-400'>▾</span>
+              </summary>
+
+              <div className='absolute right-0 top-[calc(100%+8px)] z-[80] w-[220px] rounded-[18px] border border-slate-200 bg-white p-2 shadow-xl'>
+                <div className='px-2 pb-2 pt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-orange-700'>
+                  Switch Pet
+                </div>
+
+                <div className='grid gap-2'>
+                  {chatPetPayload?.pets.map((pet) => {
+                    const isActive = pet.id === chatPetPayload.activePetId;
+
+                    return (
+                      <Link
+                        key={pet.id}
+                        href={pet.href}
+                        className={[
+                          'flex items-center justify-between gap-3 rounded-[14px] px-3 py-2.5 transition',
+                          isActive ? 'bg-orange-50 text-orange-900' : 'hover:bg-slate-50',
+                        ].join(' ')}
+                      >
+                        <div className='flex min-w-0 items-center gap-3'>
+                          <PetThumb name={pet.name} imageUrl={pet.imageUrl} />
+                          <span className='truncate text-sm font-bold text-slate-800'>{pet.name}</span>
+                        </div>
+
+                        {isActive ? (
+                          <span className='rounded-full bg-orange-600 px-2 py-1 text-[10px] font-bold text-white'>
+                            Active
+                          </span>
+                        ) : null}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            </details>
+          ) : (
+            <div className='mobile-app-topbar__spacer' aria-hidden='true' />
+          )}
         </div>
       </div>
 

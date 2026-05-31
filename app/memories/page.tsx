@@ -46,9 +46,7 @@ function pickFirst(value: string | string[] | undefined) {
 function buildTypeLabel(value: string | null | undefined) {
   if (!value) return 'Memory';
 
-  return value
-    .replace(/_/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase());
+  return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function clampPriority(value: number | null | undefined) {
@@ -93,7 +91,7 @@ function buildExcerpt(value: string, maxLength = 140) {
 function buildSummaryFromPetAndMemories(
   pet: PetItem | null,
   memories: MemoryRow[],
-  summaryText?: string | null,
+  summaryText?: string | null
 ) {
   const normalizedSummary = summaryText?.trim();
 
@@ -163,17 +161,10 @@ function PetAvatar({
   if (imageUrl) {
     return (
       <div
-        className={[
-          'overflow-hidden border border-orange-100 bg-orange-50 shadow-sm',
-          sizeClass,
-        ].join(' ')}
+        className={['overflow-hidden border border-orange-100 bg-orange-50 shadow-sm', sizeClass].join(' ')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={imageUrl}
-          alt={`${name} avatar`}
-          className='h-full w-full object-cover'
-        />
+        <img src={imageUrl} alt={`${name} avatar`} className='h-full w-full object-cover' />
       </div>
     );
   }
@@ -364,7 +355,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
   });
 
   const availableTypes = Array.from(
-    new Set(allMemories.map((item) => item.type).filter(Boolean) as string[]),
+    new Set(allMemories.map((item) => item.type).filter(Boolean) as string[])
   ).sort();
 
   const openAll = expand === 'all';
@@ -380,6 +371,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   const headerMemoryCount = summaryRow?.memory_count ?? allMemories.length;
   const headerUpdatedAt = summaryRow?.updated_at ?? allMemories[0]?.updated_at ?? null;
+  const companionSummary = buildSummaryFromPetAndMemories(
+    selectedPet,
+    allMemories,
+    summaryRow?.summary ?? null
+  );
 
   return (
     <>
@@ -395,11 +391,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
           <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
             <div className='flex items-center gap-4'>
-              <PetAvatar
-                name={selectedPet.name}
-                imageUrl={selectedPet.image_url}
-                size='xl'
-              />
+              <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='xl' />
 
               <div>
                 <h1 className='text-3xl font-black tracking-tight text-slate-900'>
@@ -413,7 +405,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </div>
 
-            <div className='flex flex-wrap gap-3'>
+            <div className='hidden md:flex flex-wrap gap-3'>
               <Link
                 href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
                 className='rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-orange-900 transition hover:bg-orange-50'
@@ -434,11 +426,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           <aside className='space-y-5'>
             <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
               <div className='flex items-start gap-4'>
-                <PetAvatar
-                  name={selectedPet.name}
-                  imageUrl={selectedPet.image_url}
-                  size='lg'
-                />
+                <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />
 
                 <div className='min-w-0 flex-1'>
                   <div className='flex flex-wrap items-center gap-2'>
@@ -470,38 +458,26 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
               <h3 className='mt-1 text-lg font-black text-slate-900'>Memory scope</h3>
 
-              <div className='mt-4 grid gap-3'>
+              <div className='mt-4 space-y-2'>
                 {pets.map((pet) => {
-                  const isActive = pet.id === selectedPet.id;
+                  const active = pet.id === selectedPet.id;
 
                   return (
                     <Link
                       key={pet.id}
                       href={`/memories?pet_id=${encodeURIComponent(pet.id)}`}
-                      className={[
-                        'rounded-[22px] border px-4 py-3 transition',
-                        isActive
-                          ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm'
-                          : 'border-slate-200 bg-white hover:bg-slate-50',
-                      ].join(' ')}
+                      className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
+                        active
+                          ? 'border-orange-200 bg-orange-50'
+                          : 'border-slate-100 hover:bg-slate-50'
+                      }`}
                     >
-                      <div className='flex items-center justify-between gap-3'>
-                        <div className='flex min-w-0 items-center gap-3'>
-                          <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
-
-                          <div className='min-w-0'>
-                            <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
-                            <div className='mt-1 truncate text-xs text-slate-500'>
-                              {pet.id === defaultPetId ? 'Primary pet' : 'Available scope'}
-                            </div>
-                          </div>
+                      <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
+                      <div className='min-w-0 flex-1'>
+                        <div className='truncate font-bold text-slate-800'>{pet.name}</div>
+                        <div className='text-xs text-slate-500'>
+                          {pet.id === defaultPetId ? 'Primary pet' : 'Companion'}
                         </div>
-
-                        {isActive ? (
-                          <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
-                            Active
-                          </span>
-                        ) : null}
                       </div>
                     </Link>
                   );
@@ -511,41 +487,108 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
             <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                Companion Snapshot
+                Companion snapshot
               </div>
-              <h3 className='mt-1 text-lg font-black text-slate-900'>Summary panel</h3>
-
-              <div className='mt-4 rounded-[22px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700'>
-                {buildSummaryFromPetAndMemories(selectedPet, allMemories, summaryRow?.summary)}
-              </div>
-
-              <div className='mt-4 flex flex-wrap gap-2'>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Compact rows by default
-                </span>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Expand row to view full content
-                </span>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Mobile stacks filters automatically
-                </span>
-              </div>
+              <p className='mt-3 text-sm leading-7 text-slate-600'>{companionSummary}</p>
             </section>
           </aside>
 
-          <main className='min-w-0 space-y-5 xl:flex xl:h-[calc(100vh-220px)] xl:min-h-0 xl:flex-col'>
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:shrink-0'>
-              <div className='flex items-center justify-between gap-4'>
-                <div>
-                  <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                    Memory Toolbar
-                  </div>
-                  <h2 className='mt-1 text-2xl font-black text-slate-900'>
-                    Search, filter, and sort
-                  </h2>
-                </div>
+          <main className='min-w-0'>
+            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+              <form className='grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]'>
+                <input
+                  type='hidden'
+                  name='pet_id'
+                  value={selectedPet.id}
+                />
 
-                <div className='flex flex-wrap gap-2'>
+                <label className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Search
+                  </span>
+                  <input
+                    name='q'
+                    defaultValue={q}
+                    placeholder='Search memory text'
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  />
+                </label>
+
+                <label className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Type
+                  </span>
+                  <select
+                    name='type'
+                    defaultValue={type}
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  >
+                    <option value='all'>All types</option>
+                    {availableTypes.map((item) => (
+                      <option key={item} value={item}>
+                        {buildTypeLabel(item)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+
+                <label className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Priority
+                  </span>
+                  <select
+                    name='priority'
+                    defaultValue={priority}
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  >
+                    <option value='all'>All priorities</option>
+                    <option value='5'>Priority 5</option>
+                    <option value='4'>Priority 4</option>
+                    <option value='3'>Priority 3</option>
+                    <option value='2'>Priority 2</option>
+                    <option value='1'>Priority 1</option>
+                  </select>
+                </label>
+
+                <label className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Sort
+                  </span>
+                  <select
+                    name='sort'
+                    defaultValue={sort}
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  >
+                    <option value='latest'>Latest</option>
+                    <option value='oldest'>Oldest</option>
+                    <option value='highest_priority'>Highest priority</option>
+                    <option value='type'>Type</option>
+                  </select>
+                </label>
+
+                <div className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Actions
+                  </span>
+                  <div className='flex gap-2'>
+                    <button type='submit' className='brand-button !h-11 flex-1'>
+                      Apply
+                    </button>
+                    <Link href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`} className='subtle-button !h-11 flex-1 text-center'>
+                      Reset
+                    </Link>
+                  </div>
+                </div>
+              </form>
+
+              <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600'>
+                <span>{filteredMemories.length} result(s)</span>
+
+                {openAll ? (
+                  <Link href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })} className='font-semibold text-orange-700'>
+                    Collapse all
+                  </Link>
+                ) : (
                   <Link
                     href={buildReturnTo({
                       petId: selectedPet.id,
@@ -555,240 +598,88 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                       sort: sort !== 'latest' ? sort : '',
                       expand: 'all',
                     })}
-                    className='rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50'
+                    className='font-semibold text-orange-700'
                   >
                     Expand all
                   </Link>
-
-                  <Link
-                    href={buildReturnTo({
-                      petId: selectedPet.id,
-                      q,
-                      type: type !== 'all' ? type : '',
-                      priority: priority !== 'all' ? priority : '',
-                      sort: sort !== 'latest' ? sort : '',
-                    })}
-                    className='rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50'
-                  >
-                    Compact default
-                  </Link>
-                </div>
-              </div>
-
-              <form action='/memories' method='get' className='mt-5 space-y-4'>
-                <input type='hidden' name='pet_id' value={selectedPet.id} />
-
-                <div className='grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]'>
-                  <label className='grid min-w-0 gap-2'>
-                    <span className='text-sm font-bold text-slate-800'>Search</span>
-                    <input
-                      name='q'
-                      defaultValue={q}
-                      placeholder='Search memories, habits, emotions, or preferences'
-                      className='input-shell w-full'
-                    />
-                  </label>
-
-                  <div className='flex flex-col justify-end gap-3 sm:flex-row'>
-                    <button type='submit' className='brand-button whitespace-nowrap'>
-                      Apply
-                    </button>
-
-                    <Link
-                      href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                      className='inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-                    >
-                      Reset view
-                    </Link>
-                  </div>
-                </div>
-
-                <div className='grid gap-3 sm:grid-cols-2 xl:grid-cols-3'>
-                  <label className='grid min-w-0 gap-2'>
-                    <span className='text-sm font-bold text-slate-800'>Type</span>
-                    <select name='type' defaultValue={type} className='input-shell w-full'>
-                      <option value='all'>All types</option>
-                      {availableTypes.map((item) => (
-                        <option key={item} value={item}>
-                          {buildTypeLabel(item)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-
-                  <label className='grid min-w-0 gap-2'>
-                    <span className='text-sm font-bold text-slate-800'>Priority</span>
-                    <select name='priority' defaultValue={priority} className='input-shell w-full'>
-                      <option value='all'>All priorities</option>
-                      <option value='5'>Priority 5</option>
-                      <option value='4'>Priority 4</option>
-                      <option value='3'>Priority 3</option>
-                      <option value='2'>Priority 2</option>
-                      <option value='1'>Priority 1</option>
-                    </select>
-                  </label>
-
-                  <label className='grid min-w-0 gap-2'>
-                    <span className='text-sm font-bold text-slate-800'>Sort</span>
-                    <select name='sort' defaultValue={sort} className='input-shell w-full'>
-                      <option value='latest'>Latest updated</option>
-                      <option value='highest_priority'>Highest priority</option>
-                      <option value='oldest'>Oldest first</option>
-                      <option value='type'>Type A–Z</option>
-                    </select>
-                  </label>
-                </div>
-              </form>
-
-              <div className='mt-4 flex flex-wrap gap-2'>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Compact rows by default
-                </span>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Expand row to view full content
-                </span>
-                <span className='rounded-full bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700'>
-                  Filters stack cleanly on mobile
-                </span>
+                )}
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:min-h-0 xl:flex xl:flex-1 xl:flex-col'>
-              <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
-                <div>
-                  <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                    Memory List
-                  </div>
-                  <h2 className='mt-1 text-2xl font-black text-slate-900'>
-                    {filteredMemories.length} visible result{filteredMemories.length === 1 ? '' : 's'}
-                  </h2>
+            <section className='mt-5 space-y-4'>
+              {!filteredMemories.length ? (
+                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-600 shadow-sm'>
+                  No memories match the current filters.
                 </div>
+              ) : (
+                filteredMemories.map((memory) => {
+                  const isOpen = openAll;
 
-                <div className='flex flex-wrap gap-2 text-xs text-slate-600'>
-                  <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
-                    Default: compact
-                  </span>
-                  <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
-                    Expand rule: click row
-                  </span>
-                </div>
-              </div>
-
-              <div className='mt-5 xl:min-h-0 xl:flex-1 xl:overflow-y-auto xl:pr-1 xl:overscroll-contain'>
-                {!allMemories.length ? (
-                  <div className='rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center'>
-                    <div className='text-lg font-black text-slate-900'>
-                      No memories yet for {selectedPet.name}
-                    </div>
-                    <p className='mt-2 text-sm leading-7 text-slate-600'>
-                      Start chatting with {selectedPet.name} and memory entries will appear here as the
-                      companionship history grows.
-                    </p>
-
-                    <div className='mt-5 flex flex-wrap justify-center gap-3'>
-                      <Link
-                        href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                        className='brand-button'
-                      >
-                        Go to Chat
-                      </Link>
-                      <Link
-                        href='/pets'
-                        className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-                      >
-                        Manage Pets
-                      </Link>
-                    </div>
-                  </div>
-                ) : !filteredMemories.length ? (
-                  <div className='rounded-[24px] border border-dashed border-slate-200 bg-slate-50 px-6 py-10 text-center'>
-                    <div className='text-lg font-black text-slate-900'>No memories match this view</div>
-                    <p className='mt-2 text-sm leading-7 text-slate-600'>
-                      Try a broader search, change the type or priority filter, or reset the view.
-                    </p>
-                  </div>
-                ) : (
-                  <div className='space-y-3'>
-                    {filteredMemories.map((memory) => {
-                      const expandedByDefault = openAll;
-
-                      return (
-                        <details
-                          key={memory.id}
-                          open={expandedByDefault}
-                          className='group rounded-[24px] border border-slate-200 bg-white transition open:border-orange-200 open:shadow-sm'
-                        >
-                          <summary className='list-none cursor-pointer px-4 py-4 sm:px-5'>
-                            <div className='flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between'>
-                              <div className='min-w-0 flex-1'>
-                                <div className='flex flex-wrap items-center gap-2'>
-                                  <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
-                                    {buildTypeLabel(memory.type)}
-                                  </span>
-
-                                  <span
-                                    className={[
-                                      'rounded-full border px-2.5 py-1 text-[11px] font-bold',
-                                      buildPriorityTone(memory.importance),
-                                    ].join(' ')}
-                                  >
-                                    {buildPriorityLabel(memory.importance)}
-                                  </span>
-
-                                  {selectedPet.id === defaultPetId ? (
-                                    <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
-                                      Primary pet
-                                    </span>
-                                  ) : null}
-                                </div>
-
-                                <div className='mt-3 text-sm font-semibold leading-7 text-slate-900'>
-                                  {buildExcerpt(memory.content)}
-                                </div>
-
-                                <div className='mt-3 text-xs text-slate-500'>
-                                  Updated {formatDateLabel(memory.updated_at)}
-                                </div>
-                              </div>
-
-                              <div className='flex items-center gap-2'>
-                                <span className='rounded-full bg-slate-100 px-3 py-1 text-[11px] font-bold text-slate-700'>
-                                  Click to expand
+                  return (
+                    <details
+                      key={memory.id}
+                      open={isOpen}
+                      className='group rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'
+                    >
+                      <summary className='cursor-pointer list-none'>
+                        <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+                          <div className='min-w-0'>
+                            <div className='flex flex-wrap items-center gap-2'>
+                              <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
+                                {buildTypeLabel(memory.type)}
+                              </span>
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${buildPriorityTone(
+                                  memory.importance
+                                )}`}
+                              >
+                                {buildPriorityLabel(memory.importance)}
+                              </span>
+                              {memory.pet_id === defaultPetId ? (
+                                <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                                  Primary pet
                                 </span>
-                              </div>
-                            </div>
-                          </summary>
-
-                          <div className='border-t border-slate-200 px-4 py-4 sm:px-5'>
-                            <div className='whitespace-pre-wrap break-words text-sm leading-7 text-slate-700'>
-                              {memory.content}
+                              ) : null}
                             </div>
 
-                            <div className='mt-4 flex flex-wrap items-center justify-between gap-3'>
-                              <div className='flex flex-wrap gap-2 text-xs text-slate-500'>
-                                <span>Created {formatDateLabel(memory.created_at)}</span>
-                                <span>•</span>
-                                <span>Updated {formatDateLabel(memory.updated_at)}</span>
-                              </div>
-
-                              <form action={deleteMemoryAction}>
-                                <input type='hidden' name='memoryId' value={memory.id} />
-                                <input type='hidden' name='returnTo' value={returnTo} />
-                                <button
-                                  type='submit'
-                                  className='rounded-full border border-rose-200 bg-white px-4 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50'
-                                >
-                                  Delete
-                                </button>
-                              </form>
-                            </div>
+                            <p className='mt-3 text-sm leading-7 text-slate-700'>
+                              {buildExcerpt(memory.content)}
+                            </p>
                           </div>
-                        </details>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
+
+                          <div className='text-xs text-slate-500'>
+                            Updated {formatDateLabel(memory.updated_at ?? memory.created_at)}
+                          </div>
+                        </div>
+                      </summary>
+
+                      <div className='mt-4 border-t border-slate-100 pt-4'>
+                        <div className='whitespace-pre-wrap text-sm leading-8 text-slate-700'>
+                          {memory.content}
+                        </div>
+
+                        <div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
+                          <div className='text-xs text-slate-500'>
+                            Created {formatDateLabel(memory.created_at)} · Updated{' '}
+                            {formatDateLabel(memory.updated_at)}
+                          </div>
+
+                          <form action={deleteMemoryAction}>
+                            <input type='hidden' name='memoryId' value={memory.id} />
+                            <input type='hidden' name='returnTo' value={returnTo} />
+                            <button
+                              type='submit'
+                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50'
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })
+              )}
             </section>
           </main>
         </div>

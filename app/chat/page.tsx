@@ -1,7 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChatPlayground } from '@/components/chat-playground';
-import { MobileBottomNav } from '@/components/mobile-bottom-nav';
 import { getChatAccessStatus } from '@/lib/chat-access';
 import { getPetsForUser } from '@/lib/pets';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
@@ -189,36 +188,34 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   if (!pets.length) {
     return (
-      <>
-        <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-8 pb-24 sm:px-6 lg:px-8'>
-          <div className='w-full rounded-[32px] border border-orange-100 bg-white p-6 shadow-sm sm:p-8'>
-            <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
-              Chat with Pet
-            </div>
-            <h1 className='mt-3 text-3xl font-black tracking-tight text-slate-900'>
-              Create a pet before you start chatting
-            </h1>
-            <p className='mt-3 max-w-2xl text-sm leading-7 text-slate-600'>
-              Your chat area is ready, but you do not have a pet profile yet. Create one first so
-              EchoPaws can remember personality, habits, and companionship history.
-            </p>
+      <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-4 sm:px-6 sm:py-10 lg:px-8'>
+        <div className='w-full rounded-[28px] border border-orange-100 bg-white p-6 shadow-sm sm:rounded-[32px] sm:p-8'>
+          <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
+            Chat with Pet
+          </div>
 
-            <div className='mt-6 flex flex-wrap gap-3'>
-              <Link href='/create-pet' className='brand-button'>
-                Create Pet
-              </Link>
-              <Link
-                href='/pets'
-                className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-              >
-                Manage Pets
-              </Link>
-            </div>
+          <h1 className='mt-3 text-3xl font-black tracking-tight text-slate-900'>
+            Create a pet before you start chatting
+          </h1>
+
+          <p className='mt-3 max-w-2xl text-sm leading-7 text-slate-600'>
+            Your chat area is ready, but you do not have a pet profile yet. Create one first so
+            EchoPaws can remember personality, habits, and companionship history.
+          </p>
+
+          <div className='mt-6 flex flex-wrap gap-3'>
+            <Link href='/create-pet' className='brand-button'>
+              Create Pet
+            </Link>
+            <Link
+              href='/pets'
+              className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+            >
+              Manage Pets
+            </Link>
           </div>
         </div>
-
-        <MobileBottomNav />
-      </>
+      </div>
     );
   }
 
@@ -280,231 +277,272 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   );
 
   return (
-    <>
-      <div className='mx-auto max-w-7xl px-4 pb-24 pt-4 sm:px-6 sm:py-6 lg:px-8'>
-        {/* Mobile-first compact hero */}
-        <section className='mb-4 rounded-[26px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-4 shadow-sm sm:mb-6 sm:rounded-[30px] sm:p-6'>
-          <div className='text-[11px] font-bold uppercase tracking-[0.2em] text-orange-700 sm:text-xs'>
-            Chat with Pet
-          </div>
+    <div className='mx-auto max-w-7xl px-3 py-3 sm:px-6 sm:py-6 lg:px-8'>
+      {/* compact mobile-first hero */}
+      <section className='mb-4 rounded-[24px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-4 shadow-sm sm:mb-6 sm:rounded-[30px] sm:p-6'>
+        <div className='text-[11px] font-bold uppercase tracking-[0.2em] text-orange-700 sm:text-xs'>
+          Chat with Pet
+        </div>
 
-          <div className='mt-3 flex items-start gap-3 sm:gap-4'>
-            <PetAvatar
-              name={selectedPet.name}
-              imageUrl={selectedPet.image_url}
-              size='xl'
-            />
+        <div className='mt-3 flex items-center gap-3 sm:gap-4'>
+          <PetAvatar
+            name={selectedPet.name}
+            imageUrl={selectedPet.image_url}
+            size='xl'
+          />
 
-            <div className='min-w-0 flex-1'>
-              <h1 className='text-[1.9rem] font-black leading-tight tracking-tight text-slate-900 sm:text-3xl'>
+          <div className='min-w-0 flex-1'>
+            <div className='flex flex-wrap items-center gap-2'>
+              <h1 className='truncate text-[1.9rem] font-black leading-tight tracking-tight text-slate-900 sm:text-3xl'>
                 Chat with {selectedPet.name}
               </h1>
 
-              <p className='mt-2 text-sm leading-7 text-slate-600 max-sm:hidden'>
-                This layout gives more space to the conversation itself, while keeping summaries and
-                memory shortcuts available without overwhelming the chat stream.
-              </p>
+              {selectedPet.id === defaultPetId ? (
+                <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                  Primary
+                </span>
+              ) : null}
+            </div>
 
-              <div className='mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap'>
-                <Link
-                  href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                  className='inline-flex items-center justify-center rounded-full border border-orange-200 bg-white px-4 py-3 text-sm font-bold text-orange-900 transition hover:bg-orange-50'
-                >
-                  Memories
-                </Link>
-                <Link
-                  href='/pets'
-                  className='inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-                >
-                  Manage Pets
-                </Link>
+            <p className='mt-2 hidden max-w-3xl text-sm leading-7 text-slate-600 sm:block'>
+              This layout gives more space to the conversation itself, while keeping summaries and
+              memory shortcuts available without overwhelming the chat stream.
+            </p>
+          </div>
+        </div>
+
+        <div className='mt-4 flex flex-wrap gap-2.5'>
+          <span className='rounded-full bg-white px-3 py-2 text-[11px] font-bold text-slate-800 shadow-sm sm:text-xs'>
+            {usageLabel}
+          </span>
+          <span className='rounded-full bg-white px-3 py-2 text-[11px] font-bold text-slate-700 shadow-sm sm:text-xs'>
+            {memorySummary?.memory_count ?? recentMemories.length} memories
+          </span>
+          <span className='rounded-full bg-white px-3 py-2 text-[11px] font-bold text-slate-500 shadow-sm sm:text-xs'>
+            Updated {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
+          </span>
+        </div>
+
+        <div className='mt-4 grid grid-cols-2 gap-3 sm:flex sm:flex-wrap'>
+          <Link
+            href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
+            className='inline-flex items-center justify-center rounded-full border border-orange-200 bg-white px-4 py-3 text-sm font-bold text-orange-900 transition hover:bg-orange-50'
+          >
+            Memories
+          </Link>
+          <Link
+            href='/pets'
+            className='inline-flex items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
+          >
+            Manage Pets
+          </Link>
+        </div>
+      </section>
+
+      <div className='grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-stretch xl:gap-6'>
+        {/* chat first on mobile */}
+        <main className='order-1 min-w-0 space-y-4 xl:order-2 xl:flex xl:min-h-[calc(100vh-190px)] xl:flex-col xl:space-y-5'>
+          {/* desktop-only conversation explainer */}
+          <section className='hidden rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:block xl:shrink-0'>
+            <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
+              <div>
+                <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+                  Conversation Area
+                </div>
+                <h2 className='mt-1 text-2xl font-black text-slate-900'>Focused chat layout</h2>
+              </div>
+
+              <div className='flex flex-wrap gap-2 text-xs text-slate-600'>
+                <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
+                  Space prioritized for messages
+                </span>
+                <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
+                  Summary folded by default
+                </span>
               </div>
             </div>
-          </div>
-        </section>
 
-        <div className='grid gap-4 xl:grid-cols-[320px_minmax(0,1fr)] xl:items-stretch xl:gap-6'>
-          {/* Main chat first on mobile */}
-          <main className='order-1 min-w-0 space-y-4 xl:order-2 xl:flex xl:min-h-[calc(100vh-190px)] xl:flex-col xl:space-y-5'>
-            {/* Desktop-only explainer */}
-            <section className='hidden rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:block xl:shrink-0'>
-              <div className='flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between'>
-                <div>
-                  <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                    Conversation Area
-                  </div>
-                  <h2 className='mt-1 text-2xl font-black text-slate-900'>Focused chat layout</h2>
-                </div>
-
-                <div className='flex flex-wrap gap-2 text-xs text-slate-600'>
-                  <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
-                    Space prioritized for messages
-                  </span>
-                  <span className='rounded-full bg-slate-100 px-3 py-1.5 font-semibold text-slate-700'>
-                    Summary folded by default
-                  </span>
-                </div>
-              </div>
-
-              <details className='mt-4 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3'>
-                <summary className='cursor-pointer list-none select-none'>
-                  <div className='flex items-center justify-between gap-3'>
-                    <div>
-                      <div className='text-sm font-bold text-slate-900'>Companionship summary</div>
-                      <div className='mt-1 text-xs text-slate-500'>
-                        Expand only when you need the longer context
-                      </div>
+            <details className='mt-4 rounded-[22px] border border-slate-200 bg-slate-50 px-4 py-3'>
+              <summary className='cursor-pointer list-none select-none'>
+                <div className='flex items-center justify-between gap-3'>
+                  <div>
+                    <div className='text-sm font-bold text-slate-900'>Companionship summary</div>
+                    <div className='mt-1 text-xs text-slate-500'>
+                      Expand only when you need the longer context
                     </div>
-
-                    <span className='rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-700'>
-                      Expand
-                    </span>
                   </div>
-                </summary>
 
-                <div className='mt-4 border-t border-slate-200 pt-4 text-sm leading-7 text-slate-700'>
-                  {summaryText}
+                  <span className='rounded-full bg-white px-3 py-1 text-[11px] font-bold text-slate-700'>
+                    Expand
+                  </span>
                 </div>
-              </details>
-            </section>
+              </summary>
 
-            <section className='rounded-[24px] border border-orange-100 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-5 xl:min-h-0 xl:flex xl:flex-1 xl:flex-col'>
-              <ChatPlayground
-                key={selectedPet.id}
-                petId={selectedPet.id}
-                petName={selectedPet.name}
-                petImageUrl={selectedPet.image_url}
-                initialMessages={initialMessages}
-                initialRemainingLabel={usageLabel}
-                initialMemorySummary={summaryText}
-              />
-            </section>
-          </main>
-
-          {/* Secondary info after chat on mobile */}
-          <aside className='order-2 space-y-4 xl:order-1 xl:space-y-5'>
-            <section className='rounded-[24px] border border-orange-100 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5'>
-              <div className='flex items-start gap-4'>
-                <PetAvatar
-                  name={selectedPet.name}
-                  imageUrl={selectedPet.image_url}
-                  size='lg'
-                />
-
-                <div className='min-w-0 flex-1'>
-                  <div className='flex flex-wrap items-center gap-2'>
-                    <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
-
-                    {selectedPet.id === defaultPetId ? (
-                      <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
-                        Primary
-                      </span>
-                    ) : null}
-                  </div>
-
-                  <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
-                    <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
-                      {usageLabel}
-                    </span>
-                    <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
-                      {memorySummary?.memory_count ?? recentMemories.length} memories
-                    </span>
-                  </div>
-
-                  <p className='mt-3 text-sm leading-7 text-slate-600'>
-                    Memory updated{' '}
-                    {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className='rounded-[24px] border border-orange-100 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5'>
-              <div className='flex items-center justify-between gap-3'>
-                <div>
-                  <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                    Pet Switcher
-                  </div>
-                  <h3 className='mt-1 text-lg font-black text-slate-900'>Choose a pet</h3>
-                </div>
-
-                <Link href='/pets' className='text-sm font-bold text-orange-700 hover:underline'>
-                  Manage
-                </Link>
-              </div>
-
-              <div className='mt-4 grid gap-3'>
-                {pets.map((pet) => {
-                  const isActive = pet.id === selectedPet.id;
-
-                  return (
-                    <Link
-                      key={pet.id}
-                      href={`/chat?pet_id=${encodeURIComponent(pet.id)}`}
-                      className={[
-                        'rounded-[20px] border px-4 py-3 transition sm:rounded-[22px]',
-                        isActive
-                          ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm'
-                          : 'border-slate-200 bg-white hover:bg-slate-50',
-                      ].join(' ')}
-                    >
-                      <div className='flex items-center justify-between gap-3'>
-                        <div className='flex min-w-0 items-center gap-3'>
-                          <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
-
-                          <div className='min-w-0'>
-                            <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
-                            <div className='mt-1 truncate text-xs text-slate-500'>
-                              {pet.id === defaultPetId ? 'Primary pet' : 'Available for chat'}
-                            </div>
-                          </div>
-                        </div>
-
-                        {isActive ? (
-                          <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
-                            Active
-                          </span>
-                        ) : null}
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            </section>
-
-            <section className='rounded-[24px] border border-orange-100 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5'>
-              <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                Quick Snapshot
-              </div>
-              <h3 className='mt-1 text-lg font-black text-slate-900'>Companionship summary</h3>
-
-              <div className='mt-4 rounded-[20px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700 sm:rounded-[22px]'>
+              <div className='mt-4 border-t border-slate-200 pt-4 text-sm leading-7 text-slate-700'>
                 {summaryText}
               </div>
+            </details>
+          </section>
 
-              {recentMemories.length ? (
-                <div className='mt-4 flex flex-wrap gap-2'>
-                  {recentMemories.slice(0, 4).map((memory) => (
-                    <span
-                      key={memory.id}
-                      className='rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-900'
-                      title={memory.content}
-                    >
-                      {buildMemoryTypeLabel(memory.type)}
+          <section className='rounded-[24px] border border-orange-100 bg-white p-3 shadow-sm sm:rounded-[28px] sm:p-5 xl:min-h-0 xl:flex xl:flex-1 xl:flex-col'>
+            <ChatPlayground
+              key={selectedPet.id}
+              petId={selectedPet.id}
+              petName={selectedPet.name}
+              petImageUrl={selectedPet.image_url}
+              initialMessages={initialMessages}
+              initialRemainingLabel={usageLabel}
+              initialMemorySummary={summaryText}
+            />
+          </section>
+        </main>
+
+        {/* support info after chat on mobile */}
+        <aside className='order-2 space-y-4 xl:order-1 xl:space-y-5'>
+          {/* compact mobile summary */}
+          <section className='rounded-[24px] border border-orange-100 bg-white p-4 shadow-sm xl:hidden'>
+            <div className='flex items-center justify-between gap-3'>
+              <div>
+                <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+                  Quick Snapshot
+                </div>
+                <h2 className='mt-1 text-lg font-black text-slate-900'>Companionship summary</h2>
+              </div>
+
+              <Link
+                href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                className='text-sm font-bold text-orange-700 hover:underline'
+              >
+                Open
+              </Link>
+            </div>
+
+            <div className='mt-4 rounded-[20px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700'>
+              {summaryText}
+            </div>
+          </section>
+
+          {/* full pet card shown on desktop only to avoid mobile duplication */}
+          <section className='hidden rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:block'>
+            <div className='flex items-start gap-4'>
+              <PetAvatar
+                name={selectedPet.name}
+                imageUrl={selectedPet.image_url}
+                size='lg'
+              />
+
+              <div className='min-w-0 flex-1'>
+                <div className='flex flex-wrap items-center gap-2'>
+                  <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
+
+                  {selectedPet.id === defaultPetId ? (
+                    <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                      Primary
                     </span>
-                  ))}
+                  ) : null}
                 </div>
-              ) : (
-                <div className='mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600'>
-                  No saved memories yet. Keep chatting and this panel will grow.
-                </div>
-              )}
-            </section>
-          </aside>
-        </div>
-      </div>
 
-      <MobileBottomNav />
-    </>
+                <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
+                  <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
+                    {usageLabel}
+                  </span>
+                  <span className='rounded-full bg-slate-100 px-2.5 py-1 font-semibold text-slate-700'>
+                    {memorySummary?.memory_count ?? recentMemories.length} memories
+                  </span>
+                </div>
+
+                <p className='mt-3 text-sm leading-7 text-slate-600'>
+                  Memory updated{' '}
+                  {formatDateLabel(memorySummary?.updated_at ?? recentMemories[0]?.updated_at ?? null)}
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className='rounded-[24px] border border-orange-100 bg-white p-4 shadow-sm sm:rounded-[28px] sm:p-5'>
+            <div className='flex items-center justify-between gap-3'>
+              <div>
+                <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+                  Pet Switcher
+                </div>
+                <h3 className='mt-1 text-lg font-black text-slate-900'>Choose a pet</h3>
+              </div>
+
+              <Link href='/pets' className='text-sm font-bold text-orange-700 hover:underline'>
+                Manage
+              </Link>
+            </div>
+
+            <div className='mt-4 grid gap-3'>
+              {pets.map((pet) => {
+                const isActive = pet.id === selectedPet.id;
+
+                return (
+                  <Link
+                    key={pet.id}
+                    href={`/chat?pet_id=${encodeURIComponent(pet.id)}`}
+                    className={[
+                      'rounded-[20px] border px-4 py-3 transition sm:rounded-[22px]',
+                      isActive
+                        ? 'border-orange-300 bg-gradient-to-r from-orange-50 to-amber-50 shadow-sm'
+                        : 'border-slate-200 bg-white hover:bg-slate-50',
+                    ].join(' ')}
+                  >
+                    <div className='flex items-center justify-between gap-3'>
+                      <div className='flex min-w-0 items-center gap-3'>
+                        <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
+
+                        <div className='min-w-0'>
+                          <div className='truncate text-sm font-black text-slate-900'>{pet.name}</div>
+                          <div className='mt-1 truncate text-xs text-slate-500'>
+                            {pet.id === defaultPetId ? 'Primary pet' : 'Available for chat'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {isActive ? (
+                        <span className='rounded-full bg-orange-600 px-2.5 py-1 text-[11px] font-bold text-white'>
+                          Active
+                        </span>
+                      ) : null}
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
+          </section>
+
+          <section className='hidden rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm xl:block'>
+            <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+              Quick Snapshot
+            </div>
+
+            <h3 className='mt-1 text-lg font-black text-slate-900'>Companionship summary</h3>
+
+            <div className='mt-4 rounded-[22px] bg-gradient-to-r from-amber-50 to-rose-50 px-4 py-4 text-sm leading-7 text-slate-700'>
+              {summaryText}
+            </div>
+
+            {recentMemories.length ? (
+              <div className='mt-4 flex flex-wrap gap-2'>
+                {recentMemories.slice(0, 4).map((memory) => (
+                  <span
+                    key={memory.id}
+                    className='rounded-full border border-orange-100 bg-orange-50 px-3 py-1.5 text-[11px] font-semibold text-orange-900'
+                    title={memory.content}
+                  >
+                    {buildMemoryTypeLabel(memory.type)}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className='mt-4 rounded-2xl bg-slate-50 px-4 py-3 text-sm text-slate-600'>
+                No saved memories yet. Keep chatting and this panel will grow.
+              </div>
+            )}
+          </section>
+        </aside>
+      </div>
+    </div>
   );
 }

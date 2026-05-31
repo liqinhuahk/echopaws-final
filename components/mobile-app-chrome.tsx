@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
 type ChatPetPayload = {
   activePetId: string | null;
@@ -123,7 +123,7 @@ function TopActionLink({
   tone = 'subtle',
 }: {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   tone?: 'subtle' | 'brand';
 }) {
   return (
@@ -157,6 +157,7 @@ export function MobileAppChrome() {
 
   useEffect(() => {
     if (typeof document === 'undefined') return;
+
     document.body.classList.toggle('mobile-chrome-active', shouldShow);
     document.body.classList.toggle('mobile-route-home', pathname === '/');
     document.body.classList.toggle('mobile-route-chat', pathname.startsWith('/chat'));
@@ -196,6 +197,7 @@ export function MobileAppChrome() {
 
     sync();
     const timer = window.setInterval(sync, 500);
+
     return () => window.clearInterval(timer);
   }, [isChatPage]);
 
@@ -218,6 +220,7 @@ export function MobileAppChrome() {
 
   const activePet = useMemo(() => {
     if (!chatPetPayload?.pets?.length) return null;
+
     return (
       chatPetPayload.pets.find((pet) => pet.id === effectiveActivePetId) ?? chatPetPayload.pets[0]
     );

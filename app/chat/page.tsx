@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ChatPlayground } from '@/components/chat-playground';
+import { SiteHeader } from '@/components/site-header';
 import { getChatAccessStatus } from '@/lib/chat-access';
 import { getPetsForUser } from '@/lib/pets';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
@@ -78,7 +79,9 @@ export default async function ChatPage({ searchParams }: { searchParams?: any })
     ? messagesData.map((m) => ({ role: m.role, content: m.content }))
     : [{ role: 'assistant', content: `Hi, I'm ${selectedPet.name}. I'm so happy to see you!` }];
 
-  const usageLabel = usageResult?.vip ? 'VIP — Unlimited' : `${usageResult?.remaining ?? 0} / 20 chats left`;
+  const usageLabel = usageResult?.vip
+    ? 'VIP — Unlimited'
+    : `${usageResult?.remaining ?? 0} / 20 chats left`;
 
   return (
     <>
@@ -98,8 +101,11 @@ export default async function ChatPage({ searchParams }: { searchParams?: any })
         }}
       />
 
+      <div className='hidden md:block'>
+        <SiteHeader />
+      </div>
+
       <div className='chat-page-shell mx-auto max-w-7xl px-4 py-3 md:py-6'>
-        {/* 手机端不再显示额外 Hero，避免占高度 */}
         <section className='hidden md:block mb-6 rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm'>
           <div className='flex items-center gap-4'>
             <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />

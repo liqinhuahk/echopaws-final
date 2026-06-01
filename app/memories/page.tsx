@@ -498,9 +498,9 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             </section>
           </aside>
 
-          <main className='min-w-0'>
+          <main className='min-w-0 xl:flex xl:min-h-[calc(100vh-250px)] xl:flex-col'>
             <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
-              <form className='grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]'>
+              <form className='grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]'>
                 <input type='hidden' name='pet_id' value={selectedPet.id} />
 
                 <label className='grid gap-2'>
@@ -567,17 +567,17 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </select>
                 </label>
 
-                <div className='grid gap-2'>
+                <div className='grid min-w-0 gap-2'>
                   <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
                     Actions
                   </span>
-                  <div className='flex gap-2'>
-                    <button type='submit' className='brand-button !h-11 flex-1'>
+                  <div className='flex flex-col gap-2 2xl:flex-row'>
+                    <button type='submit' className='brand-button !h-11 w-full 2xl:flex-1'>
                       Apply
                     </button>
                     <Link
                       href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                      className='subtle-button !h-11 flex-1 text-center'
+                      className='subtle-button !h-11 w-full text-center 2xl:flex-1'
                     >
                       Reset
                     </Link>
@@ -613,7 +613,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='mt-5 space-y-4'>
+            <section className='memories-scroll-panel mt-5 space-y-4'>
               {!filteredMemories.length ? (
                 <div className='rounded-[28px] border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-600 shadow-sm'>
                   No memories match the current filters.

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 
-const HERO_IMAGE_URL = 'https://www.genspark.ai/api/files/s/JsiZ51yn';
+const HERO_IMAGE_URL = '/images/home-hero-a.png.png';
 
 export default function HomePage() {
   return (
@@ -15,7 +15,7 @@ export default function HomePage() {
             <SiteHeader theme='dark' />
           </div>
 
-          {/* Real emotional background image */}
+          {/* Local hero background image from /public */}
           <div className='absolute inset-0 z-0' aria-hidden='true'>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -30,7 +30,7 @@ export default function HomePage() {
             className='absolute inset-0 z-10'
             style={{
               background:
-                'linear-gradient(110deg, rgba(12,10,8,0.78) 0%, rgba(12,10,8,0.58) 42%, rgba(12,10,8,0.20) 100%)',
+                'linear-gradient(110deg, rgba(12,10,8,0.76) 0%, rgba(12,10,8,0.55) 42%, rgba(12,10,8,0.18) 100%)',
             }}
             aria-hidden='true'
           />

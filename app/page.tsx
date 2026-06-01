@@ -2,14 +2,13 @@ import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 
-const HERO_IMAGE_URL =
-  'https://www.genspark.ai/api/files/s/zTEkSepx?cache_control=3600';
+const HERO_IMAGE_URL = 'https://www.genspark.ai/api/files/s/JsiZ51yn';
 
 export default function HomePage() {
   return (
     <div className='min-h-screen bg-[#f8f5ef] text-slate-900'>
       <main className='flex min-h-screen flex-col'>
-        {/* Hero */}
+        {/* Hero Section */}
         <section className='relative overflow-hidden'>
           {/* Desktop header overlay on dark hero */}
           <div className='absolute inset-x-0 top-0 z-30 hidden md:block'>
@@ -140,7 +139,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Final CTA only - stats removed */}
+        {/* Final CTA only */}
         <section className='bg-gradient-to-br from-orange-50 to-amber-50 py-16 md:py-20'>
           <div className='container-shell'>
             <div className='rounded-[32px] border border-orange-200 bg-white/75 p-8 shadow-sm backdrop-blur-sm md:p-12'>
@@ -152,8 +151,9 @@ export default function HomePage() {
                 </h2>
 
                 <p className='mx-auto mt-4 max-w-2xl text-base leading-[1.85] text-slate-500'>
-                  Create your AI pet in minutes. Set a name, a breed, a personality,
-                  and start a comforting conversation that feels like home.
+                  Create your AI pet in minutes. Set a name, a breed, a
+                  personality, and start a comforting conversation that feels
+                  like home.
                 </p>
 
                 <div className='mt-8 flex flex-wrap justify-center gap-4'>
@@ -166,7 +166,8 @@ export default function HomePage() {
                 </div>
 
                 <p className='mt-5 text-xs text-slate-400'>
-                  No credit card required · Free plan includes 20 chats · Upgrade anytime
+                  No credit card required · Free plan includes 20 chats ·
+                  Upgrade anytime
                 </p>
               </div>
             </div>

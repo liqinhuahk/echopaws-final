@@ -9,37 +9,40 @@ export default function HomePage() {
   return (
     <div className='min-h-screen bg-[#f8f5ef] text-slate-900'>
       <main className='flex min-h-screen flex-col'>
-        {/* ── Hero Section with image background ── */}
+        {/* Hero */}
         <section className='relative overflow-hidden'>
-          {/* Desktop header overlays hero */}
+          {/* Desktop header overlay on dark hero */}
           <div className='absolute inset-x-0 top-0 z-30 hidden md:block'>
             <SiteHeader theme='dark' />
           </div>
 
-          {/* Background image */}
-          <div
-            className='absolute inset-0 bg-cover bg-center bg-no-repeat'
-            style={{ backgroundImage: `url("${HERO_IMAGE_URL}")` }}
-            aria-hidden='true'
-          />
+          {/* Real emotional background image */}
+          <div className='absolute inset-0 z-0' aria-hidden='true'>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={HERO_IMAGE_URL}
+              alt='Woman holding a Shiba Inu puppy in a warm cozy home'
+              className='h-full w-full object-cover object-center'
+            />
+          </div>
 
           {/* Dark overlay for readability */}
           <div
-            className='absolute inset-0'
+            className='absolute inset-0 z-10'
             style={{
               background:
-                'linear-gradient(110deg, rgba(12,10,8,0.78) 0%, rgba(12,10,8,0.56) 42%, rgba(12,10,8,0.18) 100%)',
+                'linear-gradient(110deg, rgba(12,10,8,0.78) 0%, rgba(12,10,8,0.58) 42%, rgba(12,10,8,0.20) 100%)',
             }}
             aria-hidden='true'
           />
 
-          {/* Soft bottom fade into next section */}
+          {/* Soft fade into next section */}
           <div
-            className='absolute inset-x-0 bottom-0 h-28 bg-gradient-to-b from-transparent to-[#f8f5ef]'
+            className='absolute inset-x-0 bottom-0 z-10 h-28 bg-gradient-to-b from-transparent to-[#f8f5ef]'
             aria-hidden='true'
           />
 
-          <div className='container-shell relative z-10 flex min-h-[760px] items-center py-24 md:min-h-[760px] md:py-32 lg:min-h-[820px] lg:py-36'>
+          <div className='container-shell relative z-20 flex min-h-[760px] items-center py-24 md:min-h-[760px] md:py-32 lg:min-h-[820px] lg:py-36'>
             <div className='max-w-2xl pt-10 md:pt-20'>
               <div className='inline-flex items-center gap-2 rounded-full border border-orange-300/35 bg-orange-400/10 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-300 backdrop-blur-sm'>
                 🐾 Emotional AI Companion
@@ -51,7 +54,7 @@ export default function HomePage() {
                 <span className='text-amber-400'>Forever</span> by your side.
               </h1>
 
-              <p className='mt-6 max-w-xl text-[1.08rem] leading-[1.85] text-white/78 md:text-[1.12rem]'>
+              <p className='mt-6 max-w-xl text-[1.08rem] leading-[1.85] text-white/80 md:text-[1.12rem]'>
                 EchoPaws creates an AI companion inspired by your beloved pet —
                 warm conversations, long-term memory, emotional connection, and
                 a comforting presence that always feels close to you.
@@ -80,29 +83,9 @@ export default function HomePage() {
               </div>
             </div>
           </div>
-
-          {/* Floating pet-ready badge */}
-          <div className='absolute bottom-8 right-6 z-20 hidden md:block lg:right-10'>
-            <div className='flex items-center gap-4 rounded-[24px] border border-white/20 bg-white/12 px-5 py-4 shadow-[0_16px_40px_rgba(0,0,0,0.22)] backdrop-blur-md'>
-              <div className='grid h-14 w-14 place-items-center rounded-[16px] bg-gradient-to-br from-amber-300 to-orange-400 text-3xl shadow-sm'>
-                🐶
-              </div>
-
-              <div>
-                <div className='text-[1.05rem] font-extrabold text-white'>
-                  Mimi is online
-                </div>
-                <div className='mt-1 text-sm text-white/64'>
-                  Your AI pet is ready
-                </div>
-              </div>
-
-              <span className='ml-2 h-3.5 w-3.5 rounded-full bg-emerald-400 shadow-[0_0_0_4px_rgba(74,222,128,0.22)]' />
-            </div>
-          </div>
         </section>
 
-        {/* ── Why EchoPaws ── */}
+        {/* Why EchoPaws */}
         <section className='bg-[#f8f5ef] py-16 md:py-20'>
           <div className='container-shell'>
             <div className='eyebrow'>Why EchoPaws</div>
@@ -157,27 +140,10 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* ── Stats + Final CTA ── */}
+        {/* Final CTA only - stats removed */}
         <section className='bg-gradient-to-br from-orange-50 to-amber-50 py-16 md:py-20'>
           <div className='container-shell'>
-            <div className='grid grid-cols-3 gap-6 md:gap-10'>
-              {[
-                { num: '10K+', label: 'Pet Lovers Joined' },
-                { num: '50K+', label: 'Memories Stored' },
-                { num: '4.9★', label: 'User Rating' },
-              ].map((item) => (
-                <div key={item.label} className='text-center'>
-                  <div className='text-[clamp(1.8rem,4vw,3rem)] font-black tracking-[-0.04em] text-orange-600'>
-                    {item.num}
-                  </div>
-                  <div className='mt-1 text-[0.78rem] font-bold uppercase tracking-[0.1em] text-orange-900/70'>
-                    {item.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className='mt-14 rounded-[32px] border border-orange-200 bg-white/75 p-8 shadow-sm backdrop-blur-sm md:p-12'>
+            <div className='rounded-[32px] border border-orange-200 bg-white/75 p-8 shadow-sm backdrop-blur-sm md:p-12'>
               <div className='text-center'>
                 <div className='text-4xl'>🐾</div>
 

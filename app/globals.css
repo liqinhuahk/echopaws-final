@@ -744,7 +744,8 @@ footer {
   body.mobile-route-chat .chat-page-shell,
   body.mobile-route-memories .mx-auto.max-w-7xl,
   body.mobile-route-home .container-shell,
-  body.mobile-route-account .container-shell {
+  body.mobile-route-account .container-shell,
+  body.mobile-route-pets .container-shell {
     padding-bottom: calc(var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px) + 14px) !important;
   }
 
@@ -753,6 +754,10 @@ footer {
   }
 
   body.mobile-route-memories .mx-auto.max-w-7xl {
+    overflow-x: hidden !important;
+  }
+
+  body.mobile-route-pets .container-shell {
     overflow-x: hidden !important;
   }
 
@@ -927,5 +932,45 @@ footer {
 @media (min-width: 1280px) and (max-width: 1535px) {
   .memories-scroll-panel {
     max-height: calc(100vh - 300px);
+  }
+}
+
+/* =========================================
+   Pets Manager layout patch
+   ========================================= */
+
+.pets-manager-panel-scroll {
+  scrollbar-gutter: stable;
+}
+
+.pets-manager-list-card {
+  min-width: 0;
+}
+
+.pets-manager-summary-card,
+.pets-manager-edit-card {
+  min-width: 0;
+}
+
+@media (min-width: 1280px) {
+  .pets-manager-sticky {
+    position: sticky;
+    top: 96px;
+    align-self: start;
+  }
+
+  .pets-manager-panel-scroll {
+    min-height: 0;
+    max-height: calc(100vh - 280px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 6px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .pets-manager-panel-scroll {
+    max-height: calc(100vh - 260px);
   }
 }

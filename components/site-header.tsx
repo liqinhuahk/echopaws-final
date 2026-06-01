@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+const CONTACT_HREF = 'mailto:YOUR_EMAIL_HERE';
+
 type SiteHeaderProps = {
   ctaLabel?: string;
   ctaHref?: string;
@@ -17,7 +19,7 @@ export function SiteHeader({
           <span>EchoPaws</span>
         </Link>
 
-        <nav className='hidden items-center gap-6 text-sm font-medium text-slate-600 md:flex'>
+        <nav className='hidden items-center gap-5 text-sm font-medium text-slate-600 md:flex lg:gap-6'>
           <Link href='/' className='transition hover:text-slate-900'>
             Home
           </Link>
@@ -30,6 +32,13 @@ export function SiteHeader({
           <Link href='/account' className='transition hover:text-slate-900'>
             Account
           </Link>
+          <a
+            href={CONTACT_HREF}
+            className='transition hover:text-slate-900'
+            aria-label='Contact EchoPaws support'
+          >
+            Contact
+          </a>
         </nav>
 
         <div className='flex items-center gap-3'>

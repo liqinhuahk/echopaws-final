@@ -161,7 +161,10 @@ function PetAvatar({
   if (imageUrl) {
     return (
       <div
-        className={['overflow-hidden border border-orange-100 bg-orange-50 shadow-sm', sizeClass].join(' ')}
+        className={[
+          'shrink-0 overflow-hidden border border-orange-100 bg-orange-50 shadow-sm',
+          sizeClass,
+        ].join(' ')}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={imageUrl} alt={`${name} avatar`} className='h-full w-full object-cover' />
@@ -172,7 +175,7 @@ function PetAvatar({
   return (
     <div
       className={[
-        'flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm',
+        'shrink-0 flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm',
         sizeClass,
       ].join(' ')}
       aria-label={`${name} avatar placeholder`}
@@ -390,10 +393,10 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           </div>
 
           <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
-            <div className='flex items-center gap-4'>
+            <div className='flex items-start gap-4 sm:items-center'>
               <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='xl' />
 
-              <div>
+              <div className='min-w-0'>
                 <h1 className='text-3xl font-black tracking-tight text-slate-900'>
                   Memories of {selectedPet.name}
                 </h1>
@@ -430,7 +433,9 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
                 <div className='min-w-0 flex-1'>
                   <div className='flex flex-wrap items-center gap-2'>
-                    <h2 className='truncate text-xl font-black text-slate-900'>{selectedPet.name}</h2>
+                    <h2 className='truncate text-xl font-black text-slate-900'>
+                      {selectedPet.name}
+                    </h2>
 
                     {selectedPet.id === defaultPetId ? (
                       <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
@@ -496,11 +501,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           <main className='min-w-0'>
             <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
               <form className='grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,0.8fr))]'>
-                <input
-                  type='hidden'
-                  name='pet_id'
-                  value={selectedPet.id}
-                />
+                <input type='hidden' name='pet_id' value={selectedPet.id} />
 
                 <label className='grid gap-2'>
                   <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
@@ -574,7 +575,10 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                     <button type='submit' className='brand-button !h-11 flex-1'>
                       Apply
                     </button>
-                    <Link href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`} className='subtle-button !h-11 flex-1 text-center'>
+                    <Link
+                      href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                      className='subtle-button !h-11 flex-1 text-center'
+                    >
                       Reset
                     </Link>
                   </div>
@@ -585,7 +589,10 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 <span>{filteredMemories.length} result(s)</span>
 
                 {openAll ? (
-                  <Link href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })} className='font-semibold text-orange-700'>
+                  <Link
+                    href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })}
+                    className='font-semibold text-orange-700'
+                  >
                     Collapse all
                   </Link>
                 ) : (

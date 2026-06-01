@@ -78,10 +78,12 @@ export default async function PetsPage({
 
   return (
     <>
-      <SiteHeader
-        ctaLabel={freePlanCapReached ? 'Upgrade to VIP' : 'Create New Pet'}
-        ctaHref={freePlanCapReached ? '/pricing' : '/create-pet'}
-      />
+      <div className='hidden md:block'>
+        <SiteHeader
+          ctaLabel={freePlanCapReached ? 'Upgrade to VIP' : 'Create New Pet'}
+          ctaHref={freePlanCapReached ? '/pricing' : '/create-pet'}
+        />
+      </div>
 
       <FloatingToast message={searchParams?.message || null} tone='success' />
       <FloatingToast message={searchParams?.error || null} tone='error' />

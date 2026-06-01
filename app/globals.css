@@ -37,8 +37,8 @@
 
   --max-width: 1200px;
 
-  --mobile-topbar-height: 64px;
-  --mobile-bottomnav-height: 74px;
+  --mobile-topbar-height: 68px;
+  --mobile-bottomnav-height: 78px;
 }
 
 /* =========================================
@@ -365,6 +365,10 @@ footer {
 
 .mobile-app-topbar__brand,
 .mobile-app-topbar__paw,
+.mobile-app-topbar__actions,
+.mobile-app-topbar__action,
+.mobile-pet-thumb,
+.mobile-pet-thumb__img,
 .mobile-app-pet-switcher,
 .mobile-app-pet-switcher__trigger,
 .mobile-app-pet-switcher__name,
@@ -415,7 +419,9 @@ footer {
   }
 
   .mobile-app-content {
-    min-height: 100dvh;
+    min-height: 100dvh !important;
+    width: 100% !important;
+    overflow-x: clip !important;
   }
 
   /* -------------------------
@@ -429,13 +435,13 @@ footer {
     height: calc(var(--mobile-topbar-height) + env(safe-area-inset-top, 0px)) !important;
     padding:
       calc(env(safe-area-inset-top, 0px) + 10px)
-      14px
+      12px
       10px
-      14px !important;
+      12px !important;
     display: flex !important;
     align-items: center !important;
     justify-content: space-between !important;
-    gap: 12px !important;
+    gap: 10px !important;
     background: rgba(255, 255, 255, 0.96) !important;
     border-bottom: 1px solid rgba(15, 23, 42, 0.06) !important;
     backdrop-filter: blur(14px) !important;
@@ -449,12 +455,15 @@ footer {
     gap: 8px !important;
     min-width: 0 !important;
     flex: 0 1 auto !important;
+    max-width: 40% !important;
     white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
     color: #172033 !important;
-    font-size: 1.55rem !important;
+    font-size: 0.98rem !important;
     line-height: 1 !important;
     font-weight: 900 !important;
-    letter-spacing: -0.04em !important;
+    letter-spacing: -0.02em !important;
     text-decoration: none !important;
   }
 
@@ -462,20 +471,96 @@ footer {
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
-    font-size: 0.95rem !important;
+    font-size: 0.9rem !important;
     line-height: 1 !important;
     flex: 0 0 auto !important;
   }
 
+  .mobile-app-topbar__actions {
+    margin-left: auto !important;
+    width: min(56vw, 240px) !important;
+    min-width: 0 !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  .mobile-app-topbar__action {
+    min-width: 0 !important;
+    width: 100% !important;
+    height: 38px !important;
+    padding: 0 10px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    font-size: 0.84rem !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
+    text-decoration: none !important;
+  }
+
+  .mobile-app-topbar__action--subtle {
+    background: #ffffff !important;
+    border: 1px solid rgba(15, 23, 42, 0.1) !important;
+    color: #374151 !important;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04) !important;
+  }
+
+  .mobile-app-topbar__action--brand {
+    background: linear-gradient(135deg, #ffb020 0%, #f97316 100%) !important;
+    border: 0 !important;
+    color: #ffffff !important;
+    box-shadow: 0 10px 24px rgba(249, 115, 22, 0.22) !important;
+  }
+
   /* -------------------------
-     Pet switcher
+     Pet thumb / switcher
      ------------------------- */
+
+  .mobile-pet-thumb {
+    width: 26px !important;
+    height: 26px !important;
+    border-radius: 999px !important;
+    overflow: hidden !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex: 0 0 26px !important;
+    background: #fed7aa !important;
+  }
+
+  .mobile-pet-thumb--md {
+    width: 34px !important;
+    height: 34px !important;
+    flex-basis: 34px !important;
+  }
+
+  .mobile-pet-thumb__img {
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+    display: block !important;
+  }
+
+  .mobile-pet-thumb--fallback {
+    color: #7c2d12 !important;
+    font-size: 13px !important;
+    line-height: 1 !important;
+  }
 
   .mobile-app-pet-switcher {
     position: relative !important;
     display: block !important;
     flex: 0 0 auto !important;
+    margin-left: auto !important;
     min-width: 0 !important;
+    max-width: 58vw !important;
   }
 
   .mobile-app-pet-switcher__trigger {
@@ -491,24 +576,27 @@ footer {
     align-items: center !important;
     justify-content: center !important;
     gap: 8px !important;
-    max-width: 46vw !important;
-    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06) !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
     white-space: nowrap !important;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.06) !important;
   }
 
   .mobile-app-pet-switcher__name {
     display: block !important;
-    max-width: 18vw !important;
+    max-width: 20vw !important;
+    min-width: 0 !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     white-space: nowrap !important;
-    font-size: 0.92rem !important;
+    font-size: 0.88rem !important;
     line-height: 1 !important;
     font-weight: 800 !important;
     color: #1f2937 !important;
   }
 
-  .mobile-app-pet-switcher__chevron {
+  .mobile-app-pet-switcher__chevron,
+  .mobile-app-pet-switcher__trigger svg {
     width: 16px !important;
     height: 16px !important;
     display: inline-flex !important;
@@ -516,12 +604,6 @@ footer {
     justify-content: center !important;
     color: #1f2937 !important;
     flex: 0 0 auto !important;
-  }
-
-  .mobile-app-pet-switcher__chevron svg {
-    width: 16px !important;
-    height: 16px !important;
-    display: block !important;
   }
 
   .mobile-app-pet-switcher__backdrop {
@@ -567,31 +649,25 @@ footer {
     border-color: #fed7aa !important;
   }
 
-  .mobile-app-pet-switcher__item-text {
+  .mobile-app-pet-switcher__label {
     min-width: 0 !important;
     flex: 1 1 auto !important;
-    display: grid !important;
-  }
-
-  .mobile-app-pet-switcher__item-name {
     font-size: 0.95rem !important;
     line-height: 1.2 !important;
     font-weight: 800 !important;
     color: #1f2937 !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
   }
 
-  .mobile-app-pet-switcher__item-sub {
-    margin-top: 2px !important;
-    font-size: 0.76rem !important;
-    line-height: 1.2 !important;
-    color: #64748b !important;
-  }
-
-  .mobile-app-pet-switcher__check {
+  .mobile-app-pet-switcher__current {
     flex: 0 0 auto !important;
+    margin-left: 8px !important;
+    font-size: 0.75rem !important;
+    line-height: 1 !important;
+    font-weight: 800 !important;
     color: #ea580c !important;
-    font-size: 0.95rem !important;
-    font-weight: 900 !important;
   }
 
   /* -------------------------
@@ -603,13 +679,13 @@ footer {
     left: 0 !important;
     right: 0 !important;
     bottom: 0 !important;
-    z-index: 80 !important;
+    z-index: 90 !important;
     height: calc(var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px)) !important;
     padding:
       8px
-      10px
+      8px
       calc(8px + env(safe-area-inset-bottom, 0px))
-      10px !important;
+      8px !important;
     display: grid !important;
     grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
     align-items: stretch !important;
@@ -622,8 +698,8 @@ footer {
 
   .mobile-app-bottomnav__item {
     min-width: 0 !important;
-    height: 58px !important;
-    border-radius: 18px !important;
+    height: 56px !important;
+    border-radius: 16px !important;
     display: inline-flex !important;
     flex-direction: column !important;
     align-items: center !important;
@@ -655,33 +731,90 @@ footer {
   }
 
   .mobile-app-bottomnav__label {
-    font-size: 0.78rem !important;
+    font-size: 0.76rem !important;
     line-height: 1 !important;
     font-weight: 800 !important;
     white-space: nowrap !important;
   }
 
   /* -------------------------
-     Conservative chat fix
+     Page-level mobile spacing
      ------------------------- */
 
+  body.mobile-route-chat .chat-page-shell,
+  body.mobile-route-memories .mx-auto.max-w-7xl,
+  body.mobile-route-home .container-shell,
+  body.mobile-route-account .container-shell {
+    padding-bottom: calc(var(--mobile-bottomnav-height) + env(safe-area-inset-bottom, 0px) + 14px) !important;
+  }
+
+  body.mobile-route-chat .chat-page-shell {
+    padding-top: 10px !important;
+  }
+
+  body.mobile-route-memories .mx-auto.max-w-7xl {
+    overflow-x: hidden !important;
+  }
+
+  /* -------------------------
+     Chat mobile fit
+     ------------------------- */
+
+  body.mobile-route-chat .chat-page-main {
+    min-width: 0 !important;
+  }
+
+  body.mobile-route-chat .chat-page-card {
+    padding: 8px !important;
+    min-height: calc(
+      100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px
+    ) !important;
+    height: calc(
+      100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 32px
+    ) !important;
+    overflow: hidden !important;
+  }
+
+  body.mobile-route-chat .mobile-chat-shell {
+    min-height: 0 !important;
+    height: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  body.mobile-route-chat .mobile-chat-toolbar {
+    grid-template-columns: 1fr 1fr !important;
+  }
+
+  body.mobile-route-chat .mobile-chat-card {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
+    margin-top: 10px !important;
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
   body.mobile-route-chat .mobile-chat-scroll {
+    min-height: 0 !important;
+    flex: 1 1 auto !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
+    overscroll-behavior: contain !important;
     touch-action: pan-y !important;
   }
 
   body.mobile-route-chat .mobile-chat-composer {
     position: sticky !important;
     bottom: 0 !important;
-    z-index: 4 !important;
+    z-index: 5 !important;
+    margin-top: 10px !important;
+    padding-top: 8px !important;
     background: linear-gradient(
       180deg,
       rgba(245, 245, 247, 0) 0%,
-      rgba(245, 245, 247, 0.88) 16px,
-      rgba(245, 245, 247, 1) 44px
+      rgba(245, 245, 247, 0.9) 18px,
+      rgba(245, 245, 247, 1) 48px
     ) !important;
-    padding-top: 8px !important;
   }
 }
 
@@ -702,32 +835,41 @@ footer {
   }
 
   .mobile-app-topbar__brand {
-    font-size: 1.4rem !important;
+    max-width: 38% !important;
+    font-size: 0.92rem !important;
   }
 
-  .mobile-app-pet-switcher__trigger {
-    max-width: 48vw !important;
-    padding: 0 9px !important;
+  .mobile-app-topbar__actions {
+    width: min(58vw, 220px) !important;
+    gap: 6px !important;
+  }
+
+  .mobile-app-topbar__action {
+    height: 36px !important;
+    padding: 0 8px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .mobile-app-pet-switcher {
+    max-width: 56vw !important;
   }
 
   .mobile-app-pet-switcher__name {
-    max-width: 16vw !important;
-    font-size: 0.88rem !important;
+    max-width: 18vw !important;
+    font-size: 0.84rem !important;
   }
 
   .mobile-app-bottomnav {
     gap: 6px !important;
-    padding-left: 8px !important;
-    padding-right: 8px !important;
   }
 
-  .mobile-app-bottomnav__item {
-    height: 56px !important;
-    border-radius: 16px !important;
-  }
-
-  .mobile-app-bottomnav__label {
-    font-size: 0.76rem !important;
+  body.mobile-route-chat .chat-page-card {
+    min-height: calc(
+      100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px
+    ) !important;
+    height: calc(
+      100dvh - var(--mobile-topbar-height) - var(--mobile-bottomnav-height) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px
+    ) !important;
   }
 }
 

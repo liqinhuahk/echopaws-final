@@ -25,12 +25,14 @@ function shouldShowTopBar(path: string) {
   );
 }
 
-function isCoreMobileAppRoute(path: string) {
+function shouldShowBottomNav(path: string) {
   return (
     path === '/' ||
     path.startsWith('/chat') ||
     path.startsWith('/memories') ||
-    path.startsWith('/account')
+    path.startsWith('/account') ||
+    path.startsWith('/pets') ||
+    path.startsWith('/create-pet')
   );
 }
 
@@ -142,8 +144,8 @@ function TopActionLink({
 
 export function MobileAppChrome() {
   const pathname = usePathname();
-  const shouldShow = isCoreMobileAppRoute(pathname);
   const showTopBar = shouldShowTopBar(pathname);
+  const showBottomNav = shouldShowBottomNav(pathname);
   const isChatPage = pathname.startsWith('/chat');
   const isMemoriesPage = pathname.startsWith('/memories');
   const isAccountPage = pathname.startsWith('/account');
@@ -158,7 +160,10 @@ export function MobileAppChrome() {
   useEffect(() => {
     if (typeof document === 'undefined') return;
 
-    document.body.classList.toggle('mobile-chrome-active', shouldShow);
+    document.body.classList.toggle('mobile-chrome-active', showTopBar || showBottomNav);
+    document.body.classList.toggle('mobile-topbar-active', showTopBar);
+    document.body.classList.toggle('mobile-bottomnav-active', showBottomNav);
+
     document.body.classList.toggle('mobile-route-home', pathname === '/');
     document.body.classList.toggle('mobile-route-chat', pathname.startsWith('/chat'));
     document.body.classList.toggle('mobile-route-memories', pathname.startsWith('/memories'));
@@ -167,13 +172,15 @@ export function MobileAppChrome() {
     return () => {
       document.body.classList.remove(
         'mobile-chrome-active',
+        'mobile-topbar-active',
+        'mobile-bottomnav-active',
         'mobile-route-home',
         'mobile-route-chat',
         'mobile-route-memories',
         'mobile-route-account'
       );
     };
-  }, [pathname, shouldShow]);
+  }, [pathname, showTopBar, showBottomNav]);
 
   useEffect(() => {
     setIsOpen(false);
@@ -197,7 +204,6 @@ export function MobileAppChrome() {
 
     sync();
     const timer = window.setInterval(sync, 500);
-
     return () => window.clearInterval(timer);
   }, [isChatPage]);
 
@@ -220,7 +226,6 @@ export function MobileAppChrome() {
 
   const activePet = useMemo(() => {
     if (!chatPetPayload?.pets?.length) return null;
-
     return (
       chatPetPayload.pets.find((pet) => pet.id === effectiveActivePetId) ?? chatPetPayload.pets[0]
     );
@@ -285,7 +290,7 @@ export function MobileAppChrome() {
     [pathname]
   );
 
-  if (!shouldShow) return null;
+  if (!showTopBar && !showBottomNav) return null;
 
   return (
     <>
@@ -350,18 +355,20 @@ export function MobileAppChrome() {
         </div>
       ) : null}
 
-      <nav className='mobile-app-bottomnav'>
-        {navItems.map((item) => (
-          <Link
-            key={item.href}
-            href={item.href}
-            className={`mobile-app-bottomnav__item ${item.active ? 'is-active' : ''}`}
-          >
-            <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
-            <span className='mobile-app-bottomnav__label'>{item.label}</span>
-          </Link>
-        ))}
-      </nav>
+      {showBottomNav ? (
+        <nav className='mobile-app-bottomnav'>
+          {navItems.map((item) => (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`mobile-app-bottomnav__item ${item.active ? 'is-active' : ''}`}
+            >
+              <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
+              <span className='mobile-app-bottomnav__label'>{item.label}</span>
+            </Link>
+          ))}
+        </nav>
+      ) : null}
     </>
   );
 }

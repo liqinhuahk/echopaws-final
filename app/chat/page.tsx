@@ -25,23 +25,31 @@ function PetAvatar({
       ? 'h-10 w-10 rounded-xl'
       : size === 'lg'
         ? 'h-20 w-20 rounded-[22px]'
-        : 'h-14 w-14 rounded-[18px]';
+        : size === 'xl'
+          ? 'h-16 w-16 rounded-[20px]'
+          : 'h-14 w-14 rounded-[18px]';
 
   return imageUrl ? (
-    <div className={`overflow-hidden border border-orange-100 bg-orange-50 shadow-sm ${sizeClass}`}>
+    <div
+      className={`shrink-0 overflow-hidden border border-orange-100 bg-orange-50 shadow-sm ${sizeClass}`}
+    >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={imageUrl} alt={name} className='h-full w-full object-cover' />
     </div>
   ) : (
     <div
-      className={`flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm ${sizeClass}`}
+      className={`flex shrink-0 items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm ${sizeClass}`}
     >
       🐾
     </div>
   );
 }
 
-export default async function ChatPage({ searchParams }: { searchParams?: any }) {
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams?: Promise<Record<string, string | string[] | undefined>> | Record<string, string | string[] | undefined>;
+}) {
   const resolvedParams = searchParams ? await Promise.resolve(searchParams) : {};
   const requestedPetId = pickFirst(resolvedParams?.pet_id).trim();
 
@@ -106,18 +114,22 @@ export default async function ChatPage({ searchParams }: { searchParams?: any })
       </div>
 
       <div className='chat-page-shell mx-auto max-w-7xl px-4 py-3 md:py-6'>
-        <section className='hidden md:block mb-6 rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm'>
+        <section className='mb-6 hidden rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm md:block'>
           <div className='flex items-center gap-4'>
             <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />
-            <div>
+            <div className='min-w-0'>
               <h1 className='text-3xl font-black text-slate-900'>Chat with {selectedPet.name}</h1>
               <p className='mt-1 text-sm text-slate-600'>
-                {usageLabel} · {selectedPet.id === petOverview.defaultPetId ? 'Primary Pet' : 'Companion'}
+                {usageLabel} ·{' '}
+                {selectedPet.id === petOverview.defaultPetId ? 'Primary Pet' : 'Companion'}
               </p>
             </div>
 
             <div className='ml-auto flex gap-3'>
-              <Link href={`/memories?pet_id=${selectedPet.id}`} className='subtle-button !h-10 text-sm'>
+              <Link
+                href={`/memories?pet_id=${selectedPet.id}`}
+                className='subtle-button !h-10 text-sm'
+              >
                 Memories
               </Link>
               <Link href='/pets' className='subtle-button !h-10 text-sm'>
@@ -128,9 +140,11 @@ export default async function ChatPage({ searchParams }: { searchParams?: any })
         </section>
 
         <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
-          <aside className='hidden xl:block space-y-5'>
+          <aside className='hidden space-y-5 xl:block'>
             <div className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
-              <h3 className='text-xs font-bold uppercase tracking-widest text-orange-700'>Pet Switcher</h3>
+              <h3 className='text-xs font-bold uppercase tracking-widest text-orange-700'>
+                Pet Switcher
+              </h3>
 
               <div className='mt-4 space-y-2'>
                 {pets.map((p) => (

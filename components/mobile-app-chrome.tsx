@@ -4,6 +4,8 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
+const CONTACT_HREF = 'mailto:YOUR_EMAIL_HERE';
+
 type ChatPetPayload = {
   activePetId: string | null;
   pets: Array<{
@@ -12,6 +14,14 @@ type ChatPetPayload = {
     imageUrl?: string | null;
     href: string;
   }>;
+};
+
+type NavItem = {
+  href: string;
+  label: string;
+  icon: ReactNode;
+  active: boolean;
+  external?: boolean;
 };
 
 function shouldShowTopBar(path: string) {
@@ -82,6 +92,15 @@ function AccountIcon() {
   );
 }
 
+function ContactIcon() {
+  return (
+    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+      <path d='M4 6h16v12H4z' />
+      <path d='m4 8 8 6 8-6' />
+    </svg>
+  );
+}
+
 function ChevronDownIcon({ open }: { open: boolean }) {
   return (
     <svg
@@ -123,21 +142,50 @@ function TopActionLink({
   href,
   children,
   tone = 'subtle',
+  external = false,
 }: {
   href: string;
   children: ReactNode;
   tone?: 'subtle' | 'brand';
+  external?: boolean;
 }) {
+  const className = `mobile-app-topbar__action ${
+    tone === 'brand'
+      ? 'mobile-app-topbar__action--brand'
+      : 'mobile-app-topbar__action--subtle'
+  }`;
+
+  if (external) {
+    return (
+      <a href={href} className={className}>
+        {children}
+      </a>
+    );
+  }
+
   return (
-    <Link
-      href={href}
-      className={`mobile-app-topbar__action ${
-        tone === 'brand'
-          ? 'mobile-app-topbar__action--brand'
-          : 'mobile-app-topbar__action--subtle'
-      }`}
-    >
+    <Link href={href} className={className}>
       {children}
+    </Link>
+  );
+}
+
+function BottomNavItem({ item }: { item: NavItem }) {
+  const className = `mobile-app-bottomnav__item ${item.active ? 'is-active' : ''}`;
+
+  if (item.external) {
+    return (
+      <a href={item.href} className={className} aria-label={item.label}>
+        <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
+        <span className='mobile-app-bottomnav__label'>{item.label}</span>
+      </a>
+    );
+  }
+
+  return (
+    <Link href={item.href} className={className}>
+      <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
+      <span className='mobile-app-bottomnav__label'>{item.label}</span>
     </Link>
   );
 }
@@ -168,6 +216,7 @@ export function MobileAppChrome() {
     document.body.classList.toggle('mobile-route-chat', pathname.startsWith('/chat'));
     document.body.classList.toggle('mobile-route-memories', pathname.startsWith('/memories'));
     document.body.classList.toggle('mobile-route-account', pathname.startsWith('/account'));
+    document.body.classList.toggle('mobile-route-pets', pathname.startsWith('/pets'));
 
     return () => {
       document.body.classList.remove(
@@ -177,7 +226,8 @@ export function MobileAppChrome() {
         'mobile-route-home',
         'mobile-route-chat',
         'mobile-route-memories',
-        'mobile-route-account'
+        'mobile-route-account',
+        'mobile-route-pets'
       );
     };
   }, [pathname, showTopBar, showBottomNav]);
@@ -270,7 +320,7 @@ export function MobileAppChrome() {
     return null;
   }, [isHomePage, isAccountPage, isMemoriesPage, memoriesChatHref]);
 
-  const navItems = useMemo(
+  const navItems = useMemo<NavItem[]>(
     () => [
       { href: '/', label: 'Home', icon: <HomeIcon />, active: pathname === '/' },
       { href: '/chat', label: 'Chat', icon: <ChatIcon />, active: pathname.startsWith('/chat') },
@@ -285,6 +335,13 @@ export function MobileAppChrome() {
         label: 'Account',
         icon: <AccountIcon />,
         active: pathname.startsWith('/account'),
+      },
+      {
+        href: CONTACT_HREF,
+        label: 'Contact',
+        icon: <ContactIcon />,
+        active: false,
+        external: true,
       },
     ],
     [pathname]
@@ -356,16 +413,12 @@ export function MobileAppChrome() {
       ) : null}
 
       {showBottomNav ? (
-        <nav className='mobile-app-bottomnav'>
+        <nav
+          className='mobile-app-bottomnav'
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
           {navItems.map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`mobile-app-bottomnav__item ${item.active ? 'is-active' : ''}`}
-            >
-              <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
-              <span className='mobile-app-bottomnav__label'>{item.label}</span>
-            </Link>
+            <BottomNavItem key={`${item.label}-${item.href}`} item={item} />
           ))}
         </nav>
       ) : null}

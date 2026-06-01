@@ -144,19 +144,17 @@ export default async function AccountPage() {
                 <div className='text-sm font-bold text-muted'>Email</div>
                 <div className='mt-2 text-base font-semibold'>{maskedEmail}</div>
 
-                <div className='mt-1 flex items-center gap-2'>
-                  <div className='min-w-0 flex-1 text-xs text-muted'>
-                    <div className='truncate whitespace-nowrap'>{fullEmail}</div>
-                  </div>
-
+                <div className='mt-2 flex flex-wrap items-center gap-2'>
                   <button
                     id='copy-email-button'
                     type='button'
                     data-email={fullEmail}
-                    className='rounded-full border border-black/10 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-100'
+                    className='shrink-0 rounded-full border border-black/10 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-100'
                   >
                     <span id='copy-email-feedback'>Copy email</span>
                   </button>
+
+                  <span className='text-xs text-muted'>Full email hidden for privacy</span>
                 </div>
               </div>
 

@@ -893,3 +893,39 @@ footer {
     min-height: auto;
   }
 }
+
+/* =========================================
+   Account desktop email stability patch
+   ========================================= */
+
+@media (min-width: 768px) {
+  #copy-email-button {
+    flex-shrink: 0;
+  }
+}
+
+/* =========================================
+   Desktop memories toolbar + scroll panel
+   ========================================= */
+
+.memories-scroll-panel {
+  scrollbar-gutter: stable;
+}
+
+@media (min-width: 1280px) {
+  .memories-scroll-panel {
+    min-height: 0;
+    flex: 1 1 auto;
+    max-height: calc(100vh - 320px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+    padding-right: 8px;
+  }
+}
+
+@media (min-width: 1280px) and (max-width: 1535px) {
+  .memories-scroll-panel {
+    max-height: calc(100vh - 300px);
+  }
+}

@@ -74,7 +74,9 @@ export default async function CreatePetPage({ searchParams }: CreatePetPageProps
 
   return (
     <>
-      <SiteHeader ctaLabel='Open Memories' ctaHref='/memories' />
+      <div className='hidden md:block'>
+        <SiteHeader ctaLabel='Open Memories' ctaHref='/memories' />
+      </div>
 
       <main className='container-shell py-10'>
         <section className='mx-auto max-w-3xl rounded-[32px] border border-orange-100 bg-white p-7 shadow-sm md:p-8'>

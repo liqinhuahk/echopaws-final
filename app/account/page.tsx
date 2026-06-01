@@ -282,9 +282,9 @@ export default async function AccountPage() {
             </div>
             <h2 className='mt-2 text-2xl font-extrabold'>What VIP unlocks</h2>
 
-            <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em]'>$12.9</strong>
-              <span className='mb-1 text-muted'>/ month</span>
+            <div className='mt-4 flex items-end gap-1'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em]'>$12.99</strong>
+              <span className='mb-1 text-sm font-semibold text-muted'>/Month</span>
             </div>
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>

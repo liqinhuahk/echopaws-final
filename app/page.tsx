@@ -75,7 +75,8 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              <div className='mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[0.96rem] font-semibold text-white/62'>
+              {/* Brightened feature checklist */}
+              <div className='mt-8 flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-white/12 bg-black/18 px-4 py-3 text-[0.96rem] font-semibold text-white/88 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-sm'>
                 <span>✓ Google & Email Login</span>
                 <span>✓ Emotional AI Chat</span>
                 <span>✓ Long-Term Memory</span>

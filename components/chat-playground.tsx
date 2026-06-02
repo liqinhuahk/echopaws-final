@@ -265,7 +265,7 @@ function renderAssistantContent(content: string): ReactNode {
         return (
           <span
             key={`action-${index}`}
-            className='mx-[2px] inline rounded-full border border-orange-200/80 bg-orange-50 px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-orange-900'
+            className='mx-[2px] inline rounded-full border border-orange-200/90 bg-gradient-to-r from-amber-50 to-orange-50 px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-orange-900 shadow-[0_2px_8px_rgba(249,115,22,0.08)]'
           >
             {segment.content}
           </span>
@@ -284,7 +284,7 @@ function PetReplyAvatar({
 }) {
   if (petImageUrl) {
     return (
-      <div className='h-9 w-9 shrink-0 overflow-hidden rounded-full border border-[#dddddd] bg-white shadow-sm sm:h-11 sm:w-11'>
+      <div className='h-9 w-9 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50 shadow-[0_4px_12px_rgba(249,115,22,0.12)] sm:h-11 sm:w-11'>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={petImageUrl} alt={`${petName} avatar`} className='h-full w-full object-cover' />
       </div>
@@ -293,7 +293,7 @@ function PetReplyAvatar({
 
   return (
     <div
-      className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#dddddd] bg-white text-sm shadow-sm sm:h-11 sm:w-11 sm:text-base'
+      className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-50 text-sm shadow-[0_4px_12px_rgba(249,115,22,0.12)] sm:h-11 sm:w-11 sm:text-base'
       aria-label={`${petName} avatar placeholder`}
     >
       🐾
@@ -408,19 +408,19 @@ export function ChatPlayground({
   return (
     <div className='mobile-chat-shell flex min-h-[56vh] flex-col xl:h-full xl:min-h-0'>
       <div className='mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3'>
-        <div className='truncate rounded-full border border-black/5 bg-white px-3 py-2 text-center text-[11px] font-bold text-slate-800 shadow-sm sm:text-xs'>
+        <div className='truncate rounded-full border border-orange-200/80 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-2 text-center text-[11px] font-bold text-orange-900 shadow-[0_4px_12px_rgba(249,115,22,0.08)] sm:text-xs'>
           {usageLabel}
         </div>
 
         <a
           href={memoriesHref}
-          className='rounded-full border border-[#d8d8d8] bg-white px-3 py-2 text-center text-[11px] font-bold text-slate-700 transition hover:bg-slate-50 sm:text-xs'
+          className='rounded-full border border-orange-200/80 bg-white/92 px-3 py-2 text-center text-[11px] font-bold text-slate-700 shadow-[0_4px_12px_rgba(15,23,42,0.04)] transition hover:border-orange-300 hover:bg-orange-50/70 hover:text-orange-800 sm:text-xs'
         >
           Open Memories
         </a>
       </div>
 
-      <div className='mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] border border-[#e5e7eb] bg-[#f5f5f7] p-3 shadow-inner sm:mt-5 sm:rounded-[28px] sm:p-4'>
+      <div className='mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] border border-[#f1e4d4] bg-[#fdf8f3] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.85),0_12px_28px_rgba(15,23,42,0.04)] sm:mt-5 sm:rounded-[28px] sm:p-4'>
         <div
           ref={messageViewportRef}
           className='mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth'
@@ -434,12 +434,12 @@ export function ChatPlayground({
                   <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
                     <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
                     <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
-                      <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-slate-500 sm:text-[11px]'>
+                      <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-orange-700/80 sm:text-[11px]'>
                         {petName}
                       </div>
 
-                      <div className='relative rounded-[16px] rounded-bl-md border border-[#e6e6ea] bg-white px-3.5 py-2.5 text-[14px] text-slate-800 shadow-sm sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-[15px]'>
-                        <span className='absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-b border-l border-[#e6e6ea] bg-white sm:-left-[6px] sm:h-3 sm:w-3' />
+                      <div className='relative rounded-[18px] rounded-bl-md border border-[#f0dcc7] bg-[#fffaf5] px-3.5 py-2.5 text-[14px] text-slate-800 shadow-[0_8px_22px_rgba(233,196,151,0.14)] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]'>
+                        <span className='absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-b border-l border-[#f0dcc7] bg-[#fffaf5] sm:-left-[6px] sm:h-3 sm:w-3' />
                         <div className='relative z-[1]'>{renderAssistantContent(message.content)}</div>
                       </div>
                     </div>
@@ -450,12 +450,12 @@ export function ChatPlayground({
               return (
                 <div key={messageKey} className='flex justify-end'>
                   <div className='min-w-0 max-w-[82%] sm:max-w-[72%]'>
-                    <div className='mb-1 px-1 text-right text-[10px] font-bold tracking-wide text-slate-500 sm:text-[11px]'>
+                    <div className='mb-1 px-1 text-right text-[10px] font-bold tracking-wide text-orange-700/80 sm:text-[11px]'>
                       You
                     </div>
 
-                    <div className='relative rounded-[16px] rounded-br-md bg-[#95ec69] px-3.5 py-2.5 text-[14px] text-slate-900 shadow-sm sm:rounded-[18px] sm:px-4 sm:py-3 sm:text-[15px]'>
-                      <span className='absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 bg-[#95ec69] sm:-right-[6px] sm:h-3 sm:w-3' />
+                    <div className='relative rounded-[18px] rounded-br-md bg-gradient-to-br from-amber-300 via-orange-300 to-orange-400 px-3.5 py-2.5 text-[14px] font-medium text-white shadow-[0_10px_24px_rgba(249,115,22,0.22)] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]'>
+                      <span className='absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 bg-orange-400 sm:-right-[6px] sm:h-3 sm:w-3' />
                       <div className='relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7'>
                         {message.content}
                       </div>
@@ -469,16 +469,16 @@ export function ChatPlayground({
               <div className='flex items-end gap-2.5 sm:gap-3'>
                 <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
                 <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
-                  <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-slate-500 sm:text-[11px]'>
+                  <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-orange-700/80 sm:text-[11px]'>
                     {petName}
                   </div>
 
-                  <div className='relative rounded-[16px] rounded-bl-md border border-[#e6e6ea] bg-white px-3.5 py-2.5 shadow-sm sm:rounded-[18px] sm:px-4 sm:py-3'>
-                    <span className='absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-b border-l border-[#e6e6ea] bg-white sm:-left-[6px] sm:h-3 sm:w-3' />
-                    <div className='relative z-[1] flex items-center gap-2 text-slate-500'>
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300' />
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:120ms]' />
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-slate-300 [animation-delay:240ms]' />
+                  <div className='relative rounded-[18px] rounded-bl-md border border-[#f0dcc7] bg-[#fffaf5] px-3.5 py-2.5 shadow-[0_8px_22px_rgba(233,196,151,0.14)] sm:rounded-[20px] sm:px-4 sm:py-3'>
+                    <span className='absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-b border-l border-[#f0dcc7] bg-[#fffaf5] sm:-left-[6px] sm:h-3 sm:w-3' />
+                    <div className='relative z-[1] flex items-center gap-2 text-orange-400'>
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-amber-300' />
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
+                      <span className='h-2 w-2 animate-pulse rounded-full bg-orange-400 [animation-delay:240ms]' />
                     </div>
                   </div>
                 </div>
@@ -494,8 +494,8 @@ export function ChatPlayground({
         ) : null}
 
         {memoryHints.length ? (
-          <div className='mt-3 shrink-0 rounded-[20px] border border-emerald-100 bg-emerald-50 px-3 py-3 sm:rounded-[24px] sm:px-4'>
-            <div className='text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-700 sm:text-xs'>
+          <div className='mt-3 shrink-0 rounded-[20px] border border-orange-100 bg-gradient-to-r from-amber-50 to-orange-50 px-3 py-3 sm:rounded-[24px] sm:px-4'>
+            <div className='text-[11px] font-bold uppercase tracking-[0.18em] text-orange-700 sm:text-xs'>
               New Memory Triggers
             </div>
 
@@ -503,7 +503,7 @@ export function ChatPlayground({
               {memoryHints.map((hint, index) => (
                 <span
                   key={`${hint}-${index}`}
-                  className='rounded-full bg-white px-3 py-1.5 text-[11px] font-semibold text-emerald-900 shadow-sm shadow-emerald-100 sm:px-3 sm:py-2 sm:text-xs'
+                  className='rounded-full border border-orange-100 bg-white/92 px-3 py-1.5 text-[11px] font-semibold text-orange-900 shadow-[0_4px_10px_rgba(249,115,22,0.06)] sm:px-3 sm:py-2 sm:text-xs'
                 >
                   Remembered: {hint}
                 </span>
@@ -513,11 +513,11 @@ export function ChatPlayground({
         ) : null}
 
         <form className='mobile-chat-composer mt-3 shrink-0 sm:mt-4' onSubmit={handleSubmit}>
-          <div className='rounded-[22px] border border-[#e5e7eb] bg-white p-2.5 shadow-sm sm:rounded-[26px] sm:p-3'>
+          <div className='rounded-[22px] border border-[#f1dfcf] bg-white/92 p-2.5 shadow-[0_8px_22px_rgba(15,23,42,0.05)] sm:rounded-[26px] sm:p-3'>
             <div className='flex items-end gap-2 sm:gap-3'>
               <div className='min-w-0 flex-1'>
                 <input
-                  className='w-full rounded-full border border-[#d9d9de] bg-[#fafafa] px-4 py-3 text-[15px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#b7b7bd] focus:bg-white'
+                  className='w-full rounded-full border border-[#ead9c8] bg-[#fffaf6] px-4 py-3 text-[15px] text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-orange-300 focus:bg-white focus:shadow-[0_0_0_4px_rgba(251,146,60,0.12)]'
                   type='text'
                   placeholder='Type a message...'
                   value={input}
@@ -528,7 +528,7 @@ export function ChatPlayground({
 
               <button
                 type='submit'
-                className='inline-flex h-[46px] min-w-[72px] items-center justify-center rounded-full bg-[#95ec69] px-4 text-sm font-bold text-slate-900 shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
+                className='inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 px-4 text-sm font-extrabold text-white shadow-[0_10px_24px_rgba(249,115,22,0.28)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
                 disabled={!canSubmit}
               >
                 {loading ? '...' : 'Send'}

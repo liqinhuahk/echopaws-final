@@ -71,7 +71,6 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* 改为纯白文字，取消外框与外层底盒 */}
               <div className='mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[0.96rem] font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.42)]'>
                 <span>✓ Google & Email Login</span>
                 <span>✓ Emotional AI Chat</span>
@@ -86,9 +85,11 @@ export default function HomePage() {
           <div className='container-shell'>
             <div className='eyebrow'>Why EchoPaws</div>
 
-            <h2 className='mt-4 max-w-4xl text-[clamp(1.9rem,3.8vw,3.2rem)] font-black leading-[1.04] tracking-[-0.04em] text-slate-900'>
-              More than a memory. A companion that{' '}
-              <span className='text-orange-500'>feels alive.</span>
+            <h2 className='mt-4 max-w-5xl text-[clamp(1.9rem,3.6vw,3.15rem)] font-black leading-[1.06] tracking-[-0.045em] text-slate-900'>
+              <span className='block'>More than a memory.</span>
+              <span className='block'>
+                A companion that <span className='text-orange-500'>feels alive.</span>
+              </span>
             </h2>
 
             <p className='mt-5 max-w-3xl text-base leading-[1.85] text-slate-500 md:text-[1.04rem]'>

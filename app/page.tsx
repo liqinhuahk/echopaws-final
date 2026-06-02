@@ -43,10 +43,12 @@ export default function HomePage() {
                 🐾 Emotional AI Companion
               </div>
 
-              <h1 className='mt-5 max-w-[720px] text-[clamp(2.8rem,6vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em] text-white'>
-                Your pet.
+              <h1 className='mt-5 max-w-[760px] text-[clamp(2.8rem,6vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em] text-white'>
+                Every memory.
                 <br />
-                <span className='text-amber-400'>Forever</span> by your side.
+                Every bark.
+                <br />
+                <span className='text-amber-400'>Forever.</span>
               </h1>
 
               <p className='mt-6 max-w-xl text-[1.08rem] leading-[1.85] text-white/80 md:text-[1.12rem]'>
@@ -133,6 +135,29 @@ export default function HomePage() {
                   </p>
                 </article>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Our Story */}
+        <section className='bg-[#f5efe4] py-16 md:py-20'>
+          <div className='container-shell'>
+            <div className='rounded-[32px] border border-orange-100/80 bg-white/78 p-8 shadow-[0_16px_40px_rgba(15,23,42,0.06)] backdrop-blur-sm md:p-12'>
+              <div className='eyebrow'>Our Story</div>
+
+              <h2 className='mt-4 max-w-4xl text-[clamp(1.85rem,3.4vw,3rem)] font-black leading-[1.08] tracking-[-0.04em] text-slate-900'>
+                EchoPaws started from a simple question:
+              </h2>
+
+              <blockquote className='mt-6 max-w-4xl text-[clamp(1.2rem,2.2vw,1.7rem)] font-bold leading-[1.6] tracking-[-0.02em] text-slate-700'>
+                “What if the love we shared with our pets never had to disappear?”
+              </blockquote>
+
+              <p className='mt-6 max-w-3xl text-base leading-[1.9] text-slate-500 md:text-[1.04rem]'>
+                We believe memory can be warm, interactive, and lasting. EchoPaws
+                is designed to preserve affection, personality, and the comforting
+                feeling of connection — so the bond you built never has to fade.
+              </p>
             </div>
           </div>
         </section>

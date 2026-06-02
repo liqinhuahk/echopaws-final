@@ -203,6 +203,53 @@
 }
 
 /* =========================================
+   Shared brand backdrop
+   ========================================= */
+
+.app-brand-backdrop {
+  position: relative;
+  min-height: 100vh;
+  overflow: hidden;
+  background:
+    linear-gradient(180deg, rgba(248, 245, 239, 0.68) 0%, rgba(248, 245, 239, 0.92) 220px, #f8f5ef 100%);
+}
+
+.app-brand-backdrop::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/images/home-hero-a.png');
+  background-size: cover;
+  background-position: center top;
+  opacity: 0.22;
+  filter: blur(1.5px) saturate(0.94);
+  transform: scale(1.03);
+  pointer-events: none;
+}
+
+.app-brand-backdrop::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(12, 10, 8, 0.28) 0%,
+      rgba(248, 245, 239, 0.08) 170px,
+      rgba(248, 245, 239, 0.82) 340px,
+      #f8f5ef 100%
+    ),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.14), transparent 34%),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 30%);
+  pointer-events: none;
+}
+
+.app-brand-backdrop > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* =========================================
    Buttons
    ========================================= */
 

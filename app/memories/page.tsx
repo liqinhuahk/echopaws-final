@@ -45,7 +45,6 @@ function pickFirst(value: string | string[] | undefined) {
 
 function buildTypeLabel(value: string | null | undefined) {
   if (!value) return 'Memory';
-
   return value.replace(/_/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -254,13 +253,13 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   if (!pets.length) {
     return (
-      <>
+      <div className='app-brand-backdrop'>
         <div className='hidden md:block'>
           <SiteHeader />
         </div>
 
         <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-10 sm:px-6 lg:px-8'>
-          <div className='w-full rounded-[32px] border border-orange-100 bg-white p-8 shadow-sm'>
+          <div className='w-full rounded-[32px] border border-white/55 bg-white/80 p-8 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
               Memories
             </div>
@@ -276,16 +275,13 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <Link href='/create-pet' className='brand-button'>
                 Create Pet
               </Link>
-              <Link
-                href='/chat'
-                className='rounded-full border border-slate-200 bg-white px-5 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-              >
+              <Link href='/chat' className='subtle-button'>
                 Back to Chat
               </Link>
             </div>
           </div>
         </div>
-      </>
+      </div>
     );
   }
 
@@ -381,29 +377,28 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
   );
 
   return (
-    <>
+    <div className='app-brand-backdrop'>
       <div className='hidden md:block'>
         <SiteHeader />
       </div>
 
       <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
-        <div className='mb-6 rounded-[30px] border border-orange-100 bg-gradient-to-r from-orange-50 via-amber-50 to-rose-50 p-6 shadow-sm'>
-          <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-            Memories
+        <div className='mb-6 rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+            🧠 Companion Memory Space
           </div>
 
-          <div className='mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
+          <div className='mt-4 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between'>
             <div className='flex items-start gap-4 sm:items-center'>
               <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='xl' />
 
               <div className='min-w-0'>
-                <h1 className='text-3xl font-black tracking-tight text-slate-900'>
+                <h1 className='text-[clamp(2rem,3vw,2.8rem)] font-black tracking-[-0.04em] text-slate-900'>
                   Memories of {selectedPet.name}
                 </h1>
                 <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-                  This workspace gives more room to searchable memories, while keeping summary,
-                  filters, and pet switching close at hand so {selectedPet.name}&apos;s history stays
-                  easy to scan on both desktop and mobile.
+                  Searchable memories, cleaner filters, and a softer brand shell so the page feels
+                  like a natural continuation of Home, Chat, and Account.
                 </p>
               </div>
             </div>
@@ -411,14 +406,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             <div className='hidden md:flex flex-wrap gap-3'>
               <Link
                 href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                className='rounded-full border border-orange-200 bg-white px-4 py-2.5 text-sm font-bold text-orange-900 transition hover:bg-orange-50'
+                className='subtle-button !h-11 text-sm'
               >
                 Back to Chat
               </Link>
-              <Link
-                href='/pets'
-                className='rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-50'
-              >
+              <Link href='/pets' className='subtle-button !h-11 text-sm'>
                 Manage Pets
               </Link>
             </div>
@@ -427,7 +419,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
         <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
           <aside className='space-y-5'>
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='flex items-start gap-4'>
                 <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />
 
@@ -457,7 +449,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Pet Switcher
               </div>
@@ -473,8 +465,8 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                       href={`/memories?pet_id=${encodeURIComponent(pet.id)}`}
                       className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
                         active
-                          ? 'border-orange-200 bg-orange-50'
-                          : 'border-slate-100 hover:bg-slate-50'
+                          ? 'border-orange-200 bg-orange-50/90'
+                          : 'border-slate-100 bg-white/80 hover:bg-slate-50'
                       }`}
                     >
                       <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
@@ -490,7 +482,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Companion snapshot
               </div>
@@ -499,7 +491,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           </aside>
 
           <main className='min-w-0 xl:flex xl:min-h-[calc(100vh-250px)] xl:flex-col'>
-            <section className='rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'>
+            <section className='rounded-[28px] border border-white/55 bg-white/84 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
               <form className='grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,0.82fr))_minmax(0,1.08fr)]'>
                 <input type='hidden' name='pet_id' value={selectedPet.id} />
 
@@ -539,161 +531,3 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </span>
                   <select
                     name='priority'
-                    defaultValue={priority}
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
-                  >
-                    <option value='all'>All priorities</option>
-                    <option value='5'>Priority 5</option>
-                    <option value='4'>Priority 4</option>
-                    <option value='3'>Priority 3</option>
-                    <option value='2'>Priority 2</option>
-                    <option value='1'>Priority 1</option>
-                  </select>
-                </label>
-
-                <label className='grid gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
-                    Sort
-                  </span>
-                  <select
-                    name='sort'
-                    defaultValue={sort}
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
-                  >
-                    <option value='latest'>Latest</option>
-                    <option value='oldest'>Oldest</option>
-                    <option value='highest_priority'>Highest priority</option>
-                    <option value='type'>Type</option>
-                  </select>
-                </label>
-
-                <div className='grid min-w-0 gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
-                    Actions
-                  </span>
-                  <div className='flex min-w-0 flex-col gap-2 2xl:flex-row'>
-                    <button
-                      type='submit'
-                      className='brand-button !h-11 w-full min-w-0 2xl:flex-1'
-                    >
-                      Apply
-                    </button>
-                    <Link
-                      href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
-                      className='subtle-button !h-11 w-full min-w-0 text-center 2xl:flex-1'
-                    >
-                      Reset
-                    </Link>
-                  </div>
-                </div>
-              </form>
-
-              <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600'>
-                <span>{filteredMemories.length} result(s)</span>
-
-                {openAll ? (
-                  <Link
-                    href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })}
-                    className='font-semibold text-orange-700'
-                  >
-                    Collapse all
-                  </Link>
-                ) : (
-                  <Link
-                    href={buildReturnTo({
-                      petId: selectedPet.id,
-                      q,
-                      type: type !== 'all' ? type : '',
-                      priority: priority !== 'all' ? priority : '',
-                      sort: sort !== 'latest' ? sort : '',
-                      expand: 'all',
-                    })}
-                    className='font-semibold text-orange-700'
-                  >
-                    Expand all
-                  </Link>
-                )}
-              </div>
-            </section>
-
-            <section className='memories-scroll-panel mt-5 space-y-4'>
-              {!filteredMemories.length ? (
-                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white px-6 py-10 text-center text-sm text-slate-600 shadow-sm'>
-                  No memories match the current filters.
-                </div>
-              ) : (
-                filteredMemories.map((memory) => {
-                  const isOpen = openAll;
-
-                  return (
-                    <details
-                      key={memory.id}
-                      open={isOpen}
-                      className='group rounded-[28px] border border-orange-100 bg-white p-5 shadow-sm'
-                    >
-                      <summary className='cursor-pointer list-none'>
-                        <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
-                          <div className='min-w-0'>
-                            <div className='flex flex-wrap items-center gap-2'>
-                              <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
-                                {buildTypeLabel(memory.type)}
-                              </span>
-                              <span
-                                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${buildPriorityTone(
-                                  memory.importance
-                                )}`}
-                              >
-                                {buildPriorityLabel(memory.importance)}
-                              </span>
-                              {memory.pet_id === defaultPetId ? (
-                                <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
-                                  Primary pet
-                                </span>
-                              ) : null}
-                            </div>
-
-                            <p className='mt-3 text-sm leading-7 text-slate-700'>
-                              {buildExcerpt(memory.content)}
-                            </p>
-                          </div>
-
-                          <div className='text-xs text-slate-500'>
-                            Updated {formatDateLabel(memory.updated_at ?? memory.created_at)}
-                          </div>
-                        </div>
-                      </summary>
-
-                      <div className='mt-4 border-t border-slate-100 pt-4'>
-                        <div className='whitespace-pre-wrap text-sm leading-8 text-slate-700'>
-                          {memory.content}
-                        </div>
-
-                        <div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
-                          <div className='text-xs text-slate-500'>
-                            Created {formatDateLabel(memory.created_at)} · Updated{' '}
-                            {formatDateLabel(memory.updated_at)}
-                          </div>
-
-                          <form action={deleteMemoryAction}>
-                            <input type='hidden' name='memoryId' value={memory.id} />
-                            <input type='hidden' name='returnTo' value={returnTo} />
-                            <button
-                              type='submit'
-                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50'
-                            >
-                              Delete
-                            </button>
-                          </form>
-                        </div>
-                      </div>
-                    </details>
-                  );
-                })
-              )}
-            </section>
-          </main>
-        </div>
-      </div>
-    </>
-  );
-}

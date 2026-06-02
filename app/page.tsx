@@ -40,15 +40,15 @@ export default function HomePage() {
           <div className='container-shell relative z-20 flex min-h-[760px] items-center py-24 md:min-h-[760px] md:py-32 lg:min-h-[820px] lg:py-36'>
             <div className='max-w-2xl pt-10 md:pt-20'>
               <div className='inline-flex items-center gap-2 rounded-full border border-orange-300/35 bg-orange-400/10 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-300 backdrop-blur-sm'>
-                🐾 Emotional AI Companion
+                Every memory. Every bark. Forever.
               </div>
 
-              <h1 className='mt-5 max-w-[760px] text-[clamp(2.8rem,6vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em] text-white'>
-                Every memory.
+              <h1 className='mt-5 max-w-[720px] text-[clamp(2.8rem,6vw,5.2rem)] font-black leading-[0.96] tracking-[-0.05em] text-white'>
+                Your pet.
                 <br />
-                Every bark.
+                <span className='text-amber-400'>Forever</span> by your
                 <br />
-                <span className='text-amber-400'>Forever.</span>
+                side.
               </h1>
 
               <p className='mt-6 max-w-xl text-[1.08rem] leading-[1.85] text-white/80 md:text-[1.12rem]'>

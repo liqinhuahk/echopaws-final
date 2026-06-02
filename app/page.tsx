@@ -10,12 +10,10 @@ export default function HomePage() {
       <main className='flex min-h-screen flex-col'>
         {/* Hero Section */}
         <section className='relative overflow-hidden'>
-          {/* Desktop header overlay on dark hero */}
           <div className='absolute inset-x-0 top-0 z-30 hidden md:block'>
             <SiteHeader theme='dark' />
           </div>
 
-          {/* Local hero background image from /public */}
           <div className='absolute inset-0 z-0' aria-hidden='true'>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
@@ -25,7 +23,6 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Dark overlay for readability */}
           <div
             className='absolute inset-0 z-10'
             style={{
@@ -35,7 +32,6 @@ export default function HomePage() {
             aria-hidden='true'
           />
 
-          {/* Soft fade into next section */}
           <div
             className='absolute inset-x-0 bottom-0 z-10 h-28 bg-gradient-to-b from-transparent to-[#f8f5ef]'
             aria-hidden='true'
@@ -75,8 +71,8 @@ export default function HomePage() {
                 </Link>
               </div>
 
-              {/* Brightened feature checklist */}
-              <div className='mt-8 flex flex-wrap gap-x-6 gap-y-3 rounded-2xl border border-white/12 bg-black/18 px-4 py-3 text-[0.96rem] font-semibold text-white/88 shadow-[0_10px_30px_rgba(0,0,0,0.12)] backdrop-blur-sm'>
+              {/* 改为纯白文字，取消外框与外层底盒 */}
+              <div className='mt-8 flex flex-wrap gap-x-6 gap-y-3 text-[0.96rem] font-semibold text-white [text-shadow:0_2px_10px_rgba(0,0,0,0.42)]'>
                 <span>✓ Google & Email Login</span>
                 <span>✓ Emotional AI Chat</span>
                 <span>✓ Long-Term Memory</span>

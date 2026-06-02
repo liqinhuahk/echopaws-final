@@ -304,7 +304,7 @@ export default async function AccountPage() {
 
             <div className='mt-4 flex items-end gap-1'>
               <strong className='text-4xl font-extrabold tracking-[-0.05em] text-slate-900'>
-                $12.99
+                $9.99
               </strong>
               <span className='mb-1 text-sm font-semibold text-muted'>/Month</span>
             </div>

@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 
-const HERO_IMAGE_URL = '/images/home-hero-a.png.png';
+const HERO_IMAGE_URL = '/images/home-hero-a.png';
 
 export default function HomePage() {
   return (

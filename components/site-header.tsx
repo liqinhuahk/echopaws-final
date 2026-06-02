@@ -3,12 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-// 如果你已经有 /contact 页面，就保持这样；
-// 如果你暂时没有 /contact 页面，也可以改成：
-// const CONTACT_HREF = 'mailto:YOUR_EMAIL_HERE';
 const CONTACT_HREF = '/contact';
 
-type HeaderProps = {
+type SiteHeaderProps = {
   ctaLabel?: string;
   ctaHref?: string;
   theme?: 'light' | 'dark';
@@ -18,11 +15,11 @@ function isRouteLink(href: string) {
   return href.startsWith('/');
 }
 
-export function Header({
+export function SiteHeader({
   ctaLabel = 'Get Started',
   ctaHref = '/create-pet',
   theme = 'light',
-}: HeaderProps) {
+}: SiteHeaderProps) {
   const pathname = usePathname();
   const isDark = theme === 'dark';
 
@@ -62,13 +59,13 @@ export function Header({
   function getNavLinkClass(active: boolean) {
     if (isDark) {
       return active
-        ? 'rounded-full bg-orange-400/18 px-3 py-1.5 text-sm font-bold text-orange-200 shadow-[0_8px_20px_rgba(249,115,22,0.16)] ring-1 ring-orange-300/20 transition'
-        : 'rounded-full px-3 py-1.5 text-sm font-medium text-white/78 transition hover:bg-white/10 hover:text-white active:bg-orange-400/14 active:text-orange-200';
+        ? 'rounded-full border border-white/14 bg-white/12 px-3.5 py-1.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition'
+        : 'rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.35)] transition hover:bg-white/10 hover:text-orange-200 active:bg-white/14 active:text-orange-200';
     }
 
     return active
-      ? 'rounded-full bg-orange-50 px-3 py-1.5 text-sm font-bold text-orange-700 shadow-sm transition'
-      : 'rounded-full px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-orange-50 hover:text-orange-700 active:bg-orange-100 active:text-orange-700';
+      ? 'rounded-full bg-orange-50 px-3.5 py-1.5 text-sm font-bold text-orange-700 shadow-sm transition'
+      : 'rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-orange-50 hover:text-orange-700 active:bg-orange-100 active:text-orange-700';
   }
 
   return (
@@ -126,7 +123,4 @@ export function Header({
   );
 }
 
-// 为了兼容你项目里可能仍然使用 <SiteHeader />
-export const SiteHeader = Header;
-
-export default Header;
+export default SiteHeader;

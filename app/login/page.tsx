@@ -40,6 +40,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       <main className='container-shell py-10 md:py-14'>
         <div className='grid min-h-[calc(100vh-180px)] items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]'>
+          {/* Left hero copy */}
           <section className='hidden lg:block'>
             <div className='max-w-xl'>
               <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
@@ -72,14 +73,28 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
             </div>
           </section>
 
+          {/* Right form card */}
           <section className='mx-auto w-full max-w-[560px] rounded-[32px] border border-white/55 bg-white/80 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.10)] backdrop-blur-md md:p-8'>
             <div className='eyebrow'>Welcome to EchoPaws</div>
 
-            <h1 className='mt-4 text-[clamp(2.3rem,4vw,3.7rem)] font-black tracking-[-0.05em] text-slate-900'>
+            {/* Mobile only H1 */}
+            <h1 className='mt-4 text-[clamp(2.1rem,8vw,3rem)] font-black tracking-[-0.05em] text-slate-900 lg:hidden'>
               Sign in to your companion world
             </h1>
 
-            <p className='mt-4 text-[0.98rem] leading-[1.85] text-slate-600'>
+            {/* Desktop compact heading */}
+            <div className='mt-4 hidden lg:block'>
+              <h2 className='text-[1.7rem] font-black tracking-[-0.04em] text-slate-900'>
+                Continue with your account
+              </h2>
+              <p className='mt-2 text-[0.98rem] leading-[1.8] text-slate-600'>
+                Choose Google or email to continue. After signing in, you can return to your pet,
+                memories, and ongoing conversations right away.
+              </p>
+            </div>
+
+            {/* Mobile intro */}
+            <p className='mt-4 text-[0.98rem] leading-[1.85] text-slate-600 lg:hidden'>
               Sign in first, then create your AI pet. The whole flow is lightweight — you can be
               chatting within 3 minutes.
             </p>

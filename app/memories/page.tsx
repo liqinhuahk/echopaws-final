@@ -531,3 +531,161 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </span>
                   <select
                     name='priority'
+                    defaultValue={priority}
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  >
+                    <option value='all'>All priorities</option>
+                    <option value='5'>Priority 5</option>
+                    <option value='4'>Priority 4</option>
+                    <option value='3'>Priority 3</option>
+                    <option value='2'>Priority 2</option>
+                    <option value='1'>Priority 1</option>
+                  </select>
+                </label>
+
+                <label className='grid gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Sort
+                  </span>
+                  <select
+                    name='sort'
+                    defaultValue={sort}
+                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                  >
+                    <option value='latest'>Latest</option>
+                    <option value='oldest'>Oldest</option>
+                    <option value='highest_priority'>Highest priority</option>
+                    <option value='type'>Type</option>
+                  </select>
+                </label>
+
+                <div className='grid min-w-0 gap-2'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                    Actions
+                  </span>
+                  <div className='flex min-w-0 flex-col gap-2 2xl:flex-row'>
+                    <button
+                      type='submit'
+                      className='brand-button !h-11 w-full min-w-0 2xl:flex-1'
+                    >
+                      Apply
+                    </button>
+                    <Link
+                      href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                      className='subtle-button !h-11 w-full min-w-0 text-center 2xl:flex-1'
+                    >
+                      Reset
+                    </Link>
+                  </div>
+                </div>
+              </form>
+
+              <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600'>
+                <span>{filteredMemories.length} result(s)</span>
+
+                {openAll ? (
+                  <Link
+                    href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })}
+                    className='font-semibold text-orange-700'
+                  >
+                    Collapse all
+                  </Link>
+                ) : (
+                  <Link
+                    href={buildReturnTo({
+                      petId: selectedPet.id,
+                      q,
+                      type: type !== 'all' ? type : '',
+                      priority: priority !== 'all' ? priority : '',
+                      sort: sort !== 'latest' ? sort : '',
+                      expand: 'all',
+                    })}
+                    className='font-semibold text-orange-700'
+                  >
+                    Expand all
+                  </Link>
+                )}
+              </div>
+            </section>
+
+            <section className='memories-scroll-panel mt-5 space-y-4'>
+              {!filteredMemories.length ? (
+                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white/88 px-6 py-10 text-center text-sm text-slate-600 shadow-sm backdrop-blur-sm'>
+                  No memories match the current filters.
+                </div>
+              ) : (
+                filteredMemories.map((memory) => {
+                  const isOpen = openAll;
+
+                  return (
+                    <details
+                      key={memory.id}
+                      open={isOpen}
+                      className='group rounded-[28px] border border-white/55 bg-white/86 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'
+                    >
+                      <summary className='cursor-pointer list-none'>
+                        <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
+                          <div className='min-w-0'>
+                            <div className='flex flex-wrap items-center gap-2'>
+                              <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
+                                {buildTypeLabel(memory.type)}
+                              </span>
+                              <span
+                                className={`rounded-full border px-2.5 py-1 text-[11px] font-bold ${buildPriorityTone(
+                                  memory.importance
+                                )}`}
+                              >
+                                {buildPriorityLabel(memory.importance)}
+                              </span>
+                              {memory.pet_id === defaultPetId ? (
+                                <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                                  Primary pet
+                                </span>
+                              ) : null}
+                            </div>
+
+                            <p className='mt-3 text-sm leading-7 text-slate-700'>
+                              {buildExcerpt(memory.content)}
+                            </p>
+                          </div>
+
+                          <div className='text-xs text-slate-500'>
+                            Updated {formatDateLabel(memory.updated_at ?? memory.created_at)}
+                          </div>
+                        </div>
+                      </summary>
+
+                      <div className='mt-4 border-t border-slate-100 pt-4'>
+                        <div className='whitespace-pre-wrap text-sm leading-8 text-slate-700'>
+                          {memory.content}
+                        </div>
+
+                        <div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
+                          <div className='text-xs text-slate-500'>
+                            Created {formatDateLabel(memory.created_at)} · Updated{' '}
+                            {formatDateLabel(memory.updated_at)}
+                          </div>
+
+                          <form action={deleteMemoryAction}>
+                            <input type='hidden' name='memoryId' value={memory.id} />
+                            <input type='hidden' name='returnTo' value={returnTo} />
+                            <button
+                              type='submit'
+                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50'
+                            >
+                              Delete
+                            </button>
+                          </form>
+                        </div>
+                      </div>
+                    </details>
+                  );
+                })
+              )}
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+  );
+}

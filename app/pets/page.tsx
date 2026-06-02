@@ -9,15 +9,12 @@ import { FloatingToast } from '@/components/floating-toast';
 import { FormSubmitButton } from '@/components/form-submit-button';
 import { PetBreedSelect } from '@/components/pet-breed-select';
 import {
-  PetActionPanel,
   PetDangerZoneCard,
   PetEditFormCard,
   PetEmptyStateCard,
   PetNoticeBanner,
-  PetPageHeroCard,
   PetSidebarProfileCard,
   PetStatsGrid,
-  PetToolbarCard,
 } from '@/components/pet-cards';
 import {
   PetOrderBadge,
@@ -83,7 +80,7 @@ export default async function PetsPage({
     <div className='flex flex-wrap gap-3'>
       <Link
         href={freePlanCapReached ? '/pricing' : '/create-pet'}
-        className={freePlanCapReached ? 'brand-button' : 'brand-button'}
+        className='brand-button'
       >
         {freePlanCapReached ? 'Upgrade to VIP' : 'Add New Pet'}
       </Link>
@@ -104,29 +101,28 @@ export default async function PetsPage({
   );
 
   const planBanner = isVip ? (
-    <div className='mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-4 text-sm leading-7 text-emerald-900'>
-      <div className='font-extrabold uppercase tracking-[0.06em] text-emerald-800'>
+    <div className='mt-6 rounded-[28px] border border-emerald-200/80 bg-white/78 px-5 py-5 text-sm leading-7 text-emerald-900 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
+      <div className='font-extrabold uppercase tracking-[0.12em] text-emerald-800'>
         VIP Active
       </div>
       <div className='mt-2'>
-        Your account is currently on <strong>VIP</strong>. This manager is optimized for
-        handling multiple pets, and your account is not limited by the Free-tier{' '}
+        Your account is currently on <strong>VIP</strong>. This manager is optimized for handling
+        multiple pets, and your account is not limited by the Free-tier{' '}
         <strong>{FREE_TIER_MAX_PETS}-pet</strong> cap.
       </div>
     </div>
   ) : freePlanCapReached ? (
-    <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm leading-7 text-amber-900'>
-      <div className='font-extrabold uppercase tracking-[0.06em] text-orange-800'>
+    <div className='mt-6 rounded-[28px] border border-amber-200/80 bg-white/78 px-5 py-5 text-sm leading-7 text-amber-900 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
+      <div className='font-extrabold uppercase tracking-[0.12em] text-orange-800'>
         Free Tier Pet Limit Reached
       </div>
       <div className='mt-2'>
-        Your Free account already has <strong>{data.pets.length} AI pets</strong>. Free
-        tier supports up to <strong>{FREE_TIER_MAX_PETS} pets</strong>.
+        Your Free account already has <strong>{data.pets.length} AI pets</strong>. Free tier
+        supports up to <strong>{FREE_TIER_MAX_PETS} pets</strong>.
       </div>
       <div className='mt-2'>
-        To add another pet, delete one existing pet first, or upgrade to{' '}
-        <strong>VIP</strong> to unlock more slots, unlimited conversations, and deeper
-        memory continuity.
+        To add another pet, delete one existing pet first, or upgrade to <strong>VIP</strong> to
+        unlock more slots, unlimited conversations, and deeper memory continuity.
       </div>
       <div className='mt-4 flex flex-wrap gap-3'>
         <Link href='/pricing' className='brand-button'>
@@ -138,8 +134,8 @@ export default async function PetsPage({
       </div>
     </div>
   ) : (
-    <div className='mt-6 rounded-2xl border border-sky-200 bg-sky-50 px-4 py-4 text-sm leading-7 text-sky-900'>
-      <div className='font-extrabold uppercase tracking-[0.06em] text-sky-800'>
+    <div className='mt-6 rounded-[28px] border border-sky-200/80 bg-white/78 px-5 py-5 text-sm leading-7 text-sky-900 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
+      <div className='font-extrabold uppercase tracking-[0.12em] text-sky-800'>
         Free Tier Pet Capacity
       </div>
       <div className='mt-2'>
@@ -168,7 +164,7 @@ export default async function PetsPage({
   );
 
   return (
-    <>
+    <div className='app-brand-backdrop'>
       <div className='hidden md:block'>
         <SiteHeader
           ctaLabel={freePlanCapReached ? 'Upgrade to VIP' : 'Create New Pet'}
@@ -180,12 +176,22 @@ export default async function PetsPage({
       <FloatingToast message={searchParams?.error || null} tone='error' />
 
       <main className='container-shell py-10'>
-        <PetPageHeroCard
-          eyebrow='Pet Manager'
-          title='Manage Your EchoPaws Companions'
-          description='A cleaner multi-pet workspace for switching pets, checking summaries, and editing profiles without excessive scrolling.'
-          actions={heroActions}
-        />
+        <section className='rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-8'>
+          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+            🐾 Pet Manager
+          </div>
+
+          <h1 className='mt-4 text-[clamp(2.2rem,4vw,4rem)] font-black tracking-[-0.05em] text-slate-900'>
+            Manage Your EchoPaws Companions
+          </h1>
+
+          <p className='mt-4 max-w-4xl text-[1rem] leading-[1.9] text-slate-600'>
+            A warmer multi-pet workspace for switching pets, checking summaries, and editing
+            profiles — now visually aligned with Home, Chat, Memories, and Account.
+          </p>
+
+          <div className='mt-7'>{heroActions}</div>
+        </section>
 
         {planBanner}
 
@@ -234,13 +240,16 @@ export default async function PetsPage({
         ) : (
           <section className='mt-8 grid gap-5 xl:grid-cols-[300px_360px_minmax(0,1fr)] xl:items-start'>
             <aside className='grid gap-5 xl:sticky xl:top-24'>
-              <PetToolbarCard className='p-5'>
+              <section className='rounded-[30px] border border-white/55 bg-white/82 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
                 <div className='flex flex-wrap items-center justify-between gap-3'>
                   <div>
-                    <h2 className='text-2xl font-extrabold'>Pet List</h2>
+                    <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+                      Companion List
+                    </div>
+                    <h2 className='mt-2 text-2xl font-extrabold text-slate-900'>Pet List</h2>
                     <p className='mt-2 text-sm leading-7 text-muted'>
-                      Select a pet from the left. The summary and edit panel on the right
-                      update immediately for the chosen companion.
+                      Select a pet from the left. The summary and edit panel on the right update
+                      immediately for the chosen companion.
                     </p>
                   </div>
 
@@ -252,7 +261,7 @@ export default async function PetsPage({
                   </Link>
                 </div>
 
-                <div className='mt-5 grid gap-3 xl:max-h-[calc(100vh-280px)] xl:overflow-y-auto xl:pr-1'>
+                <div className='mt-5 grid gap-3 pets-manager-panel-scroll xl:max-h-[calc(100vh-280px)] xl:overflow-y-auto xl:pr-1'>
                   {data.pets.map((pet, index) => {
                     const active = pet.id === selectedPet.id;
                     const isPrimary = pet.id === data.defaultPetId;
@@ -269,6 +278,7 @@ export default async function PetsPage({
                       >
                         <div className='flex items-start gap-3'>
                           {pet.image_url ? (
+                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={pet.image_url}
                               alt={`${pet.name} avatar`}
@@ -341,11 +351,11 @@ export default async function PetsPage({
                   </div>
                 ) : (
                   <div className='mt-4 rounded-2xl bg-emerald-50 px-4 py-3 text-sm leading-7 text-emerald-800'>
-                    VIP is active. This left panel is designed to scale better when you manage
-                    multiple pets.
+                    VIP is active. This workspace is ready for managing multiple pets with a more
+                    consistent brand feel.
                   </div>
                 )}
-              </PetToolbarCard>
+              </section>
             </aside>
 
             <div className='grid gap-5'>
@@ -415,47 +425,37 @@ export default async function PetsPage({
                 ]}
                 metricsColumnsClassName='grid-cols-2'
                 footer={
-                  <PetActionPanel
-                    items={[
-                      {
-                        key: 'chat',
-                        label: 'Chat with This Pet',
-                        href: `/chat?pet_id=${encodeURIComponent(selectedPet.id)}`,
-                        variant: 'primary',
-                      },
-                      {
-                        key: 'memories',
-                        label: 'View This Pet Memories',
-                        href: `/memories?pet_id=${encodeURIComponent(selectedPet.id)}`,
-                        variant: 'secondary',
-                      },
-                      data.defaultPetId !== selectedPet.id
-                        ? {
-                            key: 'set-default',
-                            node: (
-                              <form action={setDefaultPetAction}>
-                                <input type='hidden' name='petId' value={selectedPet.id} />
-                                <button className='subtle-button w-full'>
-                                  Set as Primary Pet
-                                </button>
-                              </form>
-                            ),
-                          }
-                        : {
-                            key: 'default-active',
-                            node: (
-                              <PetNoticeBanner tone='success'>
-                                This is your primary pet and it stays fixed at the top.
-                              </PetNoticeBanner>
-                            ),
-                          },
-                    ]}
-                  />
+                  <div className='grid gap-3'>
+                    <Link
+                      href={`/chat?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                      className='brand-button w-full text-center'
+                    >
+                      Chat with This Pet
+                    </Link>
+
+                    <Link
+                      href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
+                      className='subtle-button w-full text-center'
+                    >
+                      View This Pet Memories
+                    </Link>
+
+                    {data.defaultPetId !== selectedPet.id ? (
+                      <form action={setDefaultPetAction}>
+                        <input type='hidden' name='petId' value={selectedPet.id} />
+                        <button className='subtle-button w-full'>Set as Primary Pet</button>
+                      </form>
+                    ) : (
+                      <PetNoticeBanner tone='success'>
+                        This is your primary pet and it stays fixed at the top.
+                      </PetNoticeBanner>
+                    )}
+                  </div>
                 }
               />
 
-              <div className='glass-card p-5'>
-                <h3 className='text-xl font-extrabold'>Quick Context</h3>
+              <div className='glass-card border border-white/55 bg-white/82 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+                <h3 className='text-xl font-extrabold text-slate-900'>Quick Context</h3>
                 <div className='mt-4 grid gap-3'>
                   <div className='rounded-2xl border border-black/5 bg-white px-4 py-3 text-sm leading-7 text-slate-700'>
                     <strong className='text-slate-900'>Most Active Pet:</strong>{' '}
@@ -470,9 +470,8 @@ export default async function PetsPage({
                   <div className='rounded-2xl border border-black/5 bg-white px-4 py-3 text-sm leading-7 text-slate-700'>
                     <strong className='text-slate-900'>Why this layout works better:</strong>
                     <div className='mt-1 text-muted'>
-                      The pet list stays compact and scrollable, while the selected pet
-                      summary and edit form remain in the primary workspace instead of being
-                      pushed far below.
+                      The pet list stays compact and scrollable, while the selected pet summary and
+                      edit form remain in the primary workspace instead of being pushed far below.
                     </div>
                   </div>
                 </div>
@@ -541,8 +540,8 @@ export default async function PetsPage({
                       Change Photo
                       <div className='rounded-[22px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
                         <p className='text-sm font-bold'>
-                          Leave empty to keep the current photo. Upload a new one to replace
-                          the avatar.
+                          Leave empty to keep the current photo. Upload a new one to replace the
+                          avatar.
                         </p>
                         <p className='mt-1 text-xs font-normal text-muted'>
                           Supports JPG / PNG / WebP, max 5MB
@@ -585,6 +584,6 @@ export default async function PetsPage({
       </main>
 
       <SiteFooter />
-    </>
+    </div>
   );
 }

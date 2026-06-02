@@ -35,6 +35,10 @@ export function SiteHeader({
     ? 'grid h-9 w-9 place-items-center rounded-[12px] bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 text-[1rem] shadow-[0_10px_24px_rgba(249,115,22,0.35)]'
     : 'grid h-9 w-9 place-items-center rounded-[12px] bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 text-[1rem] shadow-[0_8px_18px_rgba(249,115,22,0.22)]';
 
+  const ctaClassName = isDark
+    ? 'rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600'
+    : 'rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600';
+
   return (
     <header className={headerClassName}>
       <div className='container-shell flex items-center justify-between gap-4 py-4'>
@@ -60,11 +64,7 @@ export function SiteHeader({
           </Link>
           <a
             href={CONTACT_HREF}
-            className={
-              isDark
-                ? 'rounded-full border border-orange-300/30 bg-orange-400/12 px-3 py-1.5 text-sm font-bold text-orange-200 transition hover:bg-orange-400/18 hover:text-white'
-                : 'rounded-full border border-orange-200 bg-orange-50 px-3 py-1.5 text-sm font-bold text-orange-700 transition hover:bg-orange-100 hover:text-orange-800'
-            }
+            className={navLinkClassName}
             aria-label='Contact EchoPaws support'
           >
             Contact
@@ -76,10 +76,7 @@ export function SiteHeader({
             Sign In
           </Link>
 
-          <Link
-            href={ctaHref}
-            className='rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600'
-          >
+          <Link href={ctaHref} className={ctaClassName}>
             {ctaLabel}
           </Link>
         </div>

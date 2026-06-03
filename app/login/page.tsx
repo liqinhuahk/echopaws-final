@@ -1,17 +1,26 @@
-import { signInWithGoogle, signInWithPassword, signUpWithPassword } from '@/app/actions/auth';
+import {
+  signInWithGoogle,
+  signInWithPassword,
+  signUpWithPassword,
+} from '@/app/actions/auth';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 
-type LoginSearchParams = Promise<{
-  message?: string | string[];
-  error?: string | string[];
-}>;
+type SearchParamsValue = string | string[] | undefined;
 
 type LoginPageProps = {
-  searchParams?: LoginSearchParams;
+  searchParams?:
+    | Promise<{
+        message?: SearchParamsValue;
+        error?: SearchParamsValue;
+      }>
+    | {
+        message?: SearchParamsValue;
+        error?: SearchParamsValue;
+      };
 };
 
-function pickFirst(value: string | string[] | undefined) {
+function pickFirst(value: SearchParamsValue) {
   if (Array.isArray(value)) {
     return value[0] ?? '';
   }
@@ -20,17 +29,12 @@ function pickFirst(value: string | string[] | undefined) {
 }
 
 export default async function LoginPage({ searchParams }: LoginPageProps) {
-  let message = '';
-  let error = '';
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
 
-  try {
-    const resolvedSearchParams = (await searchParams) ?? {};
-    message = pickFirst(resolvedSearchParams.message);
-    error = pickFirst(resolvedSearchParams.error);
-  } catch {
-    message = '';
-    error = '';
-  }
+  const message = pickFirst(resolvedSearchParams.message).trim();
+  const error = pickFirst(resolvedSearchParams.error).trim();
 
   return (
     <div className='app-brand-backdrop'>
@@ -54,20 +58,22 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </h1>
 
               <p className='mt-6 max-w-xl text-[1.05rem] leading-[1.9] text-slate-600'>
-                Keep the same warm EchoPaws feeling from the home page while entering your account.
-                Sign in first, then create or continue with your AI pet in just a few steps.
+                Keep the same warm EchoPaws feeling from the home page while entering
+                your account. Sign in first, then create or continue with your AI pet
+                in just a few steps.
               </p>
 
               <div className='mt-8 grid gap-3'>
                 <div className='rounded-[24px] border border-white/55 bg-white/78 px-5 py-4 text-sm leading-7 text-slate-700 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
-                  <strong className='text-slate-900'>Unified brand feel:</strong> warm backdrop,
-                  soft glass card, and calmer spacing so Login visually matches Home, Chat,
+                  <strong className='text-slate-900'>Warm and familiar:</strong>{' '}
+                  a soft, calm login experience that visually matches Home, Chat,
                   Memories, Account, and Pets.
                 </div>
 
                 <div className='rounded-[24px] border border-white/55 bg-white/78 px-5 py-4 text-sm leading-7 text-slate-700 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
-                  <strong className='text-slate-900'>Fast start:</strong> sign in with Google or
-                  email, then create your AI pet and start chatting within minutes.
+                  <strong className='text-slate-900'>Fast start:</strong> sign in with
+                  Google or email, then create your AI pet and begin chatting in just a
+                  few minutes.
                 </div>
               </div>
             </div>
@@ -88,28 +94,39 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 Continue with your account
               </h2>
               <p className='mt-2 text-[0.98rem] leading-[1.8] text-slate-600'>
-                Choose Google or email to continue. After signing in, you can return to your pet,
-                memories, and ongoing conversations right away.
+                Choose Google or email to continue. After signing in, you can return to
+                your pet, memories, and ongoing conversations right away.
               </p>
             </div>
 
             {/* Mobile intro */}
             <p className='mt-4 text-[0.98rem] leading-[1.85] text-slate-600 lg:hidden'>
-              Sign in first, then create your AI pet. The whole flow is lightweight — you can be
-              chatting within 3 minutes.
+              Sign in first, then create your AI pet. The whole flow is lightweight —
+              you can be chatting within minutes.
             </p>
+
+            {message ? (
+              <div className='mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
+                {message}
+              </div>
+            ) : null}
+
+            {error ? (
+              <div className='mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+                {error}
+              </div>
+            ) : null}
 
             <div className='mt-6 grid gap-3'>
               <form action={signInWithGoogle}>
-                <button type='submit' className='subtle-button w-full !min-h-[50px]'>
+                <button type='submit' className='subtle-button w-full !min-h-[52px]'>
                   🔎 Sign in with Google
                 </button>
               </form>
 
-              <div className='rounded-2xl border border-black/5 bg-white px-4 py-3 text-center text-sm leading-7 text-muted'>
-                ✉️ Native email login — active after Supabase Auth is configured (see
-                {' '}
-                .env.local.example)
+              <div className='rounded-2xl border border-orange-100 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-3 text-center text-sm leading-7 text-slate-700'>
+                Continue with Google for the fastest setup, or use email below to sign
+                in and create your EchoPaws account.
               </div>
             </div>
 
@@ -117,19 +134,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               Or continue with email
             </div>
 
-            {message ? (
-              <div className='mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
-                {message}
-              </div>
-            ) : null}
-
-            {error ? (
-              <div className='mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-                {error}
-              </div>
-            ) : null}
-
-            <form action={signInWithPassword} className='mt-4 grid gap-4'>
+            <form action={signInWithPassword} className='grid gap-4'>
               <label className='grid gap-2 text-sm font-bold text-slate-800'>
                 Email address
                 <input
@@ -138,6 +143,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   type='email'
                   placeholder='name@example.com'
                   autoComplete='email'
+                  required
                 />
               </label>
 
@@ -149,6 +155,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   type='password'
                   placeholder='Enter your password'
                   autoComplete='current-password'
+                  required
                 />
               </label>
 
@@ -185,7 +192,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         </div>
       </main>
 
-      <SiteFooter rightText='Recommended Stack: Supabase Auth' />
+      <SiteFooter text='© 2026 EchoPaws.ai. All Rights Reserved.' />
     </div>
   );
 }

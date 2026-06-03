@@ -1,4 +1,4 @@
-import Stripe from "stripe";
+import Stripe from 'stripe';
 
 let stripeClient: Stripe | null = null;
 
@@ -8,12 +8,12 @@ export function hasStripeEnv() {
 
 export function getStripeClient() {
   if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error("Missing STRIPE_SECRET_KEY.");
+    throw new Error('Missing STRIPE_SECRET_KEY.');
   }
 
   if (!stripeClient) {
     stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-04-22.dahlia",
+      apiVersion: '2026-04-22.dahlia',
     });
   }
 
@@ -21,5 +21,19 @@ export function getStripeClient() {
 }
 
 export function getSiteUrl() {
-  return process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+  const raw = (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    process.env.SITE_URL ||
+    'http://localhost:3000'
+  ).trim();
+
+  const normalized = raw.replace(/^['"]|['"]$/g, '');
+
+  const withProtocol =
+    normalized.startsWith('http://') || normalized.startsWith('https://')
+      ? normalized
+      : `https://${normalized}`;
+
+  return withProtocol.replace(/\/$/, '');
 }

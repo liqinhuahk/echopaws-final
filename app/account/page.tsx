@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { openBillingPortal } from '@/app/actions/billing';
@@ -291,7 +293,9 @@ export default async function AccountPage() {
               {petCount >= FREE_TIER_MAX_PETS && !vipActive
                 ? `You currently have ${petCount} pets on the Free plan. You've reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
                 : !vipActive
-                  ? `You can still create ${freeSlotsLeft} more ${freeSlotsLeft === 1 ? 'pet' : 'pets'} on Free.`
+                  ? `You can still create ${freeSlotsLeft} more ${
+                      freeSlotsLeft === 1 ? 'pet' : 'pets'
+                    } on Free.`
                   : 'Your account is not currently limited by the Free plan.'}
             </div>
           </article>

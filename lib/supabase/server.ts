@@ -1,18 +1,86 @@
-import { createServerClient } from "@supabase/ssr";
-import { cookies } from "next/headers";
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+
+function stripWrappingQuotes(value: string) {
+  return value.replace(/^['"`\s]+|['"`\s]+$/g, '');
+}
+
+function normalizeSupabaseUrl(rawValue?: string) {
+  const raw = stripWrappingQuotes(rawValue ?? '');
+
+  if (!raw) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL. Please set it in Vercel or .env.local.',
+    );
+  }
+
+  const withProtocol =
+    raw.startsWith('http://') || raw.startsWith('https://')
+      ? raw
+      : `https://${raw}`;
+
+  let parsed: URL;
+
+  try {
+    parsed = new URL(withProtocol);
+  } catch {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SUPABASE_URL: "${raw}". Expected format like https://your-project-ref.supabase.co`,
+    );
+  }
+
+  if (!['http:', 'https:'].includes(parsed.protocol)) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SUPABASE_URL protocol: "${parsed.protocol}". Only http/https are allowed.`,
+    );
+  }
+
+  if (!parsed.hostname) {
+    throw new Error(
+      `Invalid NEXT_PUBLIC_SUPABASE_URL: "${raw}". Missing hostname.`,
+    );
+  }
+
+  return parsed.origin;
+}
+
+function normalizeSupabaseAnonKey(rawValue?: string) {
+  const raw = stripWrappingQuotes(rawValue ?? '');
+
+  if (!raw) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_ANON_KEY. Please set it in Vercel or .env.local.',
+    );
+  }
+
+  return raw;
+}
+
+export function getServerSupabaseConfig() {
+  const supabaseUrl = normalizeSupabaseUrl(
+    process.env.NEXT_PUBLIC_SUPABASE_URL,
+  );
+  const supabaseAnonKey = normalizeSupabaseAnonKey(
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+  );
+
+  return {
+    supabaseUrl,
+    supabaseAnonKey,
+  };
+}
 
 export function hasSupabaseEnv() {
-  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+  try {
+    getServerSupabaseConfig();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export function createServerSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new Error("Missing Supabase environment variables.");
-  }
-
+  const { supabaseUrl, supabaseAnonKey } = getServerSupabaseConfig();
   const cookieStore = cookies();
 
   return createServerClient(supabaseUrl, supabaseAnonKey, {
@@ -26,7 +94,7 @@ export function createServerSupabaseClient() {
             cookieStore.set(name, value, options);
           });
         } catch {
-          // Ignore cookie writes in server components.
+          // Ignore cookie writes in server components / restricted runtimes.
         }
       },
     },

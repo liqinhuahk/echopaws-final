@@ -2,8 +2,13 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useContactModal } from '@/components/contact-modal-provider';
 
-const CONTACT_HREF = '/contact';
+type NavItem = {
+  label: string;
+  href: string;
+  isContact?: boolean;
+};
 
 type SiteHeaderProps = {
   ctaLabel?: string;
@@ -21,6 +26,7 @@ export function SiteHeader({
   theme = 'light',
 }: SiteHeaderProps) {
   const pathname = usePathname();
+  const { openContactModal } = useContactModal();
   const isDark = theme === 'dark';
 
   const headerClassName = isDark
@@ -42,12 +48,12 @@ export function SiteHeader({
   const ctaClassName =
     'rounded-full bg-orange-500 px-4 py-2 text-sm font-bold text-white shadow-sm transition hover:bg-orange-600 active:bg-orange-700';
 
-  const navItems = [
+  const navItems: NavItem[] = [
     { label: 'Home', href: '/' },
     { label: 'Chat', href: '/chat' },
     { label: 'Memories', href: '/memories' },
     { label: 'Account', href: '/account' },
-    { label: 'Contact', href: CONTACT_HREF },
+    { label: 'Contact', href: '#contact', isContact: true },
   ];
 
   function isActive(href: string) {
@@ -80,31 +86,32 @@ export function SiteHeader({
 
         <nav className='hidden items-center gap-4 md:flex lg:gap-5'>
           {navItems.map((item) => {
-            const active = isActive(item.href);
+            const active = item.isContact ? false : isActive(item.href);
             const className = getNavLinkClass(active);
 
-            if (isRouteLink(item.href)) {
+            if (item.isContact) {
               return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={className}
-                  aria-current={active ? 'page' : undefined}
+                <button
+                  key='contact-modal-trigger'
+                  type='button'
+                  onClick={openContactModal}
+                  className={`${className} border-0 bg-transparent cursor-pointer`}
+                  aria-label='Contact EchoPaws support'
                 >
                   {item.label}
-                </Link>
+                </button>
               );
             }
 
             return (
-              <a
+              <Link
                 key={item.href}
                 href={item.href}
                 className={className}
-                aria-label='Contact EchoPaws support'
+                aria-current={active ? 'page' : undefined}
               >
                 {item.label}
-              </a>
+              </Link>
             );
           })}
         </nav>

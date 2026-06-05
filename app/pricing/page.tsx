@@ -7,7 +7,7 @@ import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
 const FREE_TOTAL_CHAT_LIMIT = 20;
 const FREE_TIER_MAX_PETS = 2;
-const VIP_PRICE = '$12.9';
+const VIP_PRICE = '$9.99';
 
 const ACTIVE_VIP_STATUSES = ['active', 'trialing', 'past_due'];
 
@@ -152,10 +152,7 @@ export default async function PricingPage({
           </div>
         ) : null}
 
-        <section
-          id='plans'
-          className='mt-8 grid gap-5 md:grid-cols-2'
-        >
+        <section id='plans' className='mt-8 grid gap-5 md:grid-cols-2'>
           <article className='glass-card p-6'>
             <div className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-stone-700'>
               Free Plan
@@ -331,7 +328,7 @@ export default async function PricingPage({
         </section>
       </main>
 
-      <SiteFooter rightText='Pricing · Subscription · FAQ · Stripe Billing' />
+      <SiteFooter />
     </>
   );
 }

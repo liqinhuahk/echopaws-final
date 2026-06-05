@@ -1,10 +1,10 @@
-"use client";
+'use client';
 
-import type { ReactNode } from "react";
-import { useFormStatus } from "react-dom";
+import type { ReactNode } from 'react';
+import { useFormStatus } from 'react-dom';
 
 export function FormSubmitButton({
-  pendingLabel = "Submitting...",
+  pendingLabel = 'Submitting...',
   children,
 }: {
   pendingLabel?: string;
@@ -13,7 +13,10 @@ export function FormSubmitButton({
   const { pending } = useFormStatus();
 
   return (
-    <button className="brand-button mt-6 w-full disabled:cursor-not-allowed disabled:opacity-60" disabled={pending}>
+    <button
+      className='brand-button min-h-[48px] w-full disabled:cursor-not-allowed disabled:opacity-60'
+      disabled={pending}
+    >
       {pending ? pendingLabel : children}
     </button>
   );

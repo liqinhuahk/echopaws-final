@@ -5,6 +5,7 @@ import {
   setDefaultPetAction,
   updatePetAction,
 } from '@/app/actions/pets';
+import { EnglishFileUpload } from '@/components/english-file-upload';
 import { FloatingToast } from '@/components/floating-toast';
 import { FormSubmitButton } from '@/components/form-submit-button';
 import { PetBreedSelect } from '@/components/pet-breed-select';
@@ -278,7 +279,6 @@ export default async function PetsPage({
                       >
                         <div className='flex items-start gap-3'>
                           {pet.image_url ? (
-                            // eslint-disable-next-line @next/next/no-img-element
                             <img
                               src={pet.image_url}
                               alt={`${pet.name} avatar`}
@@ -546,10 +546,8 @@ export default async function PetsPage({
                         <p className='mt-1 text-xs font-normal text-muted'>
                           Supports JPG / PNG / WebP, max 5MB
                         </p>
-                        <input
-                          className='input-shell mt-4'
+                        <EnglishFileUpload
                           name='image'
-                          type='file'
                           accept='image/png,image/jpeg,image/webp'
                         />
                       </div>

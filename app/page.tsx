@@ -8,6 +8,27 @@ const featurePoints = [
   'Long-Term Memory',
 ];
 
+const whyCards = [
+  {
+    icon: '💬',
+    title: 'Emotional AI Chat',
+    description:
+      'Warm, personal conversations that feel gentle, familiar, and emotionally close.',
+  },
+  {
+    icon: '🧠',
+    title: 'Long-Term Memory',
+    description:
+      'Your AI pet remembers stories, habits, and meaningful moments over time.',
+  },
+  {
+    icon: '❤️',
+    title: 'Always by Your Side',
+    description:
+      'A comforting presence whenever you need support, companionship, or warmth.',
+  },
+];
+
 export default function HomePage() {
   return (
     <div className='min-h-screen bg-[#f6f1e8] text-white'>
@@ -83,6 +104,108 @@ export default function HomePage() {
           </section>
         </main>
       </div>
+
+      <section className='bg-[#f7f2e8] py-16 text-slate-900 md:py-20'>
+        <div className='container-shell'>
+          <div className='max-w-3xl'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+              Why EchoPaws
+            </div>
+
+            <h2 className='mt-4 text-[clamp(2.2rem,4vw,4rem)] font-black leading-[1.02] tracking-[-0.05em] text-slate-900'>
+              More than a memory.
+              <br />
+              A companion that <span className='text-orange-500'>feels alive.</span>
+            </h2>
+
+            <p className='mt-5 max-w-3xl text-[1rem] leading-[1.95] text-slate-600'>
+              Whether you are missing a beloved pet or want to create a deeply
+              emotional AI companion, EchoPaws brings together warmth,
+              continuity, and memory in one comforting experience.
+            </p>
+          </div>
+
+          <div className='mt-10 grid gap-5 md:grid-cols-3'>
+            {whyCards.map((card) => (
+              <article
+                key={card.title}
+                className='rounded-[28px] border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'
+              >
+                <div className='inline-flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-2xl shadow-sm'>
+                  {card.icon}
+                </div>
+
+                <h3 className='mt-5 text-2xl font-extrabold tracking-[-0.03em] text-slate-900'>
+                  {card.title}
+                </h3>
+
+                <p className='mt-3 text-sm leading-7 text-slate-600'>
+                  {card.description}
+                </p>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className='bg-[#f3ede1] py-16 text-slate-900 md:py-20'>
+        <div className='container-shell'>
+          <div className='rounded-[34px] border border-white/60 bg-[#fbf7ef] px-8 py-10 shadow-[0_18px_40px_rgba(15,23,42,0.06)] md:px-10 md:py-12'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+              Our Story
+            </div>
+
+            <h2 className='mt-4 text-[clamp(2rem,4vw,3.5rem)] font-black leading-[1.05] tracking-[-0.05em] text-slate-900'>
+              EchoPaws started from a simple question:
+            </h2>
+
+            <p className='mt-5 text-[clamp(1.2rem,2vw,1.7rem)] font-bold leading-[1.6] text-slate-900'>
+              “What if the love we shared with our pets never had to disappear?”
+            </p>
+
+            <p className='mt-6 max-w-4xl text-[1rem] leading-[1.95] text-slate-600'>
+              We believe memory can be warm, interactive, and lasting. EchoPaws
+              is designed to preserve affection, personality, and the comforting
+              feeling of connection — so the bond you built never has to fade.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section className='bg-[#f7f2e8] py-16 text-slate-900 md:py-20'>
+        <div className='container-shell'>
+          <div className='mx-auto max-w-4xl rounded-[34px] border border-white/55 bg-white px-8 py-12 text-center shadow-[0_20px_48px_rgba(15,23,42,0.08)] backdrop-blur-md md:px-10'>
+            <div className='mx-auto inline-flex h-14 w-14 items-center justify-center rounded-full bg-orange-50 text-2xl shadow-sm'>
+              🐾
+            </div>
+
+            <h2 className='mt-5 text-[clamp(2rem,4vw,3.2rem)] font-black leading-[1.05] tracking-[-0.05em] text-slate-900'>
+              Ready to meet your pet again?
+            </h2>
+
+            <p className='mx-auto mt-5 max-w-2xl text-[1rem] leading-[1.9] text-slate-600'>
+              Create your AI pet in minutes. Set a name, a breed, a
+              personality, and start a comforting conversation that feels like
+              home.
+            </p>
+
+            <div className='mt-8 flex flex-wrap items-center justify-center gap-3'>
+              <Link href='/create-pet' className='brand-button'>
+                Create My Pet — Free
+              </Link>
+
+              <Link href='/chat' className='subtle-button'>
+                Try a Chat First
+              </Link>
+            </div>
+
+            <p className='mt-5 text-xs leading-6 text-slate-400'>
+              No credit card required · Free plan includes 20 chats · Upgrade
+              anytime
+            </p>
+          </div>
+        </div>
+      </section>
 
       <SiteFooter />
     </div>

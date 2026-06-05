@@ -36,7 +36,7 @@ export function EnglishFileUpload({
         Choose File
       </button>
 
-      <div className='text-sm text-slate-600'>{fileName}</div>
+      <div className='text-sm text-slate-600 break-all'>{fileName}</div>
     </div>
   );
 }

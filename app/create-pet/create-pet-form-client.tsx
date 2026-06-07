@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { useFormStatus } from 'react-dom';
 import { createPetAction } from '@/app/actions/pets';
 
@@ -64,6 +64,7 @@ export default function CreatePetFormClient() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [hasFile, setHasFile] = useState(false);
+  const [selectedFileName, setSelectedFileName] = useState('No image selected');
   const [fileMeta, setFileMeta] = useState<{
     sizeLabel: string;
     typeLabel: string;
@@ -71,7 +72,9 @@ export default function CreatePetFormClient() {
 
   useEffect(() => {
     return () => {
-      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
     };
   }, [previewUrl]);
 
@@ -79,7 +82,7 @@ export default function CreatePetFormClient() {
     fileInputRef.current?.click();
   }
 
-  function onFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+  function onFileChange(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0] ?? null;
 
     setHasFile(Boolean(file));
@@ -90,9 +93,12 @@ export default function CreatePetFormClient() {
     });
 
     if (!file) {
+      setSelectedFileName('No image selected');
       setFileMeta(null);
       return;
     }
+
+    setSelectedFileName(file.name);
 
     const sizeInMb = file.size / (1024 * 1024);
     setFileMeta({
@@ -208,8 +214,8 @@ export default function CreatePetFormClient() {
 
             <div className='mt-5 flex flex-wrap items-center justify-center gap-3'>
               <ChooseImageButton onClick={openPicker} hasFile={hasFile} />
-              <span className='text-sm font-medium text-stone-300'>
-                {hasFile ? '1 image selected' : 'No image selected'}
+              <span className='max-w-[320px] truncate text-sm font-medium text-stone-300'>
+                {selectedFileName}
               </span>
             </div>
 

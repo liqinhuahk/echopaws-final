@@ -244,7 +244,7 @@ export default async function AccountPage() {
             <div className='mt-5 grid gap-3'>
               <form action={openBillingPortal}>
                 <button type='submit' className='subtle-button w-full'>
-                  Open Stripe Billing Portal
+                  Manage Subscription
                 </button>
               </form>
 

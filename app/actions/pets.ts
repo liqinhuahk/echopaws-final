@@ -1,5 +1,6 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import {
@@ -38,6 +39,14 @@ function buildCreatePetRedirect(params: { error?: string; message?: string }) {
   return query ? `/create-pet?${query}` : '/create-pet';
 }
 
+function revalidatePetWorkspace() {
+  revalidatePath('/chat');
+  revalidatePath('/pets');
+  revalidatePath('/memories');
+  revalidatePath('/create-pet');
+  revalidatePath('/account');
+}
+
 async function requireUser() {
   if (!hasSupabaseEnv()) {
     redirect(
@@ -74,6 +83,9 @@ export async function createPetAction(formData: FormData) {
 
   try {
     const result = await createPetForUser(user.id, formData);
+
+    revalidatePetWorkspace();
+
     redirect(
       `/chat?pet_created=1&pet_name=${encodeURIComponent(
         result.pet.name,
@@ -105,6 +117,9 @@ export async function updatePetAction(formData: FormData) {
 
   try {
     await updatePetForUser(user.id, petId, formData);
+
+    revalidatePetWorkspace();
+
     redirect(
       buildPetsRedirect({
         petId,
@@ -135,6 +150,9 @@ export async function setDefaultPetAction(formData: FormData) {
 
   try {
     const result = await setDefaultPetForUser(user.id, petId);
+
+    revalidatePetWorkspace();
+
     redirect(
       buildPetsRedirect({
         petId,
@@ -159,6 +177,9 @@ export async function deletePetAction(formData: FormData) {
 
   try {
     const result = await deletePetForUser(user.id, petId);
+
+    revalidatePetWorkspace();
+
     redirect(
       buildPetsRedirect({
         petId: result.nextPetId,

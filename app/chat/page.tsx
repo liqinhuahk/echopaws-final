@@ -111,14 +111,14 @@ export default async function ChatPage({
         }}
       />
 
-      <div className='app-brand-backdrop'>
+      <div className='app-brand-backdrop page-noir'>
         <div className='hidden md:block'>
-          <SiteHeader />
+          <SiteHeader theme='dark' />
         </div>
 
         <div className='chat-page-shell mx-auto max-w-7xl px-4 py-4 md:py-8'>
-          <section className='mb-6 rounded-[34px] border border-white/60 bg-white/72 p-5 shadow-[0_22px_48px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-7'>
-            <div className='inline-flex items-center gap-2 rounded-full border border-orange-200/90 bg-gradient-to-r from-amber-50 to-orange-50 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700 shadow-[0_4px_12px_rgba(249,115,22,0.08)]'>
+          <section className='noir-hero mb-6 rounded-[34px] p-5 md:p-7'>
+            <div className='noir-pill px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em]'>
               🐾 Warm Companion Chat
             </div>
 
@@ -137,10 +137,10 @@ export default async function ChatPage({
                   </p>
 
                   <div className='mt-3 flex flex-wrap items-center gap-3'>
-                    <span className='inline-flex rounded-full border border-orange-100 bg-orange-50/90 px-3 py-1.5 text-xs font-bold text-orange-800 shadow-sm'>
+                    <span className='noir-chip-active px-3 py-1.5 text-xs font-bold'>
                       {usageLabel}
                     </span>
-                    <span className='inline-flex rounded-full border border-stone-200 bg-white/88 px-3 py-1.5 text-xs font-semibold text-slate-600 shadow-sm'>
+                    <span className='noir-chip px-3 py-1.5 text-xs font-semibold'>
                       {selectedPet.id === petOverview.defaultPetId ? 'Primary Pet' : 'Companion'}
                     </span>
                   </div>
@@ -150,14 +150,14 @@ export default async function ChatPage({
               <div className='flex flex-wrap gap-3'>
                 <Link
                   href={`/memories?pet_id=${selectedPet.id}`}
-                  className='subtle-button !h-11 border-orange-200/80 !bg-white/88 !text-slate-700 hover:!bg-orange-50 hover:!text-orange-800 text-sm'
+                  className='subtle-button !h-11 text-sm'
                 >
                   Memories
                 </Link>
 
                 <Link
                   href='/pets'
-                  className='subtle-button !h-11 border-orange-200/80 !bg-white/88 !text-slate-700 hover:!bg-orange-50 hover:!text-orange-800 text-sm'
+                  className='subtle-button !h-11 text-sm'
                 >
                   Manage
                 </Link>
@@ -167,7 +167,7 @@ export default async function ChatPage({
 
           <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
             <aside className='hidden space-y-5 xl:block'>
-              <section className='rounded-[30px] border border-white/55 bg-white/82 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+              <section className='noir-panel rounded-[30px] p-5'>
                 <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                   Pet Switcher
                 </div>
@@ -180,8 +180,8 @@ export default async function ChatPage({
                       href={`/chat?pet_id=${p.id}`}
                       className={`group flex items-center gap-3 rounded-[22px] border p-3.5 transition ${
                         p.id === selectedPet.id
-                          ? 'border-orange-200 bg-gradient-to-r from-amber-50 to-orange-50 shadow-[0_12px_24px_rgba(249,115,22,0.08)]'
-                          : 'border-stone-200/80 bg-white/92 hover:border-orange-200 hover:bg-orange-50/40 hover:shadow-[0_10px_22px_rgba(15,23,42,0.05)]'
+                          ? 'border-[rgba(255,184,107,0.24)] bg-[rgba(245,158,11,0.12)] shadow-[0_12px_24px_rgba(0,0,0,0.18)]'
+                          : 'border-white/10 bg-white/5 hover:border-[rgba(255,184,107,0.2)] hover:bg-white/8 hover:shadow-[0_10px_22px_rgba(0,0,0,0.18)]'
                       }`}
                     >
                       <PetAvatar name={p.name} imageUrl={p.image_url} size='sm' />
@@ -216,7 +216,7 @@ export default async function ChatPage({
                 </div>
               </section>
 
-              <section className='rounded-[30px] border border-white/55 bg-gradient-to-br from-white/84 via-orange-50/55 to-amber-50/65 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+              <section className='noir-panel noir-panel-glow rounded-[30px] p-5'>
                 <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                   Companion Mood
                 </div>
@@ -238,8 +238,8 @@ export default async function ChatPage({
             </aside>
 
             <main className='chat-page-main min-w-0'>
-              <section className='chat-page-card rounded-[30px] border border-white/55 bg-white/82 p-2 shadow-[0_22px_46px_rgba(15,23,42,0.08)] backdrop-blur-md md:min-h-[500px] md:p-5'>
-                <div className='rounded-[26px] border border-[#f1e3d5] bg-gradient-to-b from-[#fffdfa] to-[#f9f3eb] p-2 md:p-3'>
+              <section className='chat-page-card noir-panel rounded-[30px] p-2 md:min-h-[500px] md:p-5'>
+                <div className='chat-noir-frame rounded-[26px] p-2 md:p-3'>
                   <ChatPlayground
                     key={selectedPet.id}
                     petId={selectedPet.id}

@@ -1,6 +1,5 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createPetAction } from '@/app/actions/pets';
 import { findSubscriptionByUserId } from '@/lib/subscriptions';
 import { getPetsForUser } from '@/lib/pets';
 import { SiteFooter } from '@/components/site-footer';
@@ -9,6 +8,7 @@ import {
   createServerSupabaseClient,
   hasSupabaseEnv,
 } from '@/lib/supabase/server';
+import CreatePetFormClient from './create-pet-form-client';
 
 export const dynamic = 'force-dynamic';
 
@@ -50,15 +50,6 @@ function buildLoginRedirect(params: { message?: string; error?: string }) {
 
   const query = search.toString();
   return query ? `/login?${query}` : '/login';
-}
-
-function fieldClassName() {
-  return [
-    'w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5',
-    'text-sm text-white placeholder:text-stone-500',
-    'outline-none transition',
-    'focus:border-amber-300/40 focus:bg-white/7 focus:ring-4 focus:ring-amber-400/10',
-  ].join(' ');
 }
 
 function primaryButtonClassName() {
@@ -227,115 +218,7 @@ export default async function CreatePetPage({
                     </div>
                   </div>
                 ) : (
-                  <form
-                    action={createPetAction}
-                    className='grid gap-6'
-                    encType='multipart/form-data'
-                  >
-                    <div className='grid gap-5 md:grid-cols-2'>
-                      <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                        Name
-                        <input
-                          className={fieldClassName()}
-                          name='name'
-                          type='text'
-                          placeholder='e.g. Max'
-                          required
-                          maxLength={30}
-                        />
-                      </label>
-
-                      <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                        Breed
-                        <input
-                          className={fieldClassName()}
-                          name='breed'
-                          type='text'
-                          placeholder='e.g. Shiba Inu'
-                          required
-                          maxLength={30}
-                        />
-                      </label>
-                    </div>
-
-                    <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                      Personality
-                      <input
-                        className={fieldClassName()}
-                        name='personality'
-                        type='text'
-                        placeholder='e.g. Playful, clingy, loves belly rubs'
-                        required
-                        maxLength={120}
-                      />
-                    </label>
-
-                    <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                      Favorite Food
-                      <input
-                        className={fieldClassName()}
-                        name='favoriteFood'
-                        type='text'
-                        placeholder='e.g. Chicken breast, freeze-dried treats'
-                        maxLength={120}
-                      />
-                    </label>
-
-                    <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                      Daily Habits
-                      <textarea
-                        className={`${fieldClassName()} min-h-[128px]`}
-                        name='dailyHabits'
-                        placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
-                        maxLength={500}
-                      />
-                    </label>
-
-                    <label className='grid gap-2 text-sm font-bold text-stone-100'>
-                      Upload Photo
-                      <div className='rounded-[24px] border border-dashed border-amber-300/20 bg-gradient-to-b from-amber-300/6 to-white/4 px-6 py-8 text-center'>
-                        <div className='mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-2xl'>
-                          📸
-                        </div>
-
-                        <p className='mt-4 text-sm font-extrabold text-amber-100'>
-                          Supports JPG / PNG / WebP, max 5MB
-                        </p>
-
-                        <p className='mx-auto mt-2 max-w-xl text-xs leading-6 text-stone-400'>
-                          The image will be uploaded to Supabase Storage and
-                          attached to the pet profile.
-                        </p>
-
-                        <input
-                          className='mt-5 block w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-stone-200 file:mr-4 file:rounded-full file:border-0 file:bg-amber-300 file:px-4 file:py-2 file:text-sm file:font-bold file:text-stone-950 hover:file:brightness-105'
-                          name='image'
-                          type='file'
-                          accept='image/png,image/jpeg,image/webp'
-                          required
-                        />
-                      </div>
-                    </label>
-
-                    <div className='rounded-[24px] border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-stone-300'>
-                      After successful creation, EchoPaws will save your pet to
-                      Supabase and automatically open the new pet chat with the
-                      correct <span className='font-bold text-amber-200'>pet_id</span>.
-                    </div>
-
-                    <div className='flex flex-wrap gap-3 pt-1'>
-                      <button type='submit' className={primaryButtonClassName()}>
-                        Create Pet and Open Chat
-                      </button>
-
-                      <Link
-                        href='/memories'
-                        className={secondaryButtonClassName()}
-                      >
-                        Back to Memories
-                      </Link>
-                    </div>
-                  </form>
+                  <CreatePetFormClient />
                 )}
               </div>
             </section>

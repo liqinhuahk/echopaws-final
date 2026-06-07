@@ -40,8 +40,8 @@ function buildCreatePetRedirect(params: { error?: string; message?: string }) {
 }
 
 function revalidatePetWorkspace() {
-  revalidatePath('/chat');
   revalidatePath('/pets');
+  revalidatePath('/chat');
   revalidatePath('/memories');
   revalidatePath('/create-pet');
   revalidatePath('/account');

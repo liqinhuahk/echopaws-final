@@ -1022,7 +1022,6 @@ footer {
   }
 }
 
-
 /* =========================================
    Noir theme for Chat / Memories / Account / Login
    ========================================= */
@@ -1314,12 +1313,10 @@ footer {
   --tw-gradient-stops: var(--tw-gradient-from), rgba(255,255,255,0.03) var(--tw-gradient-via-position), var(--tw-gradient-to) !important;
 }
 
+/* 修复：移除会导致 CSS 解析失败的 Tailwind 任意值类名选择器 */
 .page-noir .shadow-sm,
-.page-noir .shadow-[0_16px_36px_rgba(15,23,42,0.06)],
-.page-noir .shadow-[0_18px_40px_rgba(15,23,42,0.08)],
-.page-noir .shadow-[0_20px_48px_rgba(15,23,42,0.10)],
-.page-noir .shadow-[0_22px_46px_rgba(15,23,42,0.08)],
-.page-noir .shadow-[0_22px_48px_rgba(15,23,42,0.08)] {
+.page-noir .shadow-soft,
+.page-noir .shadow-card {
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.28) !important;
 }
 

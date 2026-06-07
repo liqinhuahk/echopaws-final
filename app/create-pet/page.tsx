@@ -1,287 +1,281 @@
-'use client';
-
 import Link from 'next/link';
-import { ChangeEvent, FormEvent, useMemo, useState } from 'react';
+import { redirect } from 'next/navigation';
+import { createPetAction } from '@/app/actions/pets';
+import { findSubscriptionByUserId } from '@/lib/subscriptions';
+import { getPetsForUser } from '@/lib/pets';
+import { SiteFooter } from '@/components/site-footer';
+import { SiteHeader } from '@/components/site-header';
+import {
+  createServerSupabaseClient,
+  hasSupabaseEnv,
+} from '@/lib/supabase/server';
 
-type CreatePetFormState = {
-  name: string;
-  breed: string;
-  personality: string;
-  favoriteFood: string;
-  dailyHabits: string;
+export const dynamic = 'force-dynamic';
+
+type SearchParamsValue = string | string[] | undefined;
+
+type CreatePetPageProps = {
+  searchParams?:
+    | Promise<{
+        message?: SearchParamsValue;
+        error?: SearchParamsValue;
+      }>
+    | {
+        message?: SearchParamsValue;
+        error?: SearchParamsValue;
+      };
 };
 
-const initialFormState: CreatePetFormState = {
-  name: '',
-  breed: '',
-  personality: '',
-  favoriteFood: '',
-  dailyHabits: '',
-};
+const FREE_TIER_MAX_PETS = 2;
+const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-export default function CreatePetPage() {
-  const [form, setForm] = useState<CreatePetFormState>(initialFormState);
-  const [photoPreview, setPhotoPreview] = useState<string>('');
-  const [photoName, setPhotoName] = useState<string>('');
-  const [submitted, setSubmitted] = useState(false);
-
-  const completion = useMemo(() => {
-    const fields = [
-      form.name,
-      form.breed,
-      form.personality,
-      form.favoriteFood,
-      form.dailyHabits,
-      photoPreview,
-    ];
-    const done = fields.filter(Boolean).length;
-    return Math.round((done / fields.length) * 100);
-  }, [form, photoPreview]);
-
-  function updateField<K extends keyof CreatePetFormState>(key: K, value: CreatePetFormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setSubmitted(false);
+function pickFirst(value: SearchParamsValue) {
+  if (Array.isArray(value)) {
+    return value[0] ?? '';
   }
 
-  function handlePhotoChange(event: ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  return value ?? '';
+}
 
-    const objectUrl = URL.createObjectURL(file);
-    setPhotoPreview(objectUrl);
-    setPhotoName(file.name);
-    setSubmitted(false);
+function buildLoginRedirect(params: { message?: string; error?: string }) {
+  const search = new URLSearchParams();
+
+  if (params.message) {
+    search.set('message', params.message);
   }
 
-  function clearPhoto() {
-    setPhotoPreview('');
-    setPhotoName('');
-    setSubmitted(false);
+  if (params.error) {
+    search.set('error', params.error);
   }
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setSubmitted(true);
+  const query = search.toString();
+  return query ? `/login?${query}` : '/login';
+}
+
+export default async function CreatePetPage({
+  searchParams,
+}: CreatePetPageProps) {
+  const resolvedSearchParams = searchParams
+    ? await Promise.resolve(searchParams)
+    : {};
+
+  const message = pickFirst(resolvedSearchParams.message).trim();
+  const error = pickFirst(resolvedSearchParams.error).trim();
+
+  if (!hasSupabaseEnv()) {
+    redirect(
+      buildLoginRedirect({
+        error: 'Please configure Supabase first.',
+      }),
+    );
   }
+
+  const supabase = createServerSupabaseClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError) {
+    redirect(
+      buildLoginRedirect({
+        error: 'Unable to verify your session. Please sign in again.',
+      }),
+    );
+  }
+
+  if (!user) {
+    redirect(
+      buildLoginRedirect({
+        message: 'Please log in to continue.',
+      }),
+    );
+  }
+
+  const [petOverview, subscription] = await Promise.all([
+    getPetsForUser(user.id).catch(() => ({ pets: [], defaultPetId: null })),
+    findSubscriptionByUserId(user.id).catch(() => null),
+  ]);
+
+  const pets = petOverview?.pets ?? [];
+  const petCount = pets.length;
+
+  const vipActive =
+    subscription?.plan === 'vip' &&
+    ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
+
+  const hitFreePetLimit = !vipActive && petCount >= FREE_TIER_MAX_PETS;
+
+  const limitMessage =
+    error ||
+    (hitFreePetLimit
+      ? `Free plan supports up to ${FREE_TIER_MAX_PETS} pets. Upgrade to VIP to create more pets.`
+      : '');
 
   return (
-    <div className="page-noir app-brand-backdrop min-h-screen">
-      <div className="container-shell py-8 md:py-14">
-        <div className="mx-auto max-w-5xl">
-          <section className="rounded-[32px] border border-white/10 noir-hero px-6 py-7 shadow-2xl md:px-10 md:py-10">
-            <div className="flex flex-col gap-8 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="noir-pill mb-4 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em]">
-                  ✦ Create Pet
-                </div>
+    <div className='app-brand-backdrop'>
+      <div className='hidden md:block'>
+        <SiteHeader ctaLabel='Open Memories' ctaHref='/memories' />
+      </div>
 
-                <h1 className="noir-text-title text-4xl font-black tracking-[-0.05em] md:text-6xl">
-                  Create your AI pet profile
-                </h1>
-
-                <p className="mt-4 max-w-2xl text-sm leading-7 text-[var(--noir-text-soft)] md:text-base">
-                  Fill in a few details so EchoPaws can begin shaping memory, personality, routines, and a
-                  richer emotional profile around your companion.
-                </p>
-              </div>
-
-              <div className="w-full max-w-[280px] rounded-[24px] border border-white/10 bg-white/5 px-5 py-5">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-[0.22em] text-[var(--noir-text-muted)]">
-                    Profile Completion
-                  </span>
-                  <span className="text-sm font-black text-[var(--noir-text-title)]">{completion}%</span>
-                </div>
-
-                <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-amber-400 to-orange-300 transition-all"
-                    style={{ width: `${completion}%` }}
-                  />
-                </div>
-
-                <p className="mt-4 text-sm leading-6 text-[var(--noir-text-soft)]">
-                  A stronger pet profile helps EchoPaws deliver better memory continuity, tone, and context.
-                </p>
-              </div>
+      <main className='container-shell py-10 md:py-14'>
+        <div className='mx-auto max-w-4xl'>
+          <section className='rounded-[32px] border border-white/55 bg-white/78 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.09)] backdrop-blur-md md:p-9'>
+            <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+              🐾 Create Pet
             </div>
 
-            <form onSubmit={handleSubmit} className="mt-8 rounded-[28px] noir-panel px-5 py-5 md:px-6 md:py-6">
-              <div className="grid gap-5 md:grid-cols-2">
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Name</label>
+            <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.4rem)] font-black tracking-[-0.05em] text-slate-900'>
+              Create your AI pet profile
+            </h1>
+
+            <p className='mt-4 max-w-3xl text-[1rem] leading-[1.9] text-slate-600'>
+              Fill in a few details so EchoPaws can build a real pet profile,
+              save it to your account, and open the new chat automatically after
+              creation.
+            </p>
+
+            {message ? (
+              <div className='mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
+                {message}
+              </div>
+            ) : null}
+
+            {limitMessage ? (
+              <div className='mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+                {limitMessage}
+              </div>
+            ) : null}
+
+            {hitFreePetLimit ? (
+              <>
+                <div className='mt-6 rounded-[26px] border border-white/55 bg-white/74 px-5 py-5 text-sm leading-7 text-slate-700 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
+                  <div className='text-xs font-bold uppercase tracking-[0.16em] text-orange-700'>
+                    Pet Limit Reached
+                  </div>
+                  <p className='mt-2'>
+                    Your account currently has <strong>{petCount}</strong> pets on
+                    the Free plan. To create more pets, upgrade to VIP or manage
+                    your existing pets first.
+                  </p>
+                </div>
+
+                <div className='mt-6 flex flex-wrap gap-3'>
+                  <Link href='/pets' className='brand-button'>
+                    Manage Pets
+                  </Link>
+
+                  <Link href='/pricing' className='subtle-button'>
+                    Upgrade to VIP
+                  </Link>
+
+                  <Link href='/memories' className='subtle-button'>
+                    Back to Memories
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <form
+                action={createPetAction}
+                className='mt-7 grid gap-5'
+                encType='multipart/form-data'
+              >
+                <div className='grid gap-5 md:grid-cols-2'>
+                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                    Name
+                    <input
+                      className='input-shell'
+                      name='name'
+                      type='text'
+                      placeholder='e.g. Max'
+                      required
+                      maxLength={30}
+                    />
+                  </label>
+
+                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                    Breed
+                    <input
+                      className='input-shell'
+                      name='breed'
+                      type='text'
+                      placeholder='e.g. Shiba Inu'
+                      required
+                      maxLength={30}
+                    />
+                  </label>
+                </div>
+
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                  Personality
                   <input
-                    type="text"
-                    value={form.name}
-                    onChange={(e) => updateField('name', e.target.value)}
-                    placeholder="e.g. Max"
-                    className="noir-field h-12 rounded-2xl px-4 text-sm"
+                    className='input-shell'
+                    name='personality'
+                    type='text'
+                    placeholder='e.g. Playful, clingy, loves belly rubs'
+                    required
+                    maxLength={120}
                   />
-                </div>
+                </label>
 
-                <div>
-                  <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Breed</label>
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                  Favorite Food
                   <input
-                    type="text"
-                    value={form.breed}
-                    onChange={(e) => updateField('breed', e.target.value)}
-                    placeholder="e.g. Shiba Inu"
-                    className="noir-field h-12 rounded-2xl px-4 text-sm"
+                    className='input-shell'
+                    name='favoriteFood'
+                    type='text'
+                    placeholder='e.g. Chicken breast, freeze-dried treats'
+                    maxLength={120}
                   />
+                </label>
+
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                  Daily Habits
+                  <textarea
+                    className='input-shell min-h-[120px]'
+                    name='dailyHabits'
+                    placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
+                    maxLength={500}
+                  />
+                </label>
+
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
+                  Upload Photo
+                  <div className='rounded-[24px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
+                    <div className='text-3xl'>📸</div>
+                    <p className='mt-3 text-sm font-bold'>
+                      Supports JPG / PNG / WebP, max 5MB
+                    </p>
+                    <p className='mt-1 text-xs font-normal leading-6 text-slate-600'>
+                      The image will be uploaded to Supabase Storage and attached
+                      to the pet profile.
+                    </p>
+                    <input
+                      className='input-shell mt-4'
+                      name='image'
+                      type='file'
+                      accept='image/png,image/jpeg,image/webp'
+                      required
+                    />
+                  </div>
+                </label>
+
+                <div className='flex flex-wrap gap-3 pt-2'>
+                  <button type='submit' className='brand-button'>
+                    Create Pet and Open Chat
+                  </button>
+
+                  <Link href='/memories' className='subtle-button'>
+                    Back to Memories
+                  </Link>
                 </div>
-              </div>
-
-              <div className="mt-5">
-                <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Personality</label>
-                <input
-                  type="text"
-                  value={form.personality}
-                  onChange={(e) => updateField('personality', e.target.value)}
-                  placeholder="e.g. Playful, clingy, loves belly rubs"
-                  className="noir-field h-12 rounded-2xl px-4 text-sm"
-                />
-              </div>
-
-              <div className="mt-5">
-                <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Favorite Food</label>
-                <input
-                  type="text"
-                  value={form.favoriteFood}
-                  onChange={(e) => updateField('favoriteFood', e.target.value)}
-                  placeholder="e.g. Chicken breast, freeze-dried treats"
-                  className="noir-field h-12 rounded-2xl px-4 text-sm"
-                />
-              </div>
-
-              <div className="mt-5">
-                <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Daily Habits</label>
-                <textarea
-                  value={form.dailyHabits}
-                  onChange={(e) => updateField('dailyHabits', e.target.value)}
-                  placeholder="e.g. Loves waiting by the door, sleeps on the couch at night"
-                  className="noir-field min-h-[130px] rounded-2xl px-4 py-3 text-sm"
-                />
-              </div>
-
-              <div className="mt-5">
-                <label className="mb-2 block text-sm font-semibold text-[var(--noir-text-soft)]">Upload Photo</label>
-
-                <div className="rounded-[24px] border border-dashed border-white/15 bg-white/5 px-5 py-5">
-                  {!photoPreview ? (
-                    <label className="block cursor-pointer text-center">
-                      <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-amber-500/10 text-xl text-amber-200">
-                        ⤴
-                      </div>
-                      <p className="text-sm font-semibold text-[var(--noir-text-title)]">Upload pet photo</p>
-                      <p className="mt-2 text-xs text-[var(--noir-text-muted)]">
-                        PNG / JPG recommended, front-facing photo preferred
-                      </p>
-                    </label>
-                  ) : (
-                    <div className="flex flex-col gap-4 md:flex-row md:items-center">
-                      <div className="h-28 w-28 overflow-hidden rounded-[22px] border border-white/10 bg-white/10">
-                        <img src={photoPreview} alt="Pet preview" className="h-full w-full object-cover" />
-                      </div>
-
-                      <div className="min-w-0 flex-1">
-                        <div className="text-sm font-semibold text-[var(--noir-text-title)]">Photo ready</div>
-                        <p className="mt-1 truncate text-sm text-[var(--noir-text-soft)]">{photoName}</p>
-                        <p className="mt-2 text-xs leading-6 text-[var(--noir-text-muted)]">
-                          You can keep this image or replace it before saving the profile.
-                        </p>
-
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          <label className="subtle-button cursor-pointer">
-                            Replace Photo
-                            <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                          </label>
-
-                          <button type="button" onClick={clearPhoto} className="noir-danger-button rounded-full px-5 py-3 text-sm font-semibold">
-                            Remove
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 md:grid-cols-3">
-                <div className="rounded-[22px] noir-stat-card px-4 py-4">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted)]">
-                    Memory Ready
-                  </div>
-                  <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--noir-text-title)]">
-                    01
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--noir-text-soft)]">
-                    Start with habits, food, and personality to improve recall quality.
-                  </p>
-                </div>
-
-                <div className="rounded-[22px] noir-stat-card px-4 py-4">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted)]">
-                    Tone Match
-                  </div>
-                  <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--noir-text-title)]">
-                    High
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--noir-text-soft)]">
-                    Richer profile details help the chat feel more emotionally consistent.
-                  </p>
-                </div>
-
-                <div className="rounded-[22px] noir-stat-card px-4 py-4">
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted)]">
-                    Visual ID
-                  </div>
-                  <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-[var(--noir-text-title)]">
-                    {photoPreview ? 'Ready' : 'Pending'}
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--noir-text-soft)]">
-                    A clear portrait gives your pet profile a stronger visual identity.
-                  </p>
-                </div>
-              </div>
-
-              {submitted ? (
-                <div className="mt-6 rounded-[22px] noir-note-success px-5 py-4">
-                  <div className="text-xs font-extrabold uppercase tracking-[0.22em] text-emerald-200">
-                    Draft Saved
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--noir-text-soft)]">
-                    This page is now styled in the Noir system. If you already have a backend action, you can replace
-                    the local submit handler with your existing save logic directly.
-                  </p>
-                </div>
-              ) : (
-                <div className="mt-6 rounded-[22px] noir-note px-5 py-4">
-                  <div className="text-xs font-extrabold uppercase tracking-[0.22em] text-amber-200">
-                    Styling Update
-                  </div>
-                  <p className="mt-2 text-sm leading-6 text-[var(--noir-text-soft)]">
-                    This version focuses on visual consistency with the Noir theme while keeping the page self-contained
-                    and safe to compile.
-                  </p>
-                </div>
-              )}
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-end">
-                <Link href="/pets" className="subtle-button">
-                  Cancel
-                </Link>
-                <Link href="/chat" className="subtle-button">
-                  Open Chat
-                </Link>
-                <button type="submit" className="brand-button">
-                  Create Pet
-                </button>
-              </div>
-            </form>
+              </form>
+            )}
           </section>
         </div>
-      </div>
+      </main>
+
+      <SiteFooter text='© 2026 EchoPaws.ai. Create your first pet profile.' />
     </div>
   );
 }

@@ -59,10 +59,10 @@ function buildPriorityLabel(importance: number | null) {
 function buildPriorityTone(importance: number | null) {
   const value = clampPriority(importance);
 
-  if (value >= 5) return 'bg-rose-50 text-rose-700 border-rose-200';
-  if (value === 4) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (value === 3) return 'bg-sky-50 text-sky-700 border-sky-200';
-  return 'bg-slate-100 text-slate-700 border-slate-200';
+  if (value >= 5) return 'bg-[rgba(251,113,133,0.12)] text-rose-100 border-[rgba(251,113,133,0.24)]';
+  if (value === 4) return 'bg-[rgba(245,158,11,0.12)] text-amber-100 border-[rgba(255,184,107,0.26)]';
+  if (value === 3) return 'bg-[rgba(96,165,250,0.12)] text-sky-100 border-[rgba(96,165,250,0.24)]';
+  return 'bg-white/5 text-stone-200 border-white/10';
 }
 
 function formatDateLabel(value: string | null) {
@@ -253,13 +253,13 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   if (!pets.length) {
     return (
-      <div className='app-brand-backdrop'>
+      <div className='app-brand-backdrop page-noir'>
         <div className='hidden md:block'>
-          <SiteHeader />
+          <SiteHeader theme='dark' />
         </div>
 
         <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-10 sm:px-6 lg:px-8'>
-          <div className='w-full rounded-[32px] border border-white/55 bg-white/80 p-8 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='noir-hero w-full rounded-[32px] p-8'>
             <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
               Memories
             </div>
@@ -377,14 +377,14 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
   );
 
   return (
-    <div className='app-brand-backdrop'>
+    <div className='app-brand-backdrop page-noir'>
       <div className='hidden md:block'>
-        <SiteHeader />
+        <SiteHeader theme='dark' />
       </div>
 
       <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
-        <div className='mb-6 rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+        <div className='noir-hero mb-6 rounded-[32px] p-6'>
+          <div className='noir-pill px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em]'>
             🧠 Companion Memory Space
           </div>
 
@@ -419,7 +419,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
         <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
           <aside className='space-y-5'>
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='noir-panel rounded-[28px] p-5'>
               <div className='flex items-start gap-4'>
                 <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />
 
@@ -449,7 +449,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='noir-panel rounded-[28px] p-5'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Pet Switcher
               </div>
@@ -482,7 +482,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='noir-panel rounded-[28px] p-5'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Companion snapshot
               </div>
@@ -491,7 +491,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           </aside>
 
           <main className='min-w-0 xl:flex xl:min-h-[calc(100vh-250px)] xl:flex-col'>
-            <section className='rounded-[28px] border border-white/55 bg-white/84 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+            <section className='noir-panel rounded-[28px] p-5'>
               <form className='grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,0.82fr))_minmax(0,1.08fr)]'>
                 <input type='hidden' name='pet_id' value={selectedPet.id} />
 
@@ -503,7 +503,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                     name='q'
                     defaultValue={q}
                     placeholder='Search memory text'
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                    className='noir-field h-11 rounded-2xl px-4 text-sm outline-none transition'
                   />
                 </label>
 
@@ -514,7 +514,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   <select
                     name='type'
                     defaultValue={type}
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                    className='noir-field h-11 rounded-2xl px-4 text-sm outline-none transition'
                   >
                     <option value='all'>All types</option>
                     {availableTypes.map((item) => (
@@ -532,7 +532,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   <select
                     name='priority'
                     defaultValue={priority}
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                    className='noir-field h-11 rounded-2xl px-4 text-sm outline-none transition'
                   >
                     <option value='all'>All priorities</option>
                     <option value='5'>Priority 5</option>
@@ -550,7 +550,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   <select
                     name='sort'
                     defaultValue={sort}
-                    className='h-11 rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-900 outline-none transition focus:border-orange-300'
+                    className='noir-field h-11 rounded-2xl px-4 text-sm outline-none transition'
                   >
                     <option value='latest'>Latest</option>
                     <option value='oldest'>Oldest</option>
@@ -610,7 +610,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
             <section className='memories-scroll-panel mt-5 space-y-4'>
               {!filteredMemories.length ? (
-                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white/88 px-6 py-10 text-center text-sm text-slate-600 shadow-sm backdrop-blur-sm'>
+                <div className='noir-empty rounded-[28px] px-6 py-10 text-center text-sm shadow-sm'>
                   No memories match the current filters.
                 </div>
               ) : (
@@ -621,7 +621,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                     <details
                       key={memory.id}
                       open={isOpen}
-                      className='group rounded-[28px] border border-white/55 bg-white/86 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'
+                      className='noir-details-card group rounded-[28px] p-5'
                     >
                       <summary className='cursor-pointer list-none'>
                         <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
@@ -671,7 +671,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                             <input type='hidden' name='returnTo' value={returnTo} />
                             <button
                               type='submit'
-                              className='rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-bold text-rose-700 transition hover:bg-rose-50'
+                              className='noir-danger-button rounded-full px-4 py-2 text-sm font-bold transition'
                             >
                               Delete
                             </button>

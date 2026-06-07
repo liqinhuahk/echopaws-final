@@ -248,7 +248,7 @@ function renderAssistantContent(content: string): ReactNode {
   const segments = parseAssistantMessage(content);
 
   return (
-    <div className='whitespace-pre-wrap break-words leading-6 sm:leading-7'>
+    <div className="whitespace-pre-wrap break-words leading-6 sm:leading-7">
       {segments.map((segment, index) => {
         if (segment.type === 'text') {
           return <Fragment key={`text-${index}`}>{segment.content}</Fragment>;
@@ -256,7 +256,7 @@ function renderAssistantContent(content: string): ReactNode {
 
         if (segment.type === 'emphasis') {
           return (
-            <em key={`emphasis-${index}`} className='font-medium italic text-amber-100'>
+            <em key={`emphasis-${index}`} className="font-medium italic text-amber-100">
               {segment.content}
             </em>
           );
@@ -265,7 +265,7 @@ function renderAssistantContent(content: string): ReactNode {
         return (
           <span
             key={`action-${index}`}
-            className='mx-[2px] inline rounded-full border border-[rgba(255,184,107,0.18)] bg-[rgba(245,158,11,0.12)] px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-amber-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)]'
+            className="mx-[2px] inline rounded-full border border-[rgba(255,184,107,0.18)] bg-[rgba(245,158,11,0.12)] px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-amber-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
           >
             {segment.content}
           </span>
@@ -284,16 +284,16 @@ function PetReplyAvatar({
 }) {
   if (petImageUrl) {
     return (
-      <div className='h-9 w-9 shrink-0 overflow-hidden rounded-full border border-orange-100 bg-orange-50 shadow-[0_4px_12px_rgba(249,115,22,0.12)] sm:h-11 sm:w-11'>
+      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-[0_6px_16px_rgba(0,0,0,0.24)] sm:h-11 sm:w-11">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={petImageUrl} alt={`${petName} avatar`} className='h-full w-full object-cover' />
+        <img src={petImageUrl} alt={`${petName} avatar`} className="h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
     <div
-      className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-orange-100 bg-orange-50 text-sm shadow-[0_4px_12px_rgba(249,115,22,0.12)] sm:h-11 sm:w-11 sm:text-base'
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm shadow-[0_6px_16px_rgba(0,0,0,0.24)] sm:h-11 sm:w-11 sm:text-base"
       aria-label={`${petName} avatar placeholder`}
     >
       🐾
@@ -406,41 +406,41 @@ export function ChatPlayground({
   }
 
   return (
-    <div className='mobile-chat-shell flex min-h-[56vh] flex-col xl:h-full xl:min-h-0'>
-      <div className='mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3'>
-        <div className='chat-noir-pill truncate rounded-full px-3 py-2 text-center text-[11px] font-bold sm:text-xs'>
+    <div className="mobile-chat-shell flex min-h-[56vh] flex-col xl:h-full xl:min-h-0">
+      <div className="mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="chat-noir-pill truncate rounded-full px-3 py-2 text-center text-[11px] font-bold sm:text-xs">
           {usageLabel}
         </div>
 
         <a
           href={memoriesHref}
-          className='chat-noir-link rounded-full px-3 py-2 text-center text-[11px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition sm:text-xs'
+          className="chat-noir-link rounded-full px-3 py-2 text-center text-[11px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition sm:text-xs"
         >
           Open Memories
         </a>
       </div>
 
-      <div className='mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] p-3 sm:mt-5 sm:rounded-[28px] sm:p-4'>
+      <div className="mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[22px] p-3 sm:mt-5 sm:rounded-[28px] sm:p-4">
         <div
           ref={messageViewportRef}
-          className='mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth'
+          className="mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth"
         >
-          <div className='grid gap-3 pb-2 sm:gap-4'>
+          <div className="grid gap-3 pb-2 sm:gap-4">
             {messages.map((message, index) => {
               const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
               if (message.role === 'assistant') {
                 return (
-                  <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
+                  <div key={messageKey} className="flex items-end gap-2.5 sm:gap-3">
                     <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-                    <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
-                      <div className='chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]'>
+                    <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                      <div className="chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]">
                         {petName}
                       </div>
 
-                      <div className='chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 text-[14px] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]'>
-                        <span className='chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3' />
-                        <div className='relative z-[1]'>{renderAssistantContent(message.content)}</div>
+                      <div className="chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 text-[14px] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                        <span className="chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3" />
+                        <div className="relative z-[1]">{renderAssistantContent(message.content)}</div>
                       </div>
                     </div>
                   </div>
@@ -448,15 +448,15 @@ export function ChatPlayground({
               }
 
               return (
-                <div key={messageKey} className='flex justify-end'>
-                  <div className='min-w-0 max-w-[82%] sm:max-w-[72%]'>
-                    <div className='chat-noir-user-label mb-1 px-1 text-right text-[10px] font-bold tracking-wide sm:text-[11px]'>
+                <div key={messageKey} className="flex justify-end">
+                  <div className="min-w-0 max-w-[82%] sm:max-w-[72%]">
+                    <div className="chat-noir-user-label mb-1 px-1 text-right text-[10px] font-bold tracking-wide sm:text-[11px]">
                       You
                     </div>
 
-                    <div className='chat-noir-user-bubble relative rounded-[18px] rounded-br-md px-3.5 py-2.5 text-[14px] font-medium sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]'>
-                      <span className='chat-noir-user-bubble-tail absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-right-[6px] sm:h-3 sm:w-3' />
-                      <div className='relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7'>
+                    <div className="chat-noir-user-bubble relative rounded-[18px] rounded-br-md px-3.5 py-2.5 text-[14px] font-medium sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                      <span className="chat-noir-user-bubble-tail absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-right-[6px] sm:h-3 sm:w-3" />
+                      <div className="relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7">
                         {message.content}
                       </div>
                     </div>
@@ -466,19 +466,19 @@ export function ChatPlayground({
             })}
 
             {loading ? (
-              <div className='flex items-end gap-2.5 sm:gap-3'>
+              <div className="flex items-end gap-2.5 sm:gap-3">
                 <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-                <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
-                  <div className='chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]'>
+                <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                  <div className="chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]">
                     {petName}
                   </div>
 
-                  <div className='chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 sm:rounded-[20px] sm:px-4 sm:py-3'>
-                    <span className='chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3' />
-                    <div className='chat-noir-loading relative z-[1] flex items-center gap-2'>
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-amber-300' />
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
-                      <span className='h-2 w-2 animate-pulse rounded-full bg-orange-400 [animation-delay:240ms]' />
+                  <div className="chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 sm:rounded-[20px] sm:px-4 sm:py-3">
+                    <span className="chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3" />
+                    <div className="chat-noir-loading relative z-[1] flex items-center gap-2">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-amber-300" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400 [animation-delay:240ms]" />
                     </div>
                   </div>
                 </div>
@@ -488,22 +488,22 @@ export function ChatPlayground({
         </div>
 
         {error ? (
-          <div className='chat-noir-error mt-3 shrink-0 rounded-2xl px-4 py-3 text-sm font-bold'>
+          <div className="chat-noir-error mt-3 shrink-0 rounded-2xl px-4 py-3 text-sm font-bold">
             {error}
           </div>
         ) : null}
 
         {memoryHints.length ? (
-          <div className='chat-noir-hints mt-3 shrink-0 rounded-[20px] px-3 py-3 sm:rounded-[24px] sm:px-4'>
-            <div className='chat-noir-hints-title text-[11px] font-bold uppercase tracking-[0.18em] sm:text-xs'>
+          <div className="chat-noir-hints mt-3 shrink-0 rounded-[20px] px-3 py-3 sm:rounded-[24px] sm:px-4">
+            <div className="chat-noir-hints-title text-[11px] font-bold uppercase tracking-[0.18em] sm:text-xs">
               New Memory Triggers
             </div>
 
-            <div className='mt-2.5 flex flex-wrap gap-2 sm:mt-3'>
+            <div className="mt-2.5 flex flex-wrap gap-2 sm:mt-3">
               {memoryHints.map((hint, index) => (
                 <span
                   key={`${hint}-${index}`}
-                  className='chat-noir-hint-chip rounded-full px-3 py-1.5 text-[11px] font-semibold shadow-[0_4px_10px_rgba(0,0,0,0.14)] sm:px-3 sm:py-2 sm:text-xs'
+                  className="chat-noir-hint-chip rounded-full px-3 py-1.5 text-[11px] font-semibold shadow-[0_4px_10px_rgba(0,0,0,0.14)] sm:px-3 sm:py-2 sm:text-xs"
                 >
                   Remembered: {hint}
                 </span>
@@ -512,14 +512,14 @@ export function ChatPlayground({
           </div>
         ) : null}
 
-        <form className='mobile-chat-composer mt-3 shrink-0 sm:mt-4' onSubmit={handleSubmit}>
-          <div className='chat-noir-composer-card rounded-[22px] p-2.5 sm:rounded-[26px] sm:p-3'>
-            <div className='flex items-end gap-2 sm:gap-3'>
-              <div className='min-w-0 flex-1'>
+        <form className="mobile-chat-composer mt-3 shrink-0 sm:mt-4" onSubmit={handleSubmit}>
+          <div className="chat-noir-composer-card rounded-[22px] p-2.5 sm:rounded-[26px] sm:p-3">
+            <div className="flex items-end gap-2 sm:gap-3">
+              <div className="min-w-0 flex-1">
                 <input
-                  className='chat-noir-input w-full rounded-full px-4 py-3 text-[15px] outline-none transition'
-                  type='text'
-                  placeholder='Type a message...'
+                  className="chat-noir-input w-full rounded-full px-4 py-3 text-[15px] outline-none transition"
+                  type="text"
+                  placeholder="Type a message..."
                   value={input}
                   maxLength={800}
                   onChange={(event) => setInput(event.target.value)}
@@ -527,19 +527,19 @@ export function ChatPlayground({
               </div>
 
               <button
-                type='submit'
-                className='chat-noir-submit inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full px-4 text-sm font-extrabold transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
+                type="submit"
+                className="chat-noir-submit inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full px-4 text-sm font-extrabold transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3"
                 disabled={!canSubmit}
               >
                 {loading ? '...' : 'Send'}
               </button>
             </div>
 
-            <div className='chat-noir-meta mt-2.5 flex items-center justify-between px-1 text-[11px] sm:mt-3 sm:px-2 sm:text-xs'>
-              <span className='truncate pr-3'>
+            <div className="chat-noir-meta mt-2.5 flex items-center justify-between px-1 text-[11px] sm:mt-3 sm:px-2 sm:text-xs">
+              <span className="truncate pr-3">
                 {usageDetail || 'Free chats are shared across your account.'}
               </span>
-              <span className='shrink-0'>{input.length} / 800</span>
+              <span className="shrink-0">{input.length} / 800</span>
             </div>
           </div>
         </form>

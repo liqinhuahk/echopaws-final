@@ -67,7 +67,7 @@ function getCopyEmailScript() {
 function BenefitItem({ text }: { text: string }) {
   return (
     <li className='flex items-start gap-3'>
-      <span className='mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-orange-100 text-[11px] font-black text-orange-700'>
+      <span className='noir-check mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black'>
         ✓
       </span>
       <span>{text}</span>
@@ -123,17 +123,18 @@ export default async function AccountPage() {
   const freeSlotsLeft = Math.max(FREE_TIER_MAX_PETS - petCount, 0);
 
   return (
-    <div className='app-brand-backdrop'>
+    <div className='app-brand-backdrop page-noir'>
       <div className='hidden md:block'>
         <SiteHeader
+          theme='dark'
           ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
           ctaHref='/pricing'
         />
       </div>
 
       <main className='container-shell py-10'>
-        <section className='rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-8'>
-          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+        <section className='noir-hero rounded-[32px] p-6 md:p-8'>
+          <div className='noir-pill px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em]'>
             👤 My Account
           </div>
 
@@ -149,12 +150,12 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]'>
-          <div className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card noir-panel p-6'>
             <div className='flex flex-wrap items-center gap-3'>
               <h2 className='text-2xl font-extrabold text-slate-900'>Account Status</h2>
               <span
                 className={`inline-flex rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] ${
-                  vipActive ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-700'
+                  vipActive ? 'noir-badge' : 'noir-badge-neutral'
                 }`}
               >
                 {planBadge}
@@ -162,7 +163,7 @@ export default async function AccountPage() {
             </div>
 
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='noir-stat-card rounded-2xl p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Email</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{maskedEmail}</div>
 
@@ -171,7 +172,7 @@ export default async function AccountPage() {
                     id='copy-email-button'
                     type='button'
                     data-email={fullEmail}
-                    className='shrink-0 rounded-full border border-black/10 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-100'
+                    className='shrink-0 rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs font-bold text-stone-200 transition hover:bg-white/10'
                   >
                     <span id='copy-email-feedback'>Copy email</span>
                   </button>
@@ -180,13 +181,13 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='noir-stat-card rounded-2xl p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Current Plan</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{currentPlan}</div>
                 <div className='mt-1 text-xs text-muted'>{planStatus}</div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='noir-stat-card rounded-2xl p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Pets</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{petCount}</div>
                 <div className='mt-1 text-xs text-muted'>
@@ -194,7 +195,7 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='noir-stat-card rounded-2xl p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>
                   {vipActive ? 'Chat Access' : 'Free Chat Allowance'}
                 </div>
@@ -208,7 +209,7 @@ export default async function AccountPage() {
             </div>
 
             {!vipActive ? (
-              <div className='mt-5 rounded-2xl border border-amber-100 bg-amber-50/90 px-4 py-4 text-sm text-amber-900'>
+              <div className='noir-note mt-5 rounded-2xl px-4 py-4 text-sm'>
                 <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-amber-800'>
                   Free plan snapshot
                 </div>
@@ -220,7 +221,7 @@ export default async function AccountPage() {
                 </p>
               </div>
             ) : (
-              <div className='mt-5 rounded-2xl border border-orange-100 bg-orange-50/90 px-4 py-4 text-sm text-orange-900'>
+              <div className='noir-note mt-5 rounded-2xl px-4 py-4 text-sm'>
                 <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-orange-800'>
                   VIP membership active
                 </div>
@@ -233,10 +234,10 @@ export default async function AccountPage() {
             )}
           </div>
 
-          <div className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card noir-panel p-6'>
             <div className='flex flex-wrap items-center gap-3'>
               <h2 className='text-2xl font-extrabold text-slate-900'>Membership & Security</h2>
-              <span className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-stone-700'>
+              <span className='noir-badge-neutral px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em]'>
                 Quick Actions
               </span>
             </div>
@@ -269,14 +270,14 @@ export default async function AccountPage() {
               </form>
             </div>
 
-            <div className='mt-5 rounded-2xl border border-black/5 bg-stone-50/90 px-4 py-4 text-sm text-stone-700'>
+            <div className='noir-note mt-5 rounded-2xl px-4 py-4 text-sm'>
               If you just upgraded, your VIP status may take a moment to appear here after checkout.
             </div>
           </div>
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card noir-panel p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
               Free plan
             </div>
@@ -289,7 +290,7 @@ export default async function AccountPage() {
               <BenefitItem text='Pet profile and photo upload' />
             </ul>
 
-            <div className='mt-5 rounded-2xl bg-stone-50/90 px-4 py-3 text-sm text-stone-700'>
+            <div className='noir-note mt-5 rounded-2xl px-4 py-3 text-sm'>
               {petCount >= FREE_TIER_MAX_PETS && !vipActive
                 ? `You currently have ${petCount} pets on the Free plan. You've reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
                 : !vipActive
@@ -300,7 +301,7 @@ export default async function AccountPage() {
             </div>
           </article>
 
-          <article className='glass-card border border-orange-100 bg-gradient-to-b from-white/86 via-orange-50/78 to-amber-50/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card noir-vip-panel p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
               VIP membership
             </div>
@@ -321,7 +322,7 @@ export default async function AccountPage() {
               <BenefitItem text='Priority access to future voice features' />
             </ul>
 
-            <div className='mt-5 rounded-2xl bg-orange-100/70 px-4 py-3 text-sm text-orange-900'>
+            <div className='noir-note mt-5 rounded-2xl px-4 py-3 text-sm'>
               VIP is best for users who want uninterrupted companionship, more pet capacity, and a
               pet that remembers with greater depth over time.
             </div>
@@ -329,7 +330,7 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card noir-panel p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
               Plan rules
             </div>
@@ -340,7 +341,7 @@ export default async function AccountPage() {
             </p>
           </article>
 
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card noir-panel p-6'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
               Privacy & control
             </div>

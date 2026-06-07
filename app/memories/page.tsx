@@ -7,6 +7,7 @@ import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/serve
 
 type SearchParamsShape = {
   pet_id?: string | string[];
+  petId?: string | string[];
   q?: string | string[];
   type?: string | string[];
   priority?: string | string[];
@@ -58,7 +59,6 @@ function buildPriorityLabel(importance: number | null) {
 
 function buildPriorityTone(importance: number | null) {
   const value = clampPriority(importance);
-
   if (value >= 5) return 'bg-[rgba(251,113,133,0.12)] text-rose-100 border-[rgba(251,113,133,0.24)]';
   if (value === 4) return 'bg-[rgba(245,158,11,0.12)] text-amber-100 border-[rgba(255,184,107,0.26)]';
   if (value === 3) return 'bg-[rgba(96,165,250,0.12)] text-sky-100 border-[rgba(96,165,250,0.24)]';
@@ -118,7 +118,7 @@ function buildSummaryFromPetAndMemories(
   return `${pet.name}'s recent memory clues: ${clues.join(' ')}`;
 }
 
-function buildReturnTo(params: {
+function buildMemoriesHref(params: {
   petId?: string;
   q?: string;
   type?: string;
@@ -161,7 +161,7 @@ function PetAvatar({
     return (
       <div
         className={[
-          'shrink-0 overflow-hidden border border-orange-100 bg-orange-50 shadow-sm',
+          'shrink-0 overflow-hidden border border-white/10 bg-white/5 shadow-[0_8px_22px_rgba(0,0,0,0.22)]',
           sizeClass,
         ].join(' ')}
       >
@@ -174,7 +174,7 @@ function PetAvatar({
   return (
     <div
       className={[
-        'shrink-0 flex items-center justify-center border border-orange-100 bg-orange-100 text-orange-900 shadow-sm',
+        'shrink-0 flex items-center justify-center border border-white/10 bg-[linear-gradient(135deg,rgba(255,255,255,0.08),rgba(255,255,255,0.03))] text-[var(--noir-text-soft,#f2dbc0)] shadow-[0_8px_22px_rgba(0,0,0,0.22)]',
         sizeClass,
       ].join(' ')}
       aria-label={`${name} avatar placeholder`}
@@ -218,7 +218,9 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   const resolvedSearchParams = searchParams ? await Promise.resolve(searchParams) : undefined;
 
-  const selectedPetId = pickFirst(resolvedSearchParams?.pet_id).trim();
+  const selectedPetId = pickFirst(
+    resolvedSearchParams?.pet_id ?? resolvedSearchParams?.petId
+  ).trim();
   const q = pickFirst(resolvedSearchParams?.q).trim();
   const type = pickFirst(resolvedSearchParams?.type).trim() || 'all';
   const priority = pickFirst(resolvedSearchParams?.priority).trim() || 'all';
@@ -253,20 +255,20 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   if (!pets.length) {
     return (
-      <div className='app-brand-backdrop page-noir'>
+      <div className='app-brand-backdrop page-noir min-h-screen'>
         <div className='hidden md:block'>
           <SiteHeader theme='dark' />
         </div>
 
         <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-10 sm:px-6 lg:px-8'>
           <div className='noir-hero w-full rounded-[32px] p-8'>
-            <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
+            <div className='text-sm font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted,#9f8c7d)]'>
               Memories
             </div>
-            <h1 className='mt-3 text-3xl font-black tracking-tight text-slate-900'>
+            <h1 className='mt-3 text-3xl font-black tracking-tight text-white'>
               Create a pet before you manage memories
             </h1>
-            <p className='mt-3 max-w-2xl text-sm leading-7 text-slate-600'>
+            <p className='mt-3 max-w-2xl text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)]'>
               The memory page is ready, but there is no pet profile yet. Create a pet first so
               conversations can turn into searchable memory entries.
             </p>
@@ -359,7 +361,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
   const openAll = expand === 'all';
 
-  const returnTo = buildReturnTo({
+  const returnTo = buildMemoriesHref({
     petId: selectedPet.id,
     q,
     type: type !== 'all' ? type : '',
@@ -377,7 +379,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
   );
 
   return (
-    <div className='app-brand-backdrop page-noir'>
+    <div className='app-brand-backdrop page-noir min-h-screen'>
       <div className='hidden md:block'>
         <SiteHeader theme='dark' />
       </div>
@@ -393,12 +395,12 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='xl' />
 
               <div className='min-w-0'>
-                <h1 className='text-[clamp(2rem,3vw,2.8rem)] font-black tracking-[-0.04em] text-slate-900'>
+                <h1 className='text-[clamp(2rem,3vw,2.8rem)] font-black tracking-[-0.04em] text-white'>
                   Memories of {selectedPet.name}
                 </h1>
-                <p className='mt-2 max-w-3xl text-sm leading-7 text-slate-600'>
-                  Searchable memories, cleaner filters, and a softer brand shell so the page feels
-                  like a natural continuation of Home, Chat, and Account.
+                <p className='mt-2 max-w-3xl text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)]'>
+                  Searchable memories, cleaner filters, and a softer dark shell so the page feels
+                  like a natural continuation of Chat, Pets, and Account.
                 </p>
               </div>
             </div>
@@ -425,24 +427,22 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
                 <div className='min-w-0 flex-1'>
                   <div className='flex flex-wrap items-center gap-2'>
-                    <h2 className='truncate text-xl font-black text-slate-900'>
-                      {selectedPet.name}
-                    </h2>
+                    <h2 className='truncate text-xl font-black text-white'>{selectedPet.name}</h2>
 
                     {selectedPet.id === defaultPetId ? (
-                      <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                      <span className='rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[11px] font-bold text-[var(--noir-text-soft,#ead6bf)]'>
                         Primary
                       </span>
                     ) : null}
                   </div>
 
-                  <div className='mt-2 flex flex-wrap gap-2 text-xs text-slate-600'>
-                    <span className='rounded-full bg-orange-50 px-2.5 py-1 font-semibold text-orange-800'>
+                  <div className='mt-2 flex flex-wrap gap-2 text-xs text-[var(--noir-text-soft,#d7c0a7)]'>
+                    <span className='rounded-full border border-[#e5a962]/20 bg-[rgba(229,169,98,0.12)] px-2.5 py-1 font-semibold text-[#f3d09b]'>
                       {headerMemoryCount} memories
                     </span>
                   </div>
 
-                  <p className='mt-3 text-sm leading-7 text-slate-600'>
+                  <p className='mt-3 text-sm leading-7 text-[var(--noir-text-muted,#9f8c7d)]'>
                     Updated {formatDateLabel(headerUpdatedAt)}
                   </p>
                 </div>
@@ -450,32 +450,50 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             </section>
 
             <section className='noir-panel rounded-[28px] p-5'>
-              <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
+              <div className='text-xs font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted,#9f8c7d)]'>
                 Pet Switcher
               </div>
-              <h3 className='mt-1 text-lg font-black text-slate-900'>Memory scope</h3>
+              <h3 className='mt-1 text-lg font-black text-white'>Memory scope</h3>
 
               <div className='mt-4 space-y-2'>
                 {pets.map((pet) => {
                   const active = pet.id === selectedPet.id;
 
+                  const petHref = buildMemoriesHref({
+                    petId: pet.id,
+                    q,
+                    type: type !== 'all' ? type : '',
+                    priority: priority !== 'all' ? priority : '',
+                    sort: sort !== 'latest' ? sort : '',
+                    expand,
+                  });
+
                   return (
                     <Link
                       key={pet.id}
-                      href={`/memories?pet_id=${encodeURIComponent(pet.id)}`}
+                      href={petHref}
+                      aria-current={active ? 'page' : undefined}
                       className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
                         active
-                          ? 'border-orange-200 bg-orange-50/90'
-                          : 'border-slate-100 bg-white/80 hover:bg-slate-50'
+                          ? 'border-white/20 bg-[rgba(255,255,255,0.10)] shadow-[0_10px_24px_rgba(0,0,0,0.22)]'
+                          : 'border-white/10 bg-white/5 hover:bg-white/8'
                       }`}
                     >
                       <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
                       <div className='min-w-0 flex-1'>
-                        <div className='truncate font-bold text-slate-800'>{pet.name}</div>
-                        <div className='text-xs text-slate-500'>
+                        <div className={`truncate font-bold ${active ? 'text-white' : 'text-[var(--noir-text-soft,#ead6bf)]'}`}>
+                          {pet.name}
+                        </div>
+                        <div className='text-xs text-[var(--noir-text-muted,#9f8c7d)]'>
                           {pet.id === defaultPetId ? 'Primary pet' : 'Companion'}
                         </div>
                       </div>
+
+                      {active ? (
+                        <span className='inline-flex items-center rounded-full border border-[#e5a962]/25 bg-[rgba(229,169,98,0.12)] px-2 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[#f6d19b]'>
+                          Live
+                        </span>
+                      ) : null}
                     </Link>
                   );
                 })}
@@ -483,10 +501,12 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             </section>
 
             <section className='noir-panel rounded-[28px] p-5'>
-              <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
-                Companion snapshot
+              <div className='text-xs font-bold uppercase tracking-[0.18em] text-[var(--noir-text-muted,#9f8c7d)]'>
+                Companion Snapshot
               </div>
-              <p className='mt-3 text-sm leading-7 text-slate-600'>{companionSummary}</p>
+              <p className='mt-3 text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)]'>
+                {companionSummary}
+              </p>
             </section>
           </aside>
 
@@ -496,7 +516,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 <input type='hidden' name='pet_id' value={selectedPet.id} />
 
                 <label className='grid gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--noir-text-muted,#9f8c7d)]'>
                     Search
                   </span>
                   <input
@@ -508,7 +528,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <label className='grid gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--noir-text-muted,#9f8c7d)]'>
                     Type
                   </span>
                   <select
@@ -526,7 +546,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <label className='grid gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--noir-text-muted,#9f8c7d)]'>
                     Priority
                   </span>
                   <select
@@ -544,7 +564,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <label className='grid gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--noir-text-muted,#9f8c7d)]'>
                     Sort
                   </span>
                   <select
@@ -560,14 +580,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <div className='grid min-w-0 gap-2'>
-                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-slate-500'>
+                  <span className='text-xs font-bold uppercase tracking-[0.16em] text-[var(--noir-text-muted,#9f8c7d)]'>
                     Actions
                   </span>
                   <div className='flex min-w-0 flex-col gap-2 2xl:flex-row'>
-                    <button
-                      type='submit'
-                      className='brand-button !h-11 w-full min-w-0 2xl:flex-1'
-                    >
+                    <button type='submit' className='brand-button !h-11 w-full min-w-0 2xl:flex-1'>
                       Apply
                     </button>
                     <Link
@@ -580,19 +597,19 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </div>
               </form>
 
-              <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-slate-600'>
+              <div className='mt-4 flex flex-wrap items-center gap-3 text-sm text-[var(--noir-text-muted,#9f8c7d)]'>
                 <span>{filteredMemories.length} result(s)</span>
 
                 {openAll ? (
                   <Link
-                    href={buildReturnTo({ petId: selectedPet.id, q, type, priority, sort })}
-                    className='font-semibold text-orange-700'
+                    href={buildMemoriesHref({ petId: selectedPet.id, q, type, priority, sort })}
+                    className='font-semibold text-[#f3d09b]'
                   >
                     Collapse all
                   </Link>
                 ) : (
                   <Link
-                    href={buildReturnTo({
+                    href={buildMemoriesHref({
                       petId: selectedPet.id,
                       q,
                       type: type !== 'all' ? type : '',
@@ -600,7 +617,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                       sort: sort !== 'latest' ? sort : '',
                       expand: 'all',
                     })}
-                    className='font-semibold text-orange-700'
+                    className='font-semibold text-[#f3d09b]'
                   >
                     Expand all
                   </Link>
@@ -627,7 +644,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                         <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
                           <div className='min-w-0'>
                             <div className='flex flex-wrap items-center gap-2'>
-                              <span className='rounded-full bg-orange-50 px-2.5 py-1 text-[11px] font-bold text-orange-800'>
+                              <span className='rounded-full border border-[#e5a962]/20 bg-[rgba(229,169,98,0.12)] px-2.5 py-1 text-[11px] font-bold text-[#f3d09b]'>
                                 {buildTypeLabel(memory.type)}
                               </span>
                               <span
@@ -638,30 +655,30 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                                 {buildPriorityLabel(memory.importance)}
                               </span>
                               {memory.pet_id === defaultPetId ? (
-                                <span className='rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700'>
+                                <span className='rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[11px] font-bold text-[var(--noir-text-soft,#ead6bf)]'>
                                   Primary pet
                                 </span>
                               ) : null}
                             </div>
 
-                            <p className='mt-3 text-sm leading-7 text-slate-700'>
+                            <p className='mt-3 text-sm leading-7 text-[var(--noir-text-soft,#e6d3c0)]'>
                               {buildExcerpt(memory.content)}
                             </p>
                           </div>
 
-                          <div className='text-xs text-slate-500'>
+                          <div className='text-xs text-[var(--noir-text-muted,#9f8c7d)]'>
                             Updated {formatDateLabel(memory.updated_at ?? memory.created_at)}
                           </div>
                         </div>
                       </summary>
 
-                      <div className='mt-4 border-t border-slate-100 pt-4'>
-                        <div className='whitespace-pre-wrap text-sm leading-8 text-slate-700'>
+                      <div className='mt-4 border-t border-white/10 pt-4'>
+                        <div className='whitespace-pre-wrap text-sm leading-8 text-[var(--noir-text-soft,#e6d3c0)]'>
                           {memory.content}
                         </div>
 
                         <div className='mt-5 flex flex-wrap items-center justify-between gap-3'>
-                          <div className='text-xs text-slate-500'>
+                          <div className='text-xs text-[var(--noir-text-muted,#9f8c7d)]'>
                             Created {formatDateLabel(memory.created_at)} · Updated{' '}
                             {formatDateLabel(memory.updated_at)}
                           </div>

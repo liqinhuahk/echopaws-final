@@ -46,7 +46,7 @@ export function SiteHeader({
   function getNavLinkClass(active: boolean) {
     if (isDark) {
       return active
-        ? 'rounded-full border border-white/14 bg-white/12 px-3.5 py-1.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-sm transition'
+        ? 'rounded-full border border-white/14 bg-white/12 px-3.5 py-1.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.18)] transition'
         : 'rounded-full px-3.5 py-1.5 text-sm font-semibold text-white/90 [text-shadow:0_1px_8px_rgba(0,0,0,0.35)] transition hover:bg-white/10 hover:text-orange-200 active:bg-white/14 active:text-orange-200';
     }
 
@@ -56,8 +56,8 @@ export function SiteHeader({
   }
 
   const headerShellClassName = isDark
-    ? 'border-b border-white/10 bg-[linear-gradient(90deg,rgba(20,13,9,0.96)_0%,rgba(32,20,14,0.95)_50%,rgba(20,13,9,0.96)_100%)] shadow-[0_14px_32px_rgba(0,0,0,0.34)] backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(90deg,rgba(20,13,9,0.92)_0%,rgba(32,20,14,0.90)_50%,rgba(20,13,9,0.92)_100%)]'
-    : 'border-b border-black/5 bg-white/95 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/88';
+    ? 'border-b border-white/10 bg-[linear-gradient(90deg,#160d09_0%,#21140e_50%,#160d09_100%)] shadow-[0_14px_32px_rgba(0,0,0,0.38)]'
+    : 'border-b border-[#eadfd2] bg-[#fffaf5] shadow-[0_12px_28px_rgba(15,23,42,0.08)]';
 
   const brandTextClassName = isDark
     ? 'bg-gradient-to-r from-amber-200 via-amber-300 to-orange-400 bg-clip-text text-lg font-black tracking-[-0.03em] text-transparent md:text-xl'
@@ -78,7 +78,7 @@ export function SiteHeader({
     <>
       <div className='hidden h-[84px] md:block' aria-hidden='true' />
 
-      <header className='fixed inset-x-0 top-0 z-[100] hidden md:block'>
+      <header className='fixed inset-x-0 top-0 z-[120] hidden md:block'>
         <div className={headerShellClassName}>
           <div className='container-shell flex items-center justify-between gap-4 py-4'>
             <Link href='/' className='flex items-center gap-3'>

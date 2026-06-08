@@ -1,278 +1,280 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
-import { createPetAction } from '@/app/actions/pets';
-import { findSubscriptionByUserId } from '@/lib/subscriptions';
-import { getPetsForUser } from '@/lib/pets';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
-import {
-  createServerSupabaseClient,
-  hasSupabaseEnv,
-} from '@/lib/supabase/server';
+import { getPetsForUser } from '@/lib/pets';
+import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import { findSubscriptionByUserId } from '@/lib/subscriptions';
 
-export const dynamic = 'force-dynamic';
-
-type SearchParamsValue = string | string[] | undefined;
-
-type CreatePetPageProps = {
-  searchParams?:
-    | Promise<{
-        message?: SearchParamsValue;
-        error?: SearchParamsValue;
-      }>
-    | {
-        message?: SearchParamsValue;
-        error?: SearchParamsValue;
-      };
-};
+/**
+ * IMPORTANT:
+ * 如果你项目里当前“创建宠物”的 server action 不是这个名字/路径，
+ * 只需要把这一行改成你现有的真实导入即可。
+ */
+import { createPetAction } from '@/app/actions/pets';
 
 const FREE_TIER_MAX_PETS = 2;
 const ACTIVE_VIP_STATUSES = new Set(['active', 'trialing', 'past_due']);
 
-function pickFirst(value: SearchParamsValue) {
-  if (Array.isArray(value)) {
-    return value[0] ?? '';
-  }
+type SearchParamsValue = string | string[] | undefined;
+type SearchParamsRecord = Record<string, SearchParamsValue>;
+type CreatePetPageProps = {
+  searchParams?: Promise<SearchParamsRecord> | SearchParamsRecord;
+};
 
-  return value ?? '';
+function pickFirst(value: SearchParamsValue) {
+  return Array.isArray(value) ? value[0] : value;
 }
 
-function buildLoginRedirect(params: { message?: string; error?: string }) {
-  const search = new URLSearchParams();
-
-  if (params.message) {
-    search.set('message', params.message);
-  }
-
-  if (params.error) {
-    search.set('error', params.error);
-  }
-
-  const query = search.toString();
+function buildLoginRedirect(message?: string, error?: string) {
+  const params = new URLSearchParams();
+  if (message) params.set('message', message);
+  if (error) params.set('error', error);
+  const query = params.toString();
   return query ? `/login?${query}` : '/login';
 }
 
-export default async function CreatePetPage({
-  searchParams,
-}: CreatePetPageProps) {
-  const resolvedSearchParams = searchParams
-    ? await Promise.resolve(searchParams)
-    : {};
-
-  const message = pickFirst(resolvedSearchParams.message).trim();
-  const error = pickFirst(resolvedSearchParams.error).trim();
-
+export default async function CreatePetPage({ searchParams }: CreatePetPageProps) {
   if (!hasSupabaseEnv()) {
-    redirect(
-      buildLoginRedirect({
-        error: 'Please configure Supabase first.',
-      }),
-    );
+    redirect(buildLoginRedirect(undefined, 'Please configure Supabase environment variables first.'));
   }
+
+  const resolvedSearchParams = searchParams ? await searchParams : {};
+  const message = pickFirst(resolvedSearchParams.message)?.trim() ?? '';
+  const error = pickFirst(resolvedSearchParams.error)?.trim() ?? '';
 
   const supabase = createServerSupabaseClient();
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
-  if (userError) {
-    redirect(
-      buildLoginRedirect({
-        error: 'Unable to verify your session. Please sign in again.',
-      }),
-    );
-  }
-
   if (!user) {
-    redirect(
-      buildLoginRedirect({
-        message: 'Please log in to continue.',
-      }),
-    );
+    redirect(buildLoginRedirect('Please log in to create your pet.'));
   }
 
   const [petOverview, subscription] = await Promise.all([
-    getPetsForUser(user.id).catch(() => ({ pets: [], defaultPetId: null })),
-    findSubscriptionByUserId(user.id).catch(() => null),
+    getPetsForUser(user.id),
+    findSubscriptionByUserId(user.id),
   ]);
 
   const pets = petOverview?.pets ?? [];
   const petCount = pets.length;
 
   const vipActive =
-    subscription?.plan === 'vip' &&
-    ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
+    subscription?.plan === 'vip' && ACTIVE_VIP_STATUSES.has(subscription.status ?? '');
 
   const hitFreePetLimit = !vipActive && petCount >= FREE_TIER_MAX_PETS;
 
-  const limitMessage =
-    error ||
-    (hitFreePetLimit
-      ? `Free plan supports up to ${FREE_TIER_MAX_PETS} pets. Upgrade to VIP to create more pets.`
-      : '');
+  const limitMessage = hitFreePetLimit
+    ? `Free accounts can create up to ${FREE_TIER_MAX_PETS} pets. Upgrade to VIP if you want more companion capacity.`
+    : !vipActive
+      ? `You are on the Free plan. You can create up to ${FREE_TIER_MAX_PETS} pets total.`
+      : 'VIP is active. You can create more companions without the Free plan pet limit.';
 
   return (
     <div className='app-brand-backdrop'>
       <SiteHeader theme='dark' ctaLabel='Open Memories' ctaHref='/memories' />
 
       <main className='container-shell py-8 md:py-10'>
-        <div className='mx-auto max-w-4xl'>
-          <section className='rounded-[32px] border border-white/55 bg-white/78 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.09)] backdrop-blur-md md:p-9'>
-            <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
-              🐾 Create Pet
-            </div>
+        <section className='glass-card p-6 md:p-8'>
+          <div className='eyebrow'>✦ Create your companion</div>
 
-            <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.4rem)] font-black tracking-[-0.05em] text-slate-900'>
-              Create your AI pet profile
-            </h1>
+          <h1 className='page-title mt-5 text-[clamp(2.4rem,5vw,4.4rem)]'>
+            Design a pet that feels like yours
+          </h1>
 
-            <p className='mt-4 max-w-3xl text-[1rem] leading-[1.9] text-slate-600'>
-              Fill in a few details so EchoPaws can start building memory,
-              personality, and a warmer companionship style around your pet.
-            </p>
+          <p className='page-subtitle mt-4 max-w-4xl text-[1rem] leading-[1.95]'>
+            Give your companion a name, personality, favorite things, and everyday habits. The
+            details you choose here help shape how the relationship begins.
+          </p>
 
-            {message ? (
-              <div className='mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
-                {message}
-              </div>
-            ) : null}
+          <div className='mt-5 flex flex-wrap gap-2'>
+            <span className={`tag-chip ${vipActive ? 'tag-chip--warm' : 'tag-chip--soft'}`}>
+              {vipActive ? 'VIP active' : 'Free plan'}
+            </span>
+            <span className='tag-chip tag-chip--soft'>
+              {petCount} / {vipActive ? 'More available' : `${FREE_TIER_MAX_PETS} pets`}
+            </span>
+          </div>
+        </section>
 
-            {limitMessage ? (
-              <div className='mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-                {limitMessage}
-              </div>
-            ) : null}
+        {message ? (
+          <section className='mt-5 rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-5 py-4 text-sm text-emerald-200'>
+            {message}
+          </section>
+        ) : null}
 
-            {hitFreePetLimit ? (
-              <>
-                <div className='mt-6 rounded-[26px] border border-white/55 bg-white/74 px-5 py-5 text-sm leading-7 text-slate-700 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
-                  <div className='text-xs font-bold uppercase tracking-[0.16em] text-orange-700'>
-                    Pet Limit Reached
+        {error ? (
+          <section className='mt-5 rounded-2xl border border-red-400/20 bg-red-500/10 px-5 py-4 text-sm text-red-200'>
+            {error}
+          </section>
+        ) : null}
+
+        <section className='mt-5 grid gap-5 lg:grid-cols-[1.05fr_.95fr]'>
+          <aside className='grid gap-5'>
+            <section className='glass-card p-6'>
+              <div className='eyebrow'>Plan snapshot</div>
+              <h2 className='section-title mt-4 text-2xl'>Your current pet capacity</h2>
+              <p className='mt-3 text-sm leading-7 text-body'>{limitMessage}</p>
+
+              <div className='mt-5 grid gap-3'>
+                <div className='dark-shell-panel p-4'>
+                  <div className='text-sm font-bold text-soft'>Current plan</div>
+                  <div className='mt-2 text-base font-semibold text-strong'>
+                    {vipActive ? 'VIP Membership' : 'Free Plan'}
                   </div>
-                  <p className='mt-2'>
-                    Your account currently has <strong>{petCount}</strong> pets on
-                    the Free plan. To create more pets, upgrade to VIP or manage
-                    your existing pets first.
-                  </p>
                 </div>
 
-                <div className='mt-6 flex flex-wrap gap-3'>
-                  <Link href='/pets' className='brand-button'>
-                    Manage Pets
-                  </Link>
-
-                  <Link href='/pricing' className='subtle-button'>
-                    Upgrade to VIP
-                  </Link>
-
-                  <Link href='/memories' className='subtle-button'>
-                    Back to Memories
-                  </Link>
+                <div className='dark-shell-panel p-4'>
+                  <div className='text-sm font-bold text-soft'>Pets created</div>
+                  <div className='mt-2 text-base font-semibold text-strong'>{petCount}</div>
                 </div>
-              </>
-            ) : (
+
+                <div className='dark-shell-panel p-4'>
+                  <div className='text-sm font-bold text-soft'>Pet limit</div>
+                  <div className='mt-2 text-base font-semibold text-strong'>
+                    {vipActive ? 'More than Free plan' : `${FREE_TIER_MAX_PETS} pets on Free`}
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className='glass-card p-6'>
+              <div className='eyebrow'>What to prepare</div>
+              <ul className='mt-5 grid gap-3 text-sm leading-7 text-body'>
+                <li className='dark-shell-panel p-4'>
+                  A name that feels natural in daily conversation.
+                </li>
+                <li className='dark-shell-panel p-4'>
+                  A personality summary to shape tone and emotional style.
+                </li>
+                <li className='dark-shell-panel p-4'>
+                  Favorite food and habits to make the pet feel more specific and memorable.
+                </li>
+                <li className='dark-shell-panel p-4'>
+                  An optional photo in JPG, PNG, or WebP up to 5 MB.
+                </li>
+              </ul>
+            </section>
+          </aside>
+
+          {hitFreePetLimit ? (
+            <section className='glass-card p-6 md:p-8'>
+              <div className='eyebrow'>Free limit reached</div>
+              <h2 className='section-title mt-4 text-[clamp(1.9rem,3vw,2.8rem)]'>
+                You’ve reached the Free pet limit
+              </h2>
+
+              <p className='mt-4 text-[0.98rem] leading-[1.9] text-body'>
+                You already have {petCount} pet{petCount === 1 ? '' : 's'} on the Free plan. Upgrade
+                to VIP if you want more companion capacity and deeper long-term continuity.
+              </p>
+
+              <div className='mt-6 flex flex-wrap gap-3'>
+                <Link href='/pets' className='subtle-button'>
+                  Manage Pets
+                </Link>
+                <Link href='/pricing' className='brand-button'>
+                  Upgrade to VIP
+                </Link>
+                <Link href='/memories' className='subtle-button'>
+                  Back to Memories
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <section className='glass-card p-6 md:p-8'>
+              <div className='eyebrow'>Pet profile setup</div>
+              <h2 className='section-title mt-4 text-[clamp(1.9rem,3vw,2.8rem)]'>
+                Create your first warm companion
+              </h2>
+
+              <p className='mt-4 text-[0.98rem] leading-[1.9] text-body'>
+                The more specific the profile, the more emotionally consistent your companion can
+                feel in early conversations.
+              </p>
+
               <form
                 action={createPetAction}
-                className='mt-7 grid gap-5'
                 encType='multipart/form-data'
+                className='mt-6 grid gap-5'
               >
                 <div className='grid gap-5 md:grid-cols-2'>
-                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                    Name
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Name</span>
+                    <input type='text' name='name' placeholder='Mimi' required />
+                  </label>
+
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Breed</span>
+                    <input type='text' name='breed' placeholder='Shiba Inu, British Shorthair, etc.' />
+                  </label>
+                </div>
+
+                <label className='grid gap-2'>
+                  <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                    Personality
+                  </span>
+                  <textarea
+                    name='personality'
+                    placeholder='Warm, affectionate, playful, slightly clingy, loves calm evening chats...'
+                    required
+                  />
+                </label>
+
+                <div className='grid gap-5 md:grid-cols-2'>
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                      Favorite Food
+                    </span>
                     <input
-                      className='input-shell'
-                      name='name'
                       type='text'
-                      placeholder='e.g. Max'
-                      required
-                      maxLength={30}
+                      name='favoriteFood'
+                      placeholder='Chicken, salmon treats, sweet potato, etc.'
                     />
                   </label>
 
-                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                    Breed
+                  <label className='grid gap-2'>
+                    <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                      Daily Habits
+                    </span>
                     <input
-                      className='input-shell'
-                      name='breed'
                       type='text'
-                      placeholder='e.g. Shiba Inu'
-                      required
-                      maxLength={30}
+                      name='dailyHabits'
+                      placeholder='Morning cuddles, sunset walks, nap after lunch...'
                     />
                   </label>
                 </div>
 
-                <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                  Personality
+                <label className='grid gap-2'>
+                  <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                    Photo (optional)
+                  </span>
                   <input
-                    className='input-shell'
-                    name='personality'
-                    type='text'
-                    placeholder='e.g. Playful, clingy, loves belly rubs'
-                    required
-                    maxLength={120}
+                    type='file'
+                    name='photo'
+                    accept='image/jpeg,image/png,image/webp'
                   />
-                </label>
-
-                <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                  Favorite Food
-                  <input
-                    className='input-shell'
-                    name='favoriteFood'
-                    type='text'
-                    placeholder='e.g. Chicken breast, freeze-dried treats'
-                    maxLength={120}
-                  />
-                </label>
-
-                <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                  Daily Habits
-                  <textarea
-                    className='input-shell min-h-[120px]'
-                    name='dailyHabits'
-                    placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
-                    maxLength={500}
-                  />
-                </label>
-
-                <label className='grid gap-2 text-sm font-bold text-slate-800'>
-                  Upload Photo
-                  <div className='rounded-[24px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
-                    <div className='text-3xl'>📸</div>
-                    <p className='mt-3 text-sm font-bold'>
-                      Supports JPG / PNG / WebP, max 5MB
-                    </p>
-                    <p className='mt-1 text-xs font-normal leading-6 text-slate-600'>
-                      The image will be stored with your pet profile and used to
-                      personalize the experience.
-                    </p>
-                    <input
-                      className='input-shell mt-4'
-                      name='image'
-                      type='file'
-                      accept='image/png,image/jpeg,image/webp'
-                      required
-                    />
-                  </div>
+                  <span className='text-xs text-soft'>
+                    Accepted: JPG / PNG / WebP · max 5 MB
+                  </span>
                 </label>
 
                 <div className='flex flex-wrap gap-3 pt-2'>
                   <button type='submit' className='brand-button'>
-                    Save Pet Profile
+                    Create Pet
                   </button>
-
                   <Link href='/memories' className='subtle-button'>
-                    Back to Memories
+                    Cancel
                   </Link>
                 </div>
               </form>
-            )}
-          </section>
-        </div>
+            </section>
+          )}
+        </section>
       </main>
 
-      <SiteFooter text='© 2026 EchoPaws.ai. Create your first pet profile.' />
+      <SiteFooter text='© 2026 EchoPaws.ai. All Rights Reserved.' />
     </div>
   );
 }

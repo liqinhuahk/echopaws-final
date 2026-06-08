@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { createVipCheckoutSession, openBillingPortal } from '@/app/actions/billing';
 import { SiteFooter } from '@/components/site-footer';
 import { SiteHeader } from '@/components/site-header';
 import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
@@ -8,103 +7,59 @@ import { findSubscriptionByUserId } from '@/lib/subscriptions';
 const FREE_TOTAL_CHAT_LIMIT = 20;
 const FREE_TIER_MAX_PETS = 2;
 const VIP_PRICE = '$9.99';
-
 const ACTIVE_VIP_STATUSES = ['active', 'trialing', 'past_due'];
 
 const comparisonRows = [
-  {
-    feature: 'Price',
-    free: '$0 forever',
-    vip: `${VIP_PRICE} / month`,
-  },
-  {
-    feature: 'Chats',
-    free: `${FREE_TOTAL_CHAT_LIMIT} lifetime chats`,
-    vip: 'Unlimited chats',
-  },
-  {
-    feature: 'Pet capacity',
-    free: `Up to ${FREE_TIER_MAX_PETS} pets`,
-    vip: `More than ${FREE_TIER_MAX_PETS} pets`,
-  },
-  {
-    feature: 'Memory',
-    free: 'Basic memory capability',
-    vip: 'Deeper long-term memory',
-  },
-  {
-    feature: 'Emotional continuity',
-    free: 'Light companionship context',
-    vip: 'Richer continuity and deeper emotional understanding',
-  },
-  {
-    feature: 'Voice features',
-    free: 'Not included',
-    vip: 'Priority access to future voice features',
-  },
-  {
-    feature: 'Best for',
-    free: 'Trying EchoPaws for the first time',
-    vip: 'Building a long-term emotional bond',
-  },
+  ['Price', '$0 forever', '$9.99 / month'],
+  ['Chats', `${FREE_TOTAL_CHAT_LIMIT} lifetime chats`, 'Unlimited chats'],
+  ['Pet capacity', `Up to ${FREE_TIER_MAX_PETS} pets`, `More than ${FREE_TIER_MAX_PETS} pets`],
+  ['Memory', 'Basic memory capability', 'Deeper long-term memory'],
+  ['Emotional continuity', 'Basic continuity', 'Richer emotional continuity'],
+  ['Voice features', 'Future basic access', 'Priority future access'],
+  ['Best for', 'Trying EchoPaws gently', 'Users who want deeper companionship'],
 ];
 
 const faqs = [
   {
-    question: 'How do I pay for VIP?',
-    answer:
-      'VIP is billed monthly through Stripe. You can subscribe securely with the payment methods supported by Stripe in your region.',
+    q: 'Can I cancel VIP anytime?',
+    a: 'Yes. You can manage or cancel your membership through the billing portal.',
   },
   {
-    question: 'Can I cancel my subscription anytime?',
-    answer:
-      'Yes. You can cancel from the billing portal at any time. Your VIP access will remain available until the end of the current billing period.',
+    q: 'Do Free chats reset every day?',
+    a: 'No. Free includes 20 total lifetime chats across your account, not a daily reset.',
   },
   {
-    question: 'How many chats are included in the Free plan?',
-    answer: `Free includes ${FREE_TOTAL_CHAT_LIMIT} lifetime chats shared across your account. These chats do not reset daily.`,
+    q: 'What happens to my pets after canceling VIP?',
+    a: 'Your data remains in your account. Future pet capacity and premium behavior depend on your current plan status.',
   },
   {
-    question: 'How many pets can I create on Free?',
-    answer: `Free supports up to ${FREE_TIER_MAX_PETS} pets. If you want more pet capacity, you can upgrade to VIP.`,
-  },
-  {
-    question: 'What extra benefits does VIP unlock?',
-    answer:
-      'VIP unlocks unlimited chats, more pet capacity, deeper long-term memory, richer emotional continuity, and priority access to future voice features.',
-  },
-  {
-    question: 'What happens to my data if I cancel VIP?',
-    answer:
-      'Your account and pets remain in your account. After cancellation, your plan returns to Free rules at the end of the paid period.',
+    q: 'Is VIP mainly about message count?',
+    a: 'No. VIP is designed for deeper continuity, stronger memory, and more room for long-term companionship.',
   },
 ];
 
-export default async function PricingPage({
-  searchParams,
-}: {
-  searchParams?: { error?: string; billing?: string; checkout?: string };
-}) {
-  let isLoggedIn = false;
+export default async function PricingPage() {
   let vipActive = false;
+  let signedIn = false;
 
   if (hasSupabaseEnv()) {
-    const supabase = createServerSupabaseClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    try {
+      const supabase = createServerSupabaseClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    isLoggedIn = Boolean(user);
+      signedIn = !!user;
 
-    if (user) {
-      try {
+      if (user) {
         const subscription = await findSubscriptionByUserId(user.id);
         vipActive =
           subscription?.plan === 'vip' &&
-          ACTIVE_VIP_STATUSES.includes(subscription.status);
-      } catch {
-        vipActive = false;
+          ACTIVE_VIP_STATUSES.includes(subscription.status ?? '');
       }
+    } catch {
+      vipActive = false;
+      signedIn = false;
     }
   }
 
@@ -112,114 +67,75 @@ export default async function PricingPage({
     <div className='app-brand-backdrop'>
       <SiteHeader
         theme='dark'
-        ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
-        ctaHref={vipActive ? '/account' : '#plans'}
+        ctaLabel={vipActive ? 'Manage Membership' : 'Get Started'}
+        ctaHref={vipActive ? '/account' : '/create-pet'}
       />
 
       <main className='container-shell py-8 md:py-10'>
-        <section className='rounded-[32px] border border-white/55 bg-white/78 p-6 shadow-[0_20px_48px_rgba(15,23,42,0.10)] backdrop-blur-md md:p-8'>
-          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
-            ✨ Membership
-          </div>
+        <section className='glass-card p-6 md:p-8'>
+          <div className='eyebrow'>✦ Membership</div>
 
-          <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.2rem)] font-black tracking-[-0.05em] text-slate-900'>
+          <h1 className='page-title mt-5 max-w-4xl text-[clamp(2.5rem,5vw,4.6rem)]'>
             Pricing designed for deeper companionship
           </h1>
 
-          <p className='mt-4 max-w-4xl text-[1rem] leading-[1.9] text-slate-600'>
-            Start free, then upgrade only when the bond feels real. EchoPaws VIP is
-            not about counting messages — it is about preserving continuity,
-            emotional memory, and a companion that keeps growing with you.
+          <p className='page-subtitle mt-5 max-w-4xl text-[1rem] leading-[1.95]'>
+            Start free, then upgrade only when the bond feels real. EchoPaws VIP is not about
+            counting messages — it is about preserving continuity, emotional memory, and a
+            companion that keeps growing with you.
           </p>
         </section>
 
-        {searchParams?.error ? (
-          <div className='mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
-            {searchParams.error}
-          </div>
-        ) : null}
-
-        {searchParams?.billing ? (
-          <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
-            {searchParams.billing}
-          </div>
-        ) : null}
-
-        {searchParams?.checkout === 'success' ? (
-          <div className='mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
-            Payment successful. Your VIP Membership is now active.
-          </div>
-        ) : null}
-
-        {searchParams?.checkout === 'cancelled' ? (
-          <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
-            Checkout was cancelled. You can upgrade to VIP anytime.
-          </div>
-        ) : null}
-
-        <section id='plans' className='mt-8 grid gap-5 md:grid-cols-2'>
+        <section className='mt-8 grid gap-5 md:grid-cols-2'>
           <article className='glass-card p-6'>
-            <div className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-stone-700'>
-              Free Plan
+            <div className='eyebrow'>Free plan</div>
+            <h2 className='section-title mt-4 text-2xl'>Free</h2>
+
+            <div className='mt-4 flex items-end gap-1'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>$0</strong>
+              <span className='mb-1 text-sm font-semibold text-soft'>/ forever</span>
             </div>
 
-            <h2 className='mt-4 text-2xl font-extrabold text-slate-900'>Free</h2>
-
-            <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-5xl font-extrabold tracking-[-0.05em] text-slate-900'>
-                $0
-              </strong>
-              <span className='mb-1 text-muted'>/ forever</span>
-            </div>
-
-            <p className='mt-3 text-sm leading-8 text-muted'>
-              A gentle starting point for first-time users who want to explore
-              EchoPaws before upgrading.
+            <p className='mt-4 text-sm leading-7 text-body'>
+              A gentle starting point for first-time users who want to explore EchoPaws before
+              upgrading.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-body'>
               <li>✓ {FREE_TOTAL_CHAT_LIMIT} lifetime chats</li>
               <li>✓ Up to {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Basic memory capability</li>
               <li>✓ Pet profile and photo upload</li>
             </ul>
 
-            <div className='mt-5 rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-900'>
-              Shared across your account. Chats do not reset daily.
+            <div className='mt-6'>
+              <Link href={signedIn ? '/create-pet' : '/login'} className='subtle-button w-full'>
+                {signedIn ? 'Continue with Free' : 'Sign in to start'}
+              </Link>
             </div>
-
-            <Link
-              href={isLoggedIn ? '/create-pet' : '/login'}
-              className='subtle-button mt-6 w-full text-center'
-            >
-              {isLoggedIn ? 'Create Your Pet' : 'Start Free'}
-            </Link>
           </article>
 
-          <article className='glass-card relative overflow-hidden bg-gradient-to-b from-white/88 via-orange-50/80 to-amber-50/86 p-6'>
-            <div className='absolute right-5 top-5 rounded-full bg-orange-100 px-3 py-2 text-xs font-extrabold text-orange-800'>
-              Recommended
+          <article className='glass-card p-6'>
+            <div className='flex items-center justify-between gap-3'>
+              <div className='eyebrow'>VIP membership</div>
+              <span className='tag-chip tag-chip--warm'>Recommended</span>
             </div>
 
-            <div className='inline-flex rounded-full bg-orange-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.14em] text-orange-800'>
-              VIP Membership
-            </div>
+            <h2 className='section-title mt-4 text-2xl'>VIP</h2>
 
-            <h2 className='mt-4 text-2xl font-extrabold text-slate-900'>VIP</h2>
-
-            <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-5xl font-extrabold tracking-[-0.05em] text-slate-900'>
+            <div className='mt-4 flex items-end gap-1'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>
                 {VIP_PRICE}
               </strong>
-              <span className='mb-1 text-muted'>/ month</span>
+              <span className='mb-1 text-sm font-semibold text-soft'>/ month</span>
             </div>
 
-            <p className='mt-3 text-sm leading-8 text-muted'>
-              Best for users who want uninterrupted companionship, deeper memory,
-              and more pet capacity.
+            <p className='mt-4 text-sm leading-7 text-body'>
+              Best for users who want uninterrupted companionship, deeper memory, and more pet
+              capacity.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-body'>
               <li>✓ Unlimited chats</li>
               <li>✓ More than {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Deeper long-term memory</li>
@@ -227,121 +143,55 @@ export default async function PricingPage({
               <li>✓ Priority access to future voice features</li>
             </ul>
 
-            {vipActive ? (
+            <div className='mt-6'>
               <Link
-                href='/account'
-                className='brand-button mt-6 w-full text-center'
+                href={vipActive ? '/account' : signedIn ? '/account' : '/login'}
+                className='brand-button w-full'
               >
-                View Current Plan
+                {vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
               </Link>
-            ) : isLoggedIn ? (
-              <form action={createVipCheckoutSession} className='mt-6'>
-                <button className='brand-button w-full'>Upgrade to VIP</button>
-              </form>
-            ) : (
-              <Link
-                href='/login'
-                className='brand-button mt-6 w-full text-center'
-              >
-                Sign in to upgrade
-              </Link>
-            )}
-
-            {isLoggedIn ? (
-              <form action={openBillingPortal} className='mt-3'>
-                <button className='subtle-button w-full'>
-                  Manage Subscription
-                </button>
-              </form>
-            ) : null}
+            </div>
           </article>
         </section>
 
-        <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <div className='glass-card bg-card-gradient p-6'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Why users upgrade
-            </div>
-            <p className='mt-3 text-lg leading-9 text-slate-800'>
-              Not because EchoPaws simply answers more questions — but because it
-              feels more personal over time. VIP is about memory depth, emotional
-              continuity, and uninterrupted companionship.
-            </p>
-          </div>
+        <section className='mt-8 glass-card p-6'>
+          <h2 className='section-title text-2xl'>Plan comparison</h2>
 
-          <div className='glass-card bg-card-gradient p-6'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Access policy
+          <div className='mt-5 overflow-hidden rounded-[24px] border border-white/8'>
+            <div className='grid grid-cols-3 bg-white/4 px-4 py-3 text-sm font-bold text-[rgba(255,244,230,0.82)]'>
+              <div>Feature</div>
+              <div>Free</div>
+              <div>VIP</div>
             </div>
-            <p className='mt-3 text-lg leading-9 text-slate-800'>
-              Free accounts include {FREE_TOTAL_CHAT_LIMIT} lifetime chats and up
-              to {FREE_TIER_MAX_PETS} pets. VIP removes the{' '}
-              {FREE_TOTAL_CHAT_LIMIT}-chat limit, unlocks more pet capacity, and
-              gives your account a deeper, longer-lasting companionship layer.
-            </p>
+
+            {comparisonRows.map(([label, free, vip]) => (
+              <div
+                key={label}
+                className='grid grid-cols-3 border-t border-white/8 px-4 py-4 text-sm leading-7 text-body'
+              >
+                <div className='font-semibold text-strong'>{label}</div>
+                <div>{free}</div>
+                <div>{vip}</div>
+              </div>
+            ))}
           </div>
         </section>
 
-        <section className='mt-8 glass-card overflow-hidden p-0'>
-          <div className='border-b border-black/5 px-6 py-5'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              Free / VIP comparison
-            </div>
-            <h2 className='mt-2 text-2xl font-extrabold text-slate-900'>
-              Choose the level of companionship that fits you
-            </h2>
-          </div>
+        <section className='mt-8 glass-card p-6'>
+          <h2 className='section-title text-2xl'>Frequently asked questions</h2>
 
-          <div className='overflow-x-auto'>
-            <table className='w-full min-w-[720px] text-left'>
-              <thead className='bg-stone-50 text-sm text-stone-700'>
-                <tr>
-                  <th className='px-6 py-4 font-bold'>Feature</th>
-                  <th className='px-6 py-4 font-bold'>Free</th>
-                  <th className='px-6 py-4 font-bold'>VIP</th>
-                </tr>
-              </thead>
-              <tbody>
-                {comparisonRows.map((row) => (
-                  <tr key={row.feature} className='border-t border-black/5'>
-                    <td className='px-6 py-4 font-semibold text-slate-900'>
-                      {row.feature}
-                    </td>
-                    <td className='px-6 py-4 text-sm text-muted'>{row.free}</td>
-                    <td className='px-6 py-4 text-sm text-stone-900'>
-                      {row.vip}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
-
-        <section className='mt-8'>
-          <div className='text-center'>
-            <div className='eyebrow'>FAQ</div>
-            <h2 className='page-title mt-4 text-white md:text-slate-900'>
-              Questions users ask before upgrading
-            </h2>
-          </div>
-
-          <div className='mt-8 grid gap-5 md:grid-cols-2'>
+          <div className='mt-5 grid gap-4 md:grid-cols-2'>
             {faqs.map((item) => (
-              <article key={item.question} className='glass-card p-6'>
-                <h3 className='text-lg font-extrabold text-slate-900'>
-                  {item.question}
-                </h3>
-                <p className='mt-3 text-sm leading-8 text-muted'>
-                  {item.answer}
-                </p>
+              <article key={item.q} className='dark-shell-panel p-5'>
+                <h3 className='text-base font-extrabold text-strong'>{item.q}</h3>
+                <p className='mt-2 text-sm leading-7 text-body'>{item.a}</p>
               </article>
             ))}
           </div>
         </section>
       </main>
 
-      <SiteFooter />
+      <SiteFooter text='© 2026 EchoPaws.ai. All Rights Reserved.' />
     </div>
   );
 }

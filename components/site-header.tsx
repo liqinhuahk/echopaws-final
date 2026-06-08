@@ -23,7 +23,7 @@ function isRouteLink(href: string) {
 export function SiteHeader({
   ctaLabel = 'Get Started',
   ctaHref = '/create-pet',
-  theme = 'light',
+  theme = 'dark',
 }: SiteHeaderProps) {
   const pathname = usePathname();
   const { openContactModal } = useContactModal();
@@ -56,8 +56,8 @@ export function SiteHeader({
   }
 
   const headerShellClassName = isDark
-    ? 'border-b border-white/10 bg-[rgba(18,12,8,0.42)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(18,12,8,0.34)]'
-    : 'border-b border-black/5 bg-[rgba(255,255,255,0.82)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(255,255,255,0.74)]';
+    ? 'border-b border-white/10 bg-[linear-gradient(90deg,rgba(20,13,9,0.96)_0%,rgba(32,20,14,0.95)_50%,rgba(20,13,9,0.96)_100%)] shadow-[0_14px_32px_rgba(0,0,0,0.34)] backdrop-blur-xl supports-[backdrop-filter]:bg-[linear-gradient(90deg,rgba(20,13,9,0.92)_0%,rgba(32,20,14,0.90)_50%,rgba(20,13,9,0.92)_100%)]'
+    : 'border-b border-black/5 bg-white/95 shadow-[0_12px_28px_rgba(15,23,42,0.08)] backdrop-blur-xl supports-[backdrop-filter]:bg-white/88';
 
   const brandTextClassName = isDark
     ? 'bg-gradient-to-r from-amber-200 via-amber-300 to-orange-400 bg-clip-text text-lg font-black tracking-[-0.03em] text-transparent md:text-xl'
@@ -76,7 +76,6 @@ export function SiteHeader({
 
   return (
     <>
-      {/* 占位：让 fixed header 不遮住下面内容 */}
       <div className='hidden h-[84px] md:block' aria-hidden='true' />
 
       <header className='fixed inset-x-0 top-0 z-[100] hidden md:block'>

@@ -60,11 +60,11 @@ export default function HomePage() {
                 </div>
 
                 <h1 className='mt-6 text-[clamp(3.2rem,8vw,6rem)] font-black leading-[0.9] tracking-[-0.07em] text-white'>
-                  Your pet.
-                  <br />
-                  <span className='inline-block whitespace-nowrap'>
-                    <span className='text-[#ffbf1f]'>Forever</span> by your side.
+                  <span className='block'>Your pet.</span>
+                  <span className='mt-1 block whitespace-nowrap'>
+                    <span className='text-[#ffbf1f]'>Forever</span> by
                   </span>
+                  <span className='block whitespace-nowrap'>your side.</span>
                 </h1>
 
                 <p className='mt-6 max-w-[560px] text-[1rem] leading-[1.95] text-white/84 md:text-[1.04rem]'>

@@ -1,4 +1,5 @@
 import {
+  sendPasswordSetupLink,
   signInWithGoogle,
   signInWithPassword,
   signUpWithPassword,
@@ -112,9 +113,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 </div>
 
                 <div className='rounded-[24px] border border-white/10 bg-white/[0.05] px-5 py-4 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
-                  <strong className='text-white'>Fast start:</strong> sign in with
-                  Google or email, then create your AI pet and begin chatting in just a
-                  few minutes.
+                  <strong className='text-white'>Fast start:</strong> continue with
+                  Google, or sign in with email after setting your password.
                 </div>
               </div>
             </div>
@@ -134,14 +134,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 Continue with your account
               </h2>
               <p className='mt-2 text-[0.98rem] leading-[1.8] text-stone-300'>
-                Choose Google or email to continue. After signing in, you can return to
-                your pet, memories, and ongoing conversations right away.
+                Choose Google or email to continue. If this account was first created
+                with Google, continue with Google or set a password first.
               </p>
             </div>
 
             <p className='mt-4 text-[0.98rem] leading-[1.85] text-stone-300 lg:hidden'>
-              Sign in first, then create your AI pet. The whole flow is lightweight —
-              you can be chatting within minutes.
+              If this account was first created with Google, continue with Google or
+              set a password first before using email sign-in.
             </p>
 
             {message ? (
@@ -163,13 +163,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   className='flex w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition hover:bg-white/[0.08]'
                 >
                   <GoogleLogo />
-                  <span>Sign in with Google</span>
+                  <span>Continue with Google</span>
                 </button>
               </form>
 
               <div className='rounded-2xl border border-amber-300/12 bg-amber-300/8 px-4 py-3 text-center text-sm leading-7 text-stone-200'>
-                Continue with Google for the fastest setup, or use email below to sign
-                in and create your EchoPaws account.
+                If you first created this account with Google, continue with Google.
+                If you want to use email sign-in later, set a password first.
               </div>
             </div>
 
@@ -210,6 +210,38 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   autoComplete='nickname'
                 />
               </label>
+
+              <div className='flex items-center justify-between gap-3 text-sm'>
+                <span className='text-stone-400'>
+                  Google-first account and no password yet?
+                </span>
+
+                <form action={sendPasswordSetupLink}>
+                  <input type='hidden' name='email' value='' />
+                </form>
+              </div>
+
+              <div className='rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3'>
+                <div className='flex flex-col gap-3 md:flex-row md:items-center md:justify-between'>
+                  <div className='text-sm leading-7 text-stone-300'>
+                    Forgot password or want to enable email sign-in for a Google-first
+                    account?
+                  </div>
+
+                  <form action={sendPasswordSetupLink} className='shrink-0'>
+                    <button
+                      type='submit'
+                      className='rounded-full border border-amber-300/18 bg-amber-300/10 px-4 py-2 text-sm font-bold text-amber-200 transition hover:bg-amber-300/14'
+                    >
+                      Forgot password / Set password
+                    </button>
+                  </form>
+                </div>
+                <p className='mt-2 text-xs leading-6 text-stone-500'>
+                  Enter your email above first, then click this button. We will send a
+                  secure email link for password setup or reset.
+                </p>
+              </div>
 
               <div className='grid gap-3 pt-1 md:grid-cols-2'>
                 <button type='submit' className='brand-button w-full'>

@@ -54,7 +54,7 @@ export default function HomePage() {
         <main className='relative z-10'>
           <section className='container-shell flex min-h-[calc(100vh-96px)] items-center py-10 md:py-16'>
             <div className='grid w-full items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]'>
-              <div className='max-w-[580px]'>
+              <div className='max-w-[640px]'>
                 <div className='inline-flex items-center rounded-full border border-white/20 bg-white/8 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.22em] text-[#ffd089] shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-sm'>
                   Every memory, every bark, forever.
                 </div>
@@ -62,9 +62,9 @@ export default function HomePage() {
                 <h1 className='mt-6 text-[clamp(3.2rem,8vw,6rem)] font-black leading-[0.9] tracking-[-0.07em] text-white'>
                   Your pet.
                   <br />
-                  <span className='text-[#ffbf1f]'>Forever</span> by your
-                  <br />
-                  side.
+                  <span className='inline-block whitespace-nowrap'>
+                    <span className='text-[#ffbf1f]'>Forever</span> by your side.
+                  </span>
                 </h1>
 
                 <p className='mt-6 max-w-[560px] text-[1rem] leading-[1.95] text-white/84 md:text-[1.04rem]'>
@@ -207,7 +207,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <SiteFooter />
+      <SiteFooter theme='light' />
     </div>
   );
 }

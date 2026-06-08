@@ -58,7 +58,9 @@ export function SiteHeader({
           <div className='flex h-[76px] items-center justify-between gap-4'>
             <Link href='/' className='flex min-w-0 items-center gap-3'>
               <PawMark />
-              <span className={`truncate text-[1.15rem] font-black tracking-[-0.03em] ${brandTextClassName}`}>
+              <span
+                className={`truncate text-[1.15rem] font-black tracking-[-0.03em] ${brandTextClassName}`}
+              >
                 EchoPaws
               </span>
             </Link>

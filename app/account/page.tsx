@@ -16,11 +16,9 @@ const ACTIVE_VIP_STATUSES = ['active', 'trialing', 'past_due'];
 
 function maskEmail(email: string | null | undefined) {
   if (!email || !email.includes('@')) return 'No email available';
-
   const [localPart, domain] = email.split('@');
   const safeLocal =
     localPart.length <= 3 ? `${localPart.slice(0, 1)}***` : `${localPart.slice(0, 3)}***`;
-
   return `${safeLocal}@${domain}`;
 }
 
@@ -40,13 +38,11 @@ function getCopyEmailScript() {
       const button = document.getElementById('copy-email-button');
       const feedback = document.getElementById('copy-email-feedback');
       if (!button || !feedback) return;
-
       const originalText = feedback.textContent || 'Copy email';
 
       button.addEventListener('click', async () => {
         const email = button.getAttribute('data-email');
         if (!email) return;
-
         try {
           await navigator.clipboard.writeText(email);
           feedback.textContent = 'Copied';
@@ -67,10 +63,10 @@ function getCopyEmailScript() {
 function BenefitItem({ text }: { text: string }) {
   return (
     <li className='flex items-start gap-3'>
-      <span className='mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-orange-100 text-[11px] font-black text-orange-700'>
+      <span className='mt-[2px] inline-flex h-5 w-5 items-center justify-center rounded-full bg-amber-400/12 text-[11px] font-black text-amber-300'>
         ✓
       </span>
-      <span>{text}</span>
+      <span className='text-[rgba(255,244,230,0.78)]'>{text}</span>
     </li>
   );
 }
@@ -131,16 +127,14 @@ export default async function AccountPage() {
       />
 
       <main className='container-shell py-8 md:py-10'>
-        <section className='rounded-[32px] border border-white/55 bg-white/84 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-8'>
-          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
-            👤 My Account
-          </div>
+        <section className='glass-card p-6 md:p-8'>
+          <div className='eyebrow'>👤 My Account</div>
 
-          <h1 className='mt-4 text-[clamp(2.2rem,4vw,3.8rem)] font-black tracking-[-0.05em] text-slate-900'>
+          <h1 className='page-title mt-5 text-[clamp(2.4rem,5vw,4.4rem)]'>
             Welcome back, {displayName}
           </h1>
 
-          <p className='mt-4 max-w-4xl text-[1rem] leading-[1.9] text-slate-600'>
+          <p className='page-subtitle mt-4 max-w-4xl text-[1rem] leading-[1.95]'>
             Review your current membership, pet setup, Free versus VIP benefits, billing access,
             and security controls in one warm, unified space that matches the EchoPaws home
             experience.
@@ -148,12 +142,12 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]'>
-          <div className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card p-6'>
             <div className='flex flex-wrap items-center gap-3'>
-              <h2 className='text-2xl font-extrabold text-slate-900'>Account Status</h2>
+              <h2 className='section-title text-2xl'>Account Status</h2>
               <span
-                className={`inline-flex rounded-full px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] ${
-                  vipActive ? 'bg-orange-100 text-orange-800' : 'bg-stone-100 text-stone-700'
+                className={`tag-chip ${
+                  vipActive ? 'tag-chip--warm' : 'tag-chip--soft'
                 }`}
               >
                 {planBadge}
@@ -161,54 +155,54 @@ export default async function AccountPage() {
             </div>
 
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
-                <div className='text-sm font-bold text-muted'>Email</div>
-                <div className='mt-2 text-base font-semibold text-slate-900'>{maskedEmail}</div>
+              <div className='dark-shell-panel p-4'>
+                <div className='text-sm font-bold text-soft'>Email</div>
+                <div className='mt-2 text-base font-semibold text-strong'>{maskedEmail}</div>
 
-                <div className='mt-2 flex flex-wrap items-center gap-2'>
+                <div className='mt-3 flex flex-wrap items-center gap-2'>
                   <button
                     id='copy-email-button'
                     type='button'
                     data-email={fullEmail}
-                    className='shrink-0 rounded-full border border-black/10 bg-stone-50 px-3 py-1 text-xs font-bold text-stone-700 transition hover:bg-stone-100'
+                    className='subtle-button min-h-[36px] px-3 text-xs'
                   >
                     <span id='copy-email-feedback'>Copy email</span>
                   </button>
 
-                  <span className='text-xs text-muted'>Full email hidden for privacy</span>
+                  <span className='text-xs text-soft'>Full email hidden for privacy</span>
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
-                <div className='text-sm font-bold text-muted'>Current Plan</div>
-                <div className='mt-2 text-base font-semibold text-slate-900'>{currentPlan}</div>
-                <div className='mt-1 text-xs text-muted'>{planStatus}</div>
+              <div className='dark-shell-panel p-4'>
+                <div className='text-sm font-bold text-soft'>Current Plan</div>
+                <div className='mt-2 text-base font-semibold text-strong'>{currentPlan}</div>
+                <div className='mt-1 text-xs text-soft'>{planStatus}</div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
-                <div className='text-sm font-bold text-muted'>Pets</div>
-                <div className='mt-2 text-base font-semibold text-slate-900'>{petCount}</div>
-                <div className='mt-1 text-xs text-muted'>
+              <div className='dark-shell-panel p-4'>
+                <div className='text-sm font-bold text-soft'>Pets</div>
+                <div className='mt-2 text-base font-semibold text-strong'>{petCount}</div>
+                <div className='mt-1 text-xs text-soft'>
                   {defaultPet ? `Default pet: ${defaultPet.name}` : 'No default pet set'}
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
-                <div className='text-sm font-bold text-muted'>
+              <div className='dark-shell-panel p-4'>
+                <div className='text-sm font-bold text-soft'>
                   {vipActive ? 'Chat Access' : 'Free Chat Allowance'}
                 </div>
-                <div className='mt-2 text-base font-semibold text-slate-900'>
+                <div className='mt-2 text-base font-semibold text-strong'>
                   {vipActive ? 'Unlimited' : `${FREE_TOTAL_CHAT_LIMIT} total`}
                 </div>
-                <div className='mt-1 text-xs text-muted'>
+                <div className='mt-1 text-xs text-soft'>
                   {vipActive ? 'Unlimited chats with VIP' : 'Lifetime chats, not daily reset'}
                 </div>
               </div>
             </div>
 
             {!vipActive ? (
-              <div className='mt-5 rounded-2xl border border-amber-100 bg-amber-50/90 px-4 py-4 text-sm text-amber-900'>
-                <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-amber-800'>
+              <div className='mt-5 rounded-2xl border border-amber-300/14 bg-amber-400/8 px-4 py-4 text-sm text-amber-100'>
+                <div className='text-xs font-extrabold uppercase tracking-[0.12em] text-amber-300'>
                   Free plan snapshot
                 </div>
                 <p className='mt-2 leading-7'>
@@ -219,8 +213,8 @@ export default async function AccountPage() {
                 </p>
               </div>
             ) : (
-              <div className='mt-5 rounded-2xl border border-orange-100 bg-orange-50/90 px-4 py-4 text-sm text-orange-900'>
-                <div className='text-xs font-extrabold uppercase tracking-[0.1em] text-orange-800'>
+              <div className='mt-5 rounded-2xl border border-orange-300/14 bg-orange-400/8 px-4 py-4 text-sm text-orange-100'>
+                <div className='text-xs font-extrabold uppercase tracking-[0.12em] text-orange-300'>
                   VIP membership active
                 </div>
                 <p className='mt-2 leading-7'>
@@ -232,12 +226,10 @@ export default async function AccountPage() {
             )}
           </div>
 
-          <div className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card p-6'>
             <div className='flex flex-wrap items-center gap-3'>
-              <h2 className='text-2xl font-extrabold text-slate-900'>Membership & Security</h2>
-              <span className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-stone-700'>
-                Quick Actions
-              </span>
+              <h2 className='section-title text-2xl'>Membership & Security</h2>
+              <span className='tag-chip tag-chip--soft'>Quick Actions</span>
             </div>
 
             <div className='mt-5 grid gap-3'>
@@ -268,27 +260,25 @@ export default async function AccountPage() {
               </form>
             </div>
 
-            <div className='mt-5 rounded-2xl border border-black/5 bg-stone-50/90 px-4 py-4 text-sm text-stone-700'>
+            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm text-body'>
               If you just upgraded, your VIP status may take a moment to appear here after checkout.
             </div>
           </div>
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
-              Free plan
-            </div>
-            <h2 className='mt-2 text-2xl font-extrabold text-slate-900'>What Free includes</h2>
+          <article className='glass-card p-6'>
+            <div className='eyebrow'>Free plan</div>
+            <h2 className='section-title mt-4 text-2xl'>What Free includes</h2>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7'>
               <BenefitItem text={`${FREE_TOTAL_CHAT_LIMIT} total lifetime chats`} />
               <BenefitItem text={`Up to ${FREE_TIER_MAX_PETS} pets`} />
               <BenefitItem text='Basic memory capability' />
               <BenefitItem text='Pet profile and photo upload' />
             </ul>
 
-            <div className='mt-5 rounded-2xl bg-stone-50/90 px-4 py-3 text-sm text-stone-700'>
+            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-body'>
               {petCount >= FREE_TIER_MAX_PETS && !vipActive
                 ? `You currently have ${petCount} pets on the Free plan. You've reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
                 : !vipActive
@@ -299,20 +289,18 @@ export default async function AccountPage() {
             </div>
           </article>
 
-          <article className='glass-card border border-orange-100 bg-gradient-to-b from-white/90 via-orange-50/80 to-amber-50/84 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
-              VIP membership
-            </div>
-            <h2 className='mt-2 text-2xl font-extrabold text-slate-900'>What VIP unlocks</h2>
+          <article className='glass-card p-6'>
+            <div className='eyebrow'>VIP membership</div>
+            <h2 className='section-title mt-4 text-2xl'>What VIP unlocks</h2>
 
             <div className='mt-4 flex items-end gap-1'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-slate-900'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>
                 $9.99
               </strong>
-              <span className='mb-1 text-sm font-semibold text-muted'>/Month</span>
+              <span className='mb-1 text-sm font-semibold text-soft'>/Month</span>
             </div>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7'>
               <BenefitItem text='Unlimited chats' />
               <BenefitItem text={`More than ${FREE_TIER_MAX_PETS} pets`} />
               <BenefitItem text='Deeper long-term memory' />
@@ -320,7 +308,7 @@ export default async function AccountPage() {
               <BenefitItem text='Priority access to future voice features' />
             </ul>
 
-            <div className='mt-5 rounded-2xl bg-orange-100/70 px-4 py-3 text-sm text-orange-900'>
+            <div className='mt-5 rounded-2xl border border-orange-300/14 bg-orange-400/8 px-4 py-3 text-sm text-orange-100'>
               VIP is best for users who want uninterrupted companionship, more pet capacity, and a
               pet that remembers with greater depth over time.
             </div>
@@ -328,34 +316,30 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
-              Plan rules
-            </div>
-            <p className='mt-3 text-sm leading-8 text-muted'>
+          <article className='glass-card p-6'>
+            <div className='eyebrow'>Plan rules</div>
+            <p className='mt-4 text-sm leading-8 text-body'>
               Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats and can keep up to{' '}
               {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
               unlocks more pet capacity, and gives your pet deeper memory continuity.
             </p>
 
-            <div className='mt-4 rounded-2xl bg-stone-50/90 px-4 py-4 text-sm leading-7 text-stone-700'>
+            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-body'>
               Keep in mind that plan changes may take a short moment to sync after checkout or
               billing updates. If your plan status looks outdated, refresh once after returning
               from billing.
             </div>
           </article>
 
-          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
-              Privacy & Control
-            </div>
-            <p className='mt-3 text-sm leading-8 text-muted'>
+          <article className='glass-card p-6'>
+            <div className='eyebrow'>Privacy & Control</div>
+            <p className='mt-4 text-sm leading-8 text-body'>
               Your account gives you control over sign-in status, pet management, and subscription
               access. You can sign out at any time, manage your membership from the billing portal,
               and review which pet is set as your current default companion.
             </p>
 
-            <div className='mt-4 rounded-2xl bg-stone-50/90 px-4 py-4 text-sm leading-7 text-stone-700'>
+            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-body'>
               For privacy, your full email address is hidden in the UI. Use the copy button if you
               need the complete address for support, billing, or login troubleshooting.
             </div>

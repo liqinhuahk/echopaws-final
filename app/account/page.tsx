@@ -337,4 +337,34 @@ export default async function AccountPage() {
               {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
               unlocks more pet capacity, and gives your pet deeper memory continuity.
             </p>
-          </article
+
+            <div className='mt-4 rounded-2xl bg-stone-50/90 px-4 py-4 text-sm leading-7 text-stone-700'>
+              Keep in mind that plan changes may take a short moment to sync after checkout or
+              billing updates. If your plan status looks outdated, refresh once after returning
+              from billing.
+            </div>
+          </article>
+
+          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
+              Privacy & Control
+            </div>
+            <p className='mt-3 text-sm leading-8 text-muted'>
+              Your account gives you control over sign-in status, pet management, and subscription
+              access. You can sign out at any time, manage your membership from the billing portal,
+              and review which pet is set as your current default companion.
+            </p>
+
+            <div className='mt-4 rounded-2xl bg-stone-50/90 px-4 py-4 text-sm leading-7 text-stone-700'>
+              For privacy, your full email address is hidden in the UI. Use the copy button if you
+              need the complete address for support, billing, or login troubleshooting.
+            </div>
+          </article>
+        </section>
+      </main>
+
+      <SiteFooter text='© 2026 EchoPaws.ai. All Rights Reserved.' />
+      <script dangerouslySetInnerHTML={{ __html: getCopyEmailScript() }} />
+    </div>
+  );
+}

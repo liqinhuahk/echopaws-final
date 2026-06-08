@@ -52,10 +52,6 @@ function buildLoginRedirect(params: { message?: string; error?: string }) {
   return query ? `/login?${query}` : '/login';
 }
 
-function fieldClassName() {
-  return 'w-full rounded-2xl border border-white/10 bg-black/30 px-4 py-3 text-sm text-white placeholder:text-stone-500 outline-none transition focus:border-amber-300/35 focus:bg-white/[0.05] focus:ring-4 focus:ring-amber-400/10';
-}
-
 export default async function CreatePetPage({
   searchParams,
 }: CreatePetPageProps) {
@@ -117,61 +113,41 @@ export default async function CreatePetPage({
       : '');
 
   return (
-    <div className='min-h-screen overflow-hidden bg-[#060504] text-[#f7efe5]'>
-      <div className='pointer-events-none fixed inset-0'>
-        <div className='absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(246,158,11,0.12),transparent_24%),radial-gradient(circle_at_top_right,rgba(249,115,22,0.08),transparent_22%),linear-gradient(180deg,#0b0908_0%,#060504_48%,#050404_100%)]' />
-        <div className='absolute left-[-10%] top-[8%] h-[28rem] w-[28rem] rounded-full bg-orange-500/10 blur-3xl' />
-        <div className='absolute right-[-8%] top-[12%] h-[22rem] w-[22rem] rounded-full bg-amber-300/8 blur-3xl' />
-      </div>
+    <div className='app-brand-backdrop'>
+      <SiteHeader theme='dark' ctaLabel='Open Memories' ctaHref='/memories' />
 
-      <div className='relative z-10 hidden md:block'>
-        <SiteHeader theme='dark' ctaLabel='Open Memories' ctaHref='/memories' />
-      </div>
-
-      <main className='container-shell relative z-10 py-10 md:py-14'>
+      <main className='container-shell py-8 md:py-10'>
         <div className='mx-auto max-w-4xl'>
-          <section className='rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,17,13,0.92),rgba(11,9,8,0.92))] p-7 shadow-[0_24px_56px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-9'>
-            <div className='inline-flex items-center gap-2 rounded-full border border-amber-300/16 bg-amber-300/10 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-amber-200'>
-              ✦ Create Pet
+          <section className='rounded-[32px] border border-white/55 bg-white/78 p-7 shadow-[0_20px_48px_rgba(15,23,42,0.09)] backdrop-blur-md md:p-9'>
+            <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+              🐾 Create Pet
             </div>
 
-            <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.4rem)] font-black tracking-[-0.05em] text-white'>
+            <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.4rem)] font-black tracking-[-0.05em] text-slate-900'>
               Create your AI pet profile
             </h1>
 
-            <p className='mt-4 max-w-3xl text-[1rem] leading-[1.9] text-stone-300'>
+            <p className='mt-4 max-w-3xl text-[1rem] leading-[1.9] text-slate-600'>
               Fill in a few details so EchoPaws can start building memory,
               personality, and a warmer companionship style around your pet.
             </p>
 
-            <div className='mt-5 flex flex-wrap gap-2'>
-              <span className='rounded-full border border-amber-300/16 bg-amber-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200'>
-                Noir Mode
-              </span>
-              <span className='rounded-full border border-amber-300/16 bg-amber-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-amber-200'>
-                Supabase Save
-              </span>
-              <span className='rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em] text-stone-300'>
-                Auto Open Chat
-              </span>
-            </div>
-
             {message ? (
-              <div className='mt-5 rounded-2xl border border-emerald-400/18 bg-emerald-400/10 px-4 py-3 text-sm font-bold text-emerald-200'>
+              <div className='mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
                 {message}
               </div>
             ) : null}
 
             {limitMessage ? (
-              <div className='mt-5 rounded-2xl border border-rose-400/18 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-100'>
+              <div className='mt-5 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
                 {limitMessage}
               </div>
             ) : null}
 
             {hitFreePetLimit ? (
               <>
-                <div className='mt-6 rounded-[26px] border border-white/10 bg-white/[0.05] px-5 py-5 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
-                  <div className='text-xs font-bold uppercase tracking-[0.16em] text-amber-200'>
+                <div className='mt-6 rounded-[26px] border border-white/55 bg-white/74 px-5 py-5 text-sm leading-7 text-slate-700 shadow-[0_16px_36px_rgba(15,23,42,0.06)] backdrop-blur-md'>
+                  <div className='text-xs font-bold uppercase tracking-[0.16em] text-orange-700'>
                     Pet Limit Reached
                   </div>
                   <p className='mt-2'>
@@ -202,10 +178,10 @@ export default async function CreatePetPage({
                 encType='multipart/form-data'
               >
                 <div className='grid gap-5 md:grid-cols-2'>
-                  <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
                     Name
                     <input
-                      className={fieldClassName()}
+                      className='input-shell'
                       name='name'
                       type='text'
                       placeholder='e.g. Max'
@@ -214,10 +190,10 @@ export default async function CreatePetPage({
                     />
                   </label>
 
-                  <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                  <label className='grid gap-2 text-sm font-bold text-slate-800'>
                     Breed
                     <input
-                      className={fieldClassName()}
+                      className='input-shell'
                       name='breed'
                       type='text'
                       placeholder='e.g. Shiba Inu'
@@ -227,10 +203,10 @@ export default async function CreatePetPage({
                   </label>
                 </div>
 
-                <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
                   Personality
                   <input
-                    className={fieldClassName()}
+                    className='input-shell'
                     name='personality'
                     type='text'
                     placeholder='e.g. Playful, clingy, loves belly rubs'
@@ -239,10 +215,10 @@ export default async function CreatePetPage({
                   />
                 </label>
 
-                <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
                   Favorite Food
                   <input
-                    className={fieldClassName()}
+                    className='input-shell'
                     name='favoriteFood'
                     type='text'
                     placeholder='e.g. Chicken breast, freeze-dried treats'
@@ -250,30 +226,29 @@ export default async function CreatePetPage({
                   />
                 </label>
 
-                <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
                   Daily Habits
                   <textarea
-                    className={`${fieldClassName()} min-h-[120px] resize-y`}
+                    className='input-shell min-h-[120px]'
                     name='dailyHabits'
                     placeholder='e.g. Loves waiting by the door, sleeps on the couch at night'
                     maxLength={500}
                   />
                 </label>
 
-                <label className='grid gap-2 text-sm font-bold text-stone-100'>
+                <label className='grid gap-2 text-sm font-bold text-slate-800'>
                   Upload Photo
-                  <div className='rounded-[24px] border border-dashed border-amber-300/24 bg-amber-300/8 px-6 py-6 text-center'>
+                  <div className='rounded-[24px] border border-dashed border-orange-300 bg-gradient-to-b from-orange-50 to-amber-50 px-6 py-6 text-center text-amber-900'>
                     <div className='text-3xl'>📸</div>
-                    <p className='mt-3 text-sm font-bold text-amber-100'>
+                    <p className='mt-3 text-sm font-bold'>
                       Supports JPG / PNG / WebP, max 5MB
                     </p>
-                    <p className='mt-1 text-xs font-normal leading-6 text-stone-400'>
+                    <p className='mt-1 text-xs font-normal leading-6 text-slate-600'>
                       The image will be stored with your pet profile and used to
                       personalize the experience.
                     </p>
-
                     <input
-                      className='mt-4 block w-full rounded-2xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-stone-200 file:mr-4 file:rounded-full file:border-0 file:bg-gradient-to-r file:from-amber-300 file:to-orange-500 file:px-4 file:py-2 file:text-sm file:font-bold file:text-stone-950'
+                      className='input-shell mt-4'
                       name='image'
                       type='file'
                       accept='image/png,image/jpeg,image/webp'
@@ -282,12 +257,12 @@ export default async function CreatePetPage({
                   </div>
                 </label>
 
-                <div className='grid gap-3 pt-2 md:grid-cols-2'>
-                  <button type='submit' className='brand-button w-full'>
-                    Create Pet and Open Chat
+                <div className='flex flex-wrap gap-3 pt-2'>
+                  <button type='submit' className='brand-button'>
+                    Save Pet Profile
                   </button>
 
-                  <Link href='/memories' className='subtle-button w-full text-center'>
+                  <Link href='/memories' className='subtle-button'>
                     Back to Memories
                   </Link>
                 </div>
@@ -297,9 +272,7 @@ export default async function CreatePetPage({
         </div>
       </main>
 
-      <div className='relative z-10'>
-        <SiteFooter text='© 2026 EchoPaws.ai. All Rights Reserved.' />
-      </div>
+      <SiteFooter text='© 2026 EchoPaws.ai. Create your first pet profile.' />
     </div>
   );
 }

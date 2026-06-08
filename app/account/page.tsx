@@ -145,11 +145,7 @@ export default async function AccountPage() {
           <div className='glass-card p-6'>
             <div className='flex flex-wrap items-center gap-3'>
               <h2 className='section-title text-2xl'>Account Status</h2>
-              <span
-                className={`tag-chip ${
-                  vipActive ? 'tag-chip--warm' : 'tag-chip--soft'
-                }`}
-              >
+              <span className={`tag-chip ${vipActive ? 'tag-chip--warm' : 'tag-chip--soft'}`}>
                 {planBadge}
               </span>
             </div>

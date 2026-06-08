@@ -256,8 +256,8 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
       <div className='app-brand-backdrop'>
         <SiteHeader theme='dark' />
 
-        <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-8 sm:px-6 lg:px-8'>
-          <div className='w-full rounded-[32px] border border-white/55 bg-white/80 p-8 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+        <div className='mx-auto flex min-h-[70vh] max-w-5xl items-center px-4 py-10 sm:px-6 lg:px-8'>
+          <div className='w-full rounded-[32px] border border-white/55 bg-white/84 p-8 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='text-sm font-bold uppercase tracking-[0.18em] text-orange-600'>
               Memories
             </div>
@@ -378,8 +378,8 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
     <div className='app-brand-backdrop'>
       <SiteHeader theme='dark' />
 
-      <div className='mx-auto max-w-7xl px-4 py-5 sm:px-6 md:py-8 lg:px-8'>
-        <div className='mb-6 rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+      <div className='mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8'>
+        <div className='mb-6 rounded-[32px] border border-white/55 bg-white/84 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
           <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
             🧠 Companion Memory Space
           </div>
@@ -415,7 +415,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
         <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
           <aside className='space-y-5'>
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='rounded-[28px] border border-white/55 bg-white/88 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='flex items-start gap-4'>
                 <PetAvatar name={selectedPet.name} imageUrl={selectedPet.image_url} size='lg' />
 
@@ -445,7 +445,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='rounded-[28px] border border-white/55 bg-white/88 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Pet Switcher
               </div>
@@ -462,7 +462,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                       className={`flex items-center gap-3 rounded-2xl border p-3 transition ${
                         active
                           ? 'border-orange-200 bg-orange-50/90'
-                          : 'border-slate-100 bg-white/80 hover:bg-slate-50'
+                          : 'border-slate-100 bg-white/86 hover:bg-slate-50'
                       }`}
                     >
                       <PetAvatar name={pet.name} imageUrl={pet.image_url} size='sm' />
@@ -478,7 +478,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               </div>
             </section>
 
-            <section className='rounded-[28px] border border-white/55 bg-white/82 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
+            <section className='rounded-[28px] border border-white/55 bg-white/88 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'>
               <div className='text-xs font-bold uppercase tracking-[0.18em] text-orange-700'>
                 Companion snapshot
               </div>
@@ -487,7 +487,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
           </aside>
 
           <main className='min-w-0 xl:flex xl:min-h-[calc(100vh-250px)] xl:flex-col'>
-            <section className='rounded-[28px] border border-white/55 bg-white/84 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+            <section className='rounded-[28px] border border-white/55 bg-white/88 p-5 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
               <form className='grid gap-3 md:grid-cols-2 2xl:grid-cols-[minmax(0,1.5fr)_repeat(3,minmax(0,0.82fr))_minmax(0,1.08fr)]'>
                 <input type='hidden' name='pet_id' value={selectedPet.id} />
 
@@ -606,7 +606,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
             <section className='memories-scroll-panel mt-5 space-y-4'>
               {!filteredMemories.length ? (
-                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white/88 px-6 py-10 text-center text-sm text-slate-600 shadow-sm backdrop-blur-sm'>
+                <div className='rounded-[28px] border border-dashed border-slate-200 bg-white/92 px-6 py-10 text-center text-sm text-slate-600 shadow-sm backdrop-blur-sm'>
                   No memories match the current filters.
                 </div>
               ) : (
@@ -617,7 +617,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                     <details
                       key={memory.id}
                       open={isOpen}
-                      className='group rounded-[28px] border border-white/55 bg-white/86 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'
+                      className='group rounded-[28px] border border-white/55 bg-white/90 p-5 shadow-[0_16px_36px_rgba(15,23,42,0.07)] backdrop-blur-md'
                     >
                       <summary className='cursor-pointer list-none'>
                         <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>

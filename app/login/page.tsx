@@ -44,45 +44,47 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
         <SiteHeader theme='dark' ctaLabel='Get Started' ctaHref='/create-pet' />
       </div>
 
-      <main className='container-shell relative z-10 py-10 md:py-14'>
-        <div className='grid min-h-[calc(100vh-180px)] items-center gap-8 lg:grid-cols-[1.05fr_0.95fr]'>
+      <main className='container-shell relative z-10 py-8 md:py-10 lg:py-12'>
+        <div className='grid gap-8 lg:grid-cols-[minmax(0,1.05fr)_minmax(460px,0.95fr)] lg:items-start xl:gap-10'>
           <section className='hidden lg:block'>
-            <div className='max-w-xl'>
-              <div className='inline-flex items-center gap-2 rounded-full border border-amber-300/16 bg-amber-300/10 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-amber-200'>
-                ✦ Welcome to EchoPaws
-              </div>
-
-              <h1 className='mt-5 text-[clamp(3rem,6vw,5.2rem)] font-black leading-[0.95] tracking-[-0.05em] text-white'>
-                Sign in to your
-                <br />
-                <span className='bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500 bg-clip-text text-transparent'>
-                  companion
-                </span>{' '}
-                world.
-              </h1>
-
-              <p className='mt-6 max-w-xl text-[1.05rem] leading-[1.9] text-stone-300'>
-                Keep the same warm EchoPaws feeling from the home page while entering
-                your account. Sign in first, then create or continue with your AI pet
-                in just a few steps.
-              </p>
-
-              <div className='mt-8 grid gap-3'>
-                <div className='rounded-[24px] border border-white/10 bg-white/[0.05] px-5 py-4 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
-                  <strong className='text-white'>Warm and familiar:</strong> a soft,
-                  calm login experience that visually matches Home, Chat, Memories,
-                  Account, and Pets.
+            <div className='sticky top-24 self-start'>
+              <div className='max-w-xl pt-4'>
+                <div className='inline-flex items-center gap-2 rounded-full border border-amber-300/16 bg-amber-300/10 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-amber-200'>
+                  ✦ Welcome to EchoPaws
                 </div>
 
-                <div className='rounded-[24px] border border-white/10 bg-white/[0.05] px-5 py-4 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
-                  <strong className='text-white'>Fast start:</strong> continue with
-                  Google, or sign in with email after setting your password.
+                <h1 className='mt-5 text-[clamp(3rem,6vw,5.2rem)] font-black leading-[0.95] tracking-[-0.05em] text-white'>
+                  Sign in to your
+                  <br />
+                  <span className='bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500 bg-clip-text text-transparent'>
+                    companion
+                  </span>{' '}
+                  world.
+                </h1>
+
+                <p className='mt-6 max-w-xl text-[1.05rem] leading-[1.9] text-stone-300'>
+                  Keep the same warm EchoPaws feeling from the home page while entering
+                  your account. Sign in first, then create or continue with your AI pet
+                  in just a few steps.
+                </p>
+
+                <div className='mt-8 grid gap-3'>
+                  <div className='rounded-[24px] border border-white/10 bg-white/[0.05] px-5 py-4 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
+                    <strong className='text-white'>Warm and familiar:</strong> a soft,
+                    calm login experience that visually matches Home, Chat, Memories,
+                    Account, and Pets.
+                  </div>
+
+                  <div className='rounded-[24px] border border-white/10 bg-white/[0.05] px-5 py-4 text-sm leading-7 text-stone-200 shadow-[0_18px_40px_rgba(0,0,0,0.28)] backdrop-blur-xl'>
+                    <strong className='text-white'>Fast start:</strong> continue with
+                    Google, or sign in with email after setting your password.
+                  </div>
                 </div>
               </div>
             </div>
           </section>
 
-          <section className='mx-auto w-full max-w-[560px] rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,17,13,0.92),rgba(11,9,8,0.92))] p-7 shadow-[0_24px_56px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-8'>
+          <section className='mx-auto w-full max-w-[560px] rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(24,17,13,0.92),rgba(11,9,8,0.92))] p-7 shadow-[0_24px_56px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-8 lg:mt-2'>
             <div className='text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-300'>
               Welcome to EchoPaws
             </div>

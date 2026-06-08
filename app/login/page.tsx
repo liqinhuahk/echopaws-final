@@ -146,7 +146,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
             <form action={signInWithPassword} className='mt-6 grid gap-4'>
               <label className='grid gap-2'>
-                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Email address</span>
+                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                  Email address
+                </span>
                 <input type='email' name='email' placeholder='name@example.com' required />
               </label>
 
@@ -156,7 +158,9 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </label>
 
               <label className='grid gap-2'>
-                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Nickname (optional)</span>
+                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
+                  Nickname (optional)
+                </span>
                 <input type='text' name='nickname' placeholder='What should your pet call you' />
               </label>
 
@@ -165,7 +169,11 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   Sign In
                 </button>
 
-                <button formAction={signUpWithPassword} type='submit' className='subtle-button w-full'>
+                <button
+                  formAction={signUpWithPassword}
+                  type='submit'
+                  className='subtle-button w-full'
+                >
                   Create Account
                 </button>
               </div>

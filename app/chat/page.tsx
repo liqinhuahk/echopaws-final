@@ -68,7 +68,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   }
 
   const selectedPet =
-    pets.find((pet) => pet.id === petIdFromQuery) ||
+    pets.find((pet) => String(pet.id) === String(petIdFromQuery)) ||
     pets.find((pet) => pet.id === petOverview?.defaultPetId) ||
     pets[0];
 
@@ -97,4 +97,94 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
               <PetAvatar src={petImage} name={selectedPet.name} className='h-16 w-16' />
 
               <div>
-                <h1 className='page-title text-
+                <h1 className='page-title text-[clamp(2.4rem,4vw,4rem)]'>Chat with {selectedPet.name}</h1>
+                <p className='page-subtitle mt-3 max-w-2xl text-[0.98rem] leading-[1.9]'>
+                  {petDescription}
+                </p>
+
+                <div className='mt-4 flex flex-wrap gap-2'>
+                  <span className='tag-chip tag-chip--warm'>Companion chat</span>
+                  <span className='tag-chip tag-chip--soft'>
+                    {selectedPet.id === petOverview?.defaultPetId ? 'Primary Pet' : 'Companion'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className='flex flex-wrap gap-3'>
+              <Link href='/memories' className='subtle-button'>
+                Open Memories
+              </Link>
+              <Link href='/pets' className='subtle-button'>
+                Manage Pets
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        <section className='mt-5 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]'>
+          <aside className='grid gap-5'>
+            <section className='glass-card p-5'>
+              <div className='eyebrow'>Pet switcher</div>
+              <h2 className='section-title mt-4 text-xl'>Choose your companion</h2>
+
+              <div className='mt-5 grid gap-3'>
+                {pets.map((pet) => {
+                  const itemImage =
+                    (pet as any)?.image_url ??
+                    (pet as any)?.imageUrl ??
+                    (pet as any)?.photo_url ??
+                    (pet as any)?.photoUrl ??
+                    null;
+
+                  const active = pet.id === selectedPet.id;
+
+                  return (
+                    <Link
+                      key={pet.id}
+                      href={`/chat?petId=${pet.id}`}
+                      className={`rounded-2xl border px-4 py-3 transition ${
+                        active
+                          ? 'border-amber-300/20 bg-amber-400/8'
+                          : 'border-white/8 bg-white/4 hover:bg-white/6'
+                      }`}
+                    >
+                      <div className='flex items-center gap-3'>
+                        <PetAvatar src={itemImage} name={pet.name} className='h-11 w-11' />
+                        <div className='min-w-0'>
+                          <div className='truncate text-sm font-bold text-strong'>{pet.name}</div>
+                          <div className='text-xs text-soft'>
+                            {pet.id === petOverview?.defaultPetId ? 'Primary pet' : 'Companion'}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className='glass-card p-5'>
+              <div className='eyebrow'>Companion mood</div>
+              <h2 className='section-title mt-4 text-xl'>A softer place to chat</h2>
+              <p className='mt-3 text-sm leading-7 text-body'>
+                Warm cream tones, gentler bubbles, and cleaner message focus help the conversation
+                feel more personal, calm, and emotionally close.
+              </p>
+            </section>
+          </aside>
+
+          <section className='glass-card min-h-[640px] p-4 md:p-5'>
+            <ChatPlayground
+              petId={selectedPet.id}
+              petName={selectedPet.name}
+              petImage={petImage}
+              initialMessages={[]}
+              usageLabel='Companion chat'
+            />
+          </section>
+        </section>
+      </main>
+    </div>
+  );
+}

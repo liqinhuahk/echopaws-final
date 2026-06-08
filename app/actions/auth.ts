@@ -92,7 +92,7 @@ function toFriendlyAuthError(message: string, fallback: string) {
     lowered.includes('invalid login credentials') ||
     lowered.includes('invalid credentials')
   ) {
-    return 'Incorrect email or password.';
+    return 'Incorrect email or password. If this account was first created with Google, continue with Google or set/reset a password first.';
   }
 
   if (lowered.includes('email not confirmed')) {
@@ -280,6 +280,46 @@ export async function signUpWithPassword(formData: FormData) {
 
   redirectToLoginMessage(
     'Account created. Please check your email to confirm your sign-in.',
+  );
+}
+
+export async function sendPasswordSetupLink(formData: FormData) {
+  if (!hasSupabaseEnv()) {
+    redirectToLoginError('Please configure Supabase Auth first.');
+  }
+
+  const email = sanitizeEmail(formData.get('email'));
+  if (!email) {
+    redirectToLoginError('Please enter your email first.');
+  }
+
+  const supabase = createServerSupabaseClient();
+  const siteUrl = getSiteUrl();
+
+  try {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${siteUrl}/reset-password`,
+    });
+
+    if (error) {
+      redirectToLoginError(
+        toFriendlyAuthError(
+          error.message,
+          'Could not send the password setup link.',
+        ),
+      );
+    }
+  } catch (error) {
+    redirectToLoginError(
+      toFriendlyAuthError(
+        error instanceof Error ? error.message : '',
+        'Could not send the password setup link.',
+      ),
+    );
+  }
+
+  redirectToLoginMessage(
+    'Password setup link sent. If this account was first created with Google, open the email link to set a password for future email sign-in.',
   );
 }
 

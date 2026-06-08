@@ -203,12 +203,16 @@
 }
 
 .bg-card-gradient {
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.90) 0%, rgba(255, 247, 237, 0.92) 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.9) 0%,
+    rgba(255, 247, 237, 0.92) 100%
+  );
 }
 
 /* =========================================
    Shared brand backdrop
+   恢复为先前暖色浅层风格，避免整页被压成深色
    ========================================= */
 
 .app-brand-backdrop {
@@ -216,14 +220,11 @@
   min-height: 100vh;
   overflow: hidden;
   background:
-    radial-gradient(circle at 12% 18%, rgba(245, 158, 11, 0.14), transparent 26%),
-    radial-gradient(circle at 84% 16%, rgba(249, 115, 22, 0.10), transparent 22%),
     linear-gradient(
       180deg,
-      #110a07 0px,
-      #140c09 76px,
-      #16100c 220px,
-      #18120e 100%
+      rgba(248, 245, 239, 0.68) 0%,
+      rgba(248, 245, 239, 0.92) 220px,
+      #f8f5ef 100%
     );
 }
 
@@ -234,8 +235,8 @@
   background-image: url('/images/home-hero-a.png');
   background-size: cover;
   background-position: center top;
-  opacity: 0.10;
-  filter: blur(2px) saturate(0.92);
+  opacity: 0.22;
+  filter: blur(1.5px) saturate(0.94);
   transform: scale(1.03);
   pointer-events: none;
 }
@@ -247,11 +248,13 @@
   background:
     linear-gradient(
       180deg,
-      rgba(8, 6, 5, 0.20) 0%,
-      rgba(12, 9, 7, 0.42) 120px,
-      rgba(16, 12, 9, 0.72) 260px,
-      rgba(18, 13, 10, 0.90) 100%
-    );
+      rgba(12, 10, 8, 0.28) 0%,
+      rgba(248, 245, 239, 0.08) 170px,
+      rgba(248, 245, 239, 0.82) 340px,
+      #f8f5ef 100%
+    ),
+    radial-gradient(circle at top left, rgba(249, 115, 22, 0.14), transparent 34%),
+    radial-gradient(circle at top right, rgba(245, 158, 11, 0.12), transparent 30%);
   pointer-events: none;
 }
 
@@ -361,7 +364,7 @@ textarea::placeholder {
 .input-shell {
   width: 100%;
   border-radius: 18px;
-  border: 1px solid rgba(15, 23, 42, 0.10);
+  border: 1px solid rgba(15, 23, 42, 0.1);
   background: rgba(255, 255, 255, 0.98);
   color: var(--text);
   padding: 14px 16px;

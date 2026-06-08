@@ -55,9 +55,9 @@ export function SiteHeader({
       : 'rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-orange-50 hover:text-orange-700 active:bg-orange-100 active:text-orange-700';
   }
 
-  const shellClassName = isDark
+  const headerShellClassName = isDark
     ? 'border-b border-white/10 bg-[rgba(18,12,8,0.42)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(18,12,8,0.34)]'
-    : 'border-b border-black/5 bg-[rgba(255,255,255,0.80)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(255,255,255,0.72)]';
+    : 'border-b border-black/5 bg-[rgba(255,255,255,0.82)] backdrop-blur-xl supports-[backdrop-filter]:bg-[rgba(255,255,255,0.74)]';
 
   const brandTextClassName = isDark
     ? 'bg-gradient-to-r from-amber-200 via-amber-300 to-orange-400 bg-clip-text text-lg font-black tracking-[-0.03em] text-transparent md:text-xl'
@@ -76,11 +76,11 @@ export function SiteHeader({
 
   return (
     <>
-      {/* 占位，避免 fixed header 盖住页面内容 */}
-      <div className='hidden md:block h-[84px]' aria-hidden='true' />
+      {/* 占位：让 fixed header 不遮住下面内容 */}
+      <div className='hidden h-[84px] md:block' aria-hidden='true' />
 
       <header className='fixed inset-x-0 top-0 z-[100] hidden md:block'>
-        <div className={shellClassName}>
+        <div className={headerShellClassName}>
           <div className='container-shell flex items-center justify-between gap-4 py-4'>
             <Link href='/' className='flex items-center gap-3'>
               <span className={pawWrapClassName} aria-hidden='true'>

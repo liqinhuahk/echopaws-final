@@ -109,45 +109,50 @@ export default async function PricingPage({
   }
 
   return (
-    <>
+    <div className='app-brand-backdrop'>
       <SiteHeader
+        theme='dark'
         ctaLabel={vipActive ? 'Manage Membership' : 'Upgrade to VIP'}
         ctaHref={vipActive ? '/account' : '#plans'}
       />
 
-      <main className='container-shell py-10'>
-        <section className='text-center'>
-          <div className='eyebrow'>Membership</div>
-          <h1 className='page-title mt-4'>
+      <main className='container-shell py-8 md:py-10'>
+        <section className='rounded-[32px] border border-white/55 bg-white/78 p-6 shadow-[0_20px_48px_rgba(15,23,42,0.10)] backdrop-blur-md md:p-8'>
+          <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
+            ✨ Membership
+          </div>
+
+          <h1 className='mt-4 text-[clamp(2.3rem,4vw,4.2rem)] font-black tracking-[-0.05em] text-slate-900'>
             Pricing designed for deeper companionship
           </h1>
-          <p className='section-subtitle mx-auto max-w-3xl'>
-            Start free, then upgrade only when the bond feels real. EchoPaws VIP
-            is not about counting messages — it is about preserving continuity,
+
+          <p className='mt-4 max-w-4xl text-[1rem] leading-[1.9] text-slate-600'>
+            Start free, then upgrade only when the bond feels real. EchoPaws VIP is
+            not about counting messages — it is about preserving continuity,
             emotional memory, and a companion that keeps growing with you.
           </p>
         </section>
 
         {searchParams?.error ? (
-          <div className='mt-6 rounded-2xl bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
+          <div className='mt-6 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-800'>
             {searchParams.error}
           </div>
         ) : null}
 
         {searchParams?.billing ? (
-          <div className='mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
+          <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
             {searchParams.billing}
           </div>
         ) : null}
 
         {searchParams?.checkout === 'success' ? (
-          <div className='mt-6 rounded-2xl bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
+          <div className='mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800'>
             Payment successful. Your VIP Membership is now active.
           </div>
         ) : null}
 
         {searchParams?.checkout === 'cancelled' ? (
-          <div className='mt-6 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
+          <div className='mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-900'>
             Checkout was cancelled. You can upgrade to VIP anytime.
           </div>
         ) : null}
@@ -158,10 +163,10 @@ export default async function PricingPage({
               Free Plan
             </div>
 
-            <h2 className='mt-4 text-2xl font-extrabold'>Free</h2>
+            <h2 className='mt-4 text-2xl font-extrabold text-slate-900'>Free</h2>
 
             <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-5xl font-extrabold tracking-[-0.05em]'>
+              <strong className='text-5xl font-extrabold tracking-[-0.05em] text-slate-900'>
                 $0
               </strong>
               <span className='mb-1 text-muted'>/ forever</span>
@@ -172,7 +177,7 @@ export default async function PricingPage({
               EchoPaws before upgrading.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
               <li>✓ {FREE_TOTAL_CHAT_LIMIT} lifetime chats</li>
               <li>✓ Up to {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Basic memory capability</li>
@@ -191,7 +196,7 @@ export default async function PricingPage({
             </Link>
           </article>
 
-          <article className='glass-card relative overflow-hidden bg-gradient-to-b from-orange-50 to-amber-50 p-6'>
+          <article className='glass-card relative overflow-hidden bg-gradient-to-b from-white/88 via-orange-50/80 to-amber-50/86 p-6'>
             <div className='absolute right-5 top-5 rounded-full bg-orange-100 px-3 py-2 text-xs font-extrabold text-orange-800'>
               Recommended
             </div>
@@ -200,10 +205,10 @@ export default async function PricingPage({
               VIP Membership
             </div>
 
-            <h2 className='mt-4 text-2xl font-extrabold'>VIP</h2>
+            <h2 className='mt-4 text-2xl font-extrabold text-slate-900'>VIP</h2>
 
             <div className='mt-4 flex items-end gap-2'>
-              <strong className='text-5xl font-extrabold tracking-[-0.05em]'>
+              <strong className='text-5xl font-extrabold tracking-[-0.05em] text-slate-900'>
                 {VIP_PRICE}
               </strong>
               <span className='mb-1 text-muted'>/ month</span>
@@ -214,7 +219,7 @@ export default async function PricingPage({
               and more pet capacity.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-slate-700'>
               <li>✓ Unlimited chats</li>
               <li>✓ More than {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Deeper long-term memory</li>
@@ -257,7 +262,7 @@ export default async function PricingPage({
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
               Why users upgrade
             </div>
-            <p className='mt-3 text-lg leading-9'>
+            <p className='mt-3 text-lg leading-9 text-slate-800'>
               Not because EchoPaws simply answers more questions — but because it
               feels more personal over time. VIP is about memory depth, emotional
               continuity, and uninterrupted companionship.
@@ -268,11 +273,11 @@ export default async function PricingPage({
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
               Access policy
             </div>
-            <p className='mt-3 text-lg leading-9'>
+            <p className='mt-3 text-lg leading-9 text-slate-800'>
               Free accounts include {FREE_TOTAL_CHAT_LIMIT} lifetime chats and up
-              to {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}
-              -chat limit, unlocks more pet capacity, and gives your account a
-              deeper, longer-lasting companionship layer.
+              to {FREE_TIER_MAX_PETS} pets. VIP removes the{' '}
+              {FREE_TOTAL_CHAT_LIMIT}-chat limit, unlocks more pet capacity, and
+              gives your account a deeper, longer-lasting companionship layer.
             </p>
           </div>
         </section>
@@ -282,7 +287,7 @@ export default async function PricingPage({
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
               Free / VIP comparison
             </div>
-            <h2 className='mt-2 text-2xl font-extrabold'>
+            <h2 className='mt-2 text-2xl font-extrabold text-slate-900'>
               Choose the level of companionship that fits you
             </h2>
           </div>
@@ -299,7 +304,9 @@ export default async function PricingPage({
               <tbody>
                 {comparisonRows.map((row) => (
                   <tr key={row.feature} className='border-t border-black/5'>
-                    <td className='px-6 py-4 font-semibold'>{row.feature}</td>
+                    <td className='px-6 py-4 font-semibold text-slate-900'>
+                      {row.feature}
+                    </td>
                     <td className='px-6 py-4 text-sm text-muted'>{row.free}</td>
                     <td className='px-6 py-4 text-sm text-stone-900'>
                       {row.vip}
@@ -314,14 +321,20 @@ export default async function PricingPage({
         <section className='mt-8'>
           <div className='text-center'>
             <div className='eyebrow'>FAQ</div>
-            <h2 className='page-title mt-4'>Questions users ask before upgrading</h2>
+            <h2 className='page-title mt-4 text-white md:text-slate-900'>
+              Questions users ask before upgrading
+            </h2>
           </div>
 
           <div className='mt-8 grid gap-5 md:grid-cols-2'>
             {faqs.map((item) => (
               <article key={item.question} className='glass-card p-6'>
-                <h3 className='text-lg font-extrabold'>{item.question}</h3>
-                <p className='mt-3 text-sm leading-8 text-muted'>{item.answer}</p>
+                <h3 className='text-lg font-extrabold text-slate-900'>
+                  {item.question}
+                </h3>
+                <p className='mt-3 text-sm leading-8 text-muted'>
+                  {item.answer}
+                </p>
               </article>
             ))}
           </div>
@@ -329,6 +342,6 @@ export default async function PricingPage({
       </main>
 
       <SiteFooter />
-    </>
+    </div>
   );
 }

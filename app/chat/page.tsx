@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
+import { unstable_noStore as noStore } from 'next/cache';
 import { ChatPlayground } from '@/components/chat-playground';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
@@ -11,10 +12,47 @@ import {
 } from '@/lib/supabase/server';
 
 export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
-function pickFirst(value: string | string[] | undefined) {
+type SearchValue = string | string[] | undefined;
+
+type ChatPageProps = {
+  searchParams?:
+    | Promise<{
+        pet_id?: SearchValue;
+        petId?: SearchValue;
+        pet_created?: SearchValue;
+        pet_name?: SearchValue;
+        message?: SearchValue;
+      }>
+    | {
+        pet_id?: SearchValue;
+        petId?: SearchValue;
+        pet_created?: SearchValue;
+        pet_name?: SearchValue;
+        message?: SearchValue;
+      };
+};
+
+function pickFirst(value: SearchValue) {
   if (Array.isArray(value)) return value[0] ?? '';
   return value ?? '';
+}
+
+function badgeClassName(active = false) {
+  return active
+    ? 'inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-200'
+    : 'inline-flex items-center rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-stone-200';
+}
+
+function panelClassName() {
+  return 'rounded-[28px] border border-white/10 bg-white/5 shadow-xl shadow-black/20 backdrop-blur-xl';
+}
+
+function petLinkClassName(active: boolean) {
+  return active
+    ? 'flex items-center gap-3 rounded-[22px] border border-amber-300/20 bg-gradient-to-r from-amber-300/10 to-orange-400/8 px-3.5 py-3.5 shadow-lg shadow-black/20'
+    : 'flex items-center gap-3 rounded-[22px] border border-white/10 bg-white/4 px-3.5 py-3.5 transition hover:bg-white/7 hover:border-white/15';
 }
 
 function PetAvatar({
@@ -28,10 +66,10 @@ function PetAvatar({
 }) {
   const sizeClass =
     size === 'sm'
-      ? 'h-11 w-11 rounded-2xl'
+      ? 'h-12 w-12 rounded-[16px]'
       : size === 'lg'
       ? 'h-20 w-20 rounded-[24px]'
-      : 'h-14 w-14 rounded-[20px]';
+      : 'h-14 w-14 rounded-[18px]';
 
   return imageUrl ? (
     <div
@@ -49,44 +87,20 @@ function PetAvatar({
   );
 }
 
-function chipClassName(active = false) {
-  return active
-    ? 'inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200'
-    : 'inline-flex items-center rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-stone-200';
-}
+export default async function ChatPage({ searchParams }: ChatPageProps) {
+  noStore();
 
-function petLinkClassName(active: boolean) {
-  return active
-    ? [
-        'flex items-center gap-3 rounded-[22px] border border-amber-300/20',
-        'bg-gradient-to-r from-amber-300/10 to-orange-400/8',
-        'px-3.5 py-3.5 shadow-lg shadow-black/20',
-      ].join(' ')
-    : [
-        'flex items-center gap-3 rounded-[22px] border border-white/10',
-        'bg-white/4 px-3.5 py-3.5 transition',
-        'hover:bg-white/7 hover:border-white/15',
-      ].join(' ');
-}
-
-export default async function ChatPage({
-  searchParams,
-}: {
-  searchParams?:
-    | Promise<Record<string, string | string[] | undefined>>
-    | Record<string, string | string[] | undefined>;
-}) {
   const resolvedParams = searchParams
     ? await Promise.resolve(searchParams)
     : {};
 
   const requestedPetId = (
-    pickFirst(resolvedParams?.pet_id) || pickFirst(resolvedParams?.petId)
+    pickFirst(resolvedParams.pet_id) || pickFirst(resolvedParams.petId)
   ).trim();
 
-  const petCreated = pickFirst(resolvedParams?.pet_created).trim() === '1';
-  const createdPetName = pickFirst(resolvedParams?.pet_name).trim();
-  const pageMessage = pickFirst(resolvedParams?.message).trim();
+  const petCreated = pickFirst(resolvedParams.pet_created).trim() === '1';
+  const createdPetName = pickFirst(resolvedParams.pet_name).trim();
+  const pageMessage = pickFirst(resolvedParams.message).trim();
 
   if (!hasSupabaseEnv()) {
     redirect('/login');
@@ -102,7 +116,13 @@ export default async function ChatPage({
   }
 
   const [petOverview, usageResult] = await Promise.all([
-    getPetsForUser(user.id).catch(() => ({ pets: [], defaultPetId: null })),
+    getPetsForUser(user.id).catch(() => ({
+      pets: [],
+      defaultPetId: null,
+      latestActivePetId: null,
+      totalMemories: 0,
+      totalConversations: 0,
+    })),
     getChatAccessStatus(user.id).catch(() => null),
   ]);
 
@@ -112,10 +132,15 @@ export default async function ChatPage({
     redirect('/create-pet');
   }
 
+  const selectedPetId =
+    requestedPetId ||
+    petOverview.latestActivePetId ||
+    petOverview.defaultPetId ||
+    pets[0]?.id ||
+    null;
+
   const selectedPet =
-    pets.find((p) => p.id === requestedPetId) ||
-    pets.find((p) => p.id === petOverview.defaultPetId) ||
-    pets[0];
+    pets.find((pet) => pet.id === selectedPetId) || pets[0];
 
   const { data: messagesData } = await supabase
     .from('chat_messages')
@@ -142,14 +167,14 @@ export default async function ChatPage({
     ? 'VIP — Unlimited'
     : `${usageResult?.remaining ?? 0} / 20 chats left`;
 
-  const moodText = selectedPet.personality
+  const moodHeading = selectedPet.personality
     ? `${selectedPet.name} feels ${selectedPet.personality.toLowerCase()}`
     : 'Warm, emotionally present, softly attentive';
 
   const shortProfile = [
-    selectedPet.breed ? `${selectedPet.breed}` : null,
+    selectedPet.breed ? selectedPet.breed : null,
     selectedPet.favorite_food ? `loves ${selectedPet.favorite_food}` : null,
-    selectedPet.daily_habits ? `${selectedPet.daily_habits}` : null,
+    selectedPet.daily_habits ? selectedPet.daily_habits : null,
   ]
     .filter(Boolean)
     .join(' · ');
@@ -194,7 +219,7 @@ export default async function ChatPage({
               )}
 
               <section className='mb-6 overflow-hidden rounded-[32px] border border-white/10 bg-white/5 shadow-2xl shadow-black/30 backdrop-blur-xl'>
-                <div className='bg-gradient-to-r from-white/7 via-white/4 to-transparent px-5 py-6 md:px-7 md:py-7'>
+                <div className='bg-gradient-to-r from-white/7 via-white/4 to-transparent px-6 py-6 md:px-7 md:py-7'>
                   <div className='inline-flex items-center gap-2 rounded-full border border-amber-300/15 bg-amber-300/10 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[0.24em] text-amber-200'>
                     ✦ Warm Companion Chat
                   </div>
@@ -215,31 +240,33 @@ export default async function ChatPage({
                         <p className='mt-3 max-w-3xl text-sm leading-7 text-stone-300 md:text-base'>
                           A softer, darker, more intimate chat space — designed
                           to keep your companion emotionally front and center in
-                          the new Noir experience.
+                          the Noir experience.
                         </p>
 
                         <div className='mt-4 flex flex-wrap gap-2'>
-                          <span className={chipClassName(true)}>{usageLabel}</span>
-                          <span className={chipClassName()}>
+                          <span className={badgeClassName(true)}>
+                            {usageLabel}
+                          </span>
+                          <span className={badgeClassName()}>
                             {selectedPet.id === petOverview.defaultPetId
                               ? 'Primary Pet'
                               : 'Companion'}
                           </span>
-                          <span className={chipClassName()}>Noir Live</span>
+                          <span className={badgeClassName()}>Noir Live</span>
                         </div>
                       </div>
                     </div>
 
                     <div className='flex flex-wrap gap-3'>
                       <Link
-                        href={`/memories?pet_id=${selectedPet.id}`}
+                        href={`/memories?pet_id=${encodeURIComponent(selectedPet.id)}`}
                         className='inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-4 text-sm font-bold text-white transition hover:bg-white/10'
                       >
                         Memories
                       </Link>
 
                       <Link
-                        href='/pets'
+                        href={`/pets?pet_id=${encodeURIComponent(selectedPet.id)}`}
                         className='inline-flex min-h-11 items-center justify-center rounded-full border border-white/12 bg-white/6 px-4 text-sm font-bold text-white transition hover:bg-white/10'
                       >
                         Manage Pets
@@ -251,7 +278,7 @@ export default async function ChatPage({
 
               <div className='grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]'>
                 <aside className='space-y-5'>
-                  <section className='rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/20 backdrop-blur-xl'>
+                  <section className={`${panelClassName()} p-5`}>
                     <div className='text-[11px] font-extrabold uppercase tracking-[0.22em] text-amber-200'>
                       Pet Switcher
                     </div>
@@ -261,18 +288,19 @@ export default async function ChatPage({
                     </h2>
 
                     <div className='mt-4 space-y-3'>
-                      {pets.map((p) => {
-                        const active = p.id === selectedPet.id;
+                      {pets.map((pet) => {
+                        const active = pet.id === selectedPet.id;
+                        const isPrimary = pet.id === petOverview.defaultPetId;
 
                         return (
                           <Link
-                            key={p.id}
-                            href={`/chat?pet_id=${p.id}`}
+                            key={pet.id}
+                            href={`/chat?pet_id=${encodeURIComponent(pet.id)}`}
                             className={petLinkClassName(active)}
                           >
                             <PetAvatar
-                              name={p.name}
-                              imageUrl={p.image_url}
+                              name={pet.name}
+                              imageUrl={pet.image_url}
                               size='sm'
                             />
 
@@ -282,7 +310,7 @@ export default async function ChatPage({
                                   active ? 'text-white' : 'text-stone-200'
                                 }`}
                               >
-                                {p.name}
+                                {pet.name}
                               </div>
 
                               <div
@@ -290,16 +318,12 @@ export default async function ChatPage({
                                   active ? 'text-amber-200' : 'text-stone-400'
                                 }`}
                               >
-                                {p.id === petOverview.defaultPetId
-                                  ? 'Primary pet'
-                                  : 'Companion'}
+                                {isPrimary ? 'Primary pet' : 'Companion'}
                               </div>
                             </div>
 
                             {active ? (
-                              <span className='inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.14em] text-amber-200'>
-                                Live
-                              </span>
+                              <span className={badgeClassName(true)}>Live</span>
                             ) : null}
                           </Link>
                         );
@@ -307,13 +331,13 @@ export default async function ChatPage({
                     </div>
                   </section>
 
-                  <section className='rounded-[28px] border border-white/10 bg-white/5 p-5 shadow-xl shadow-black/20 backdrop-blur-xl'>
+                  <section className={`${panelClassName()} p-5`}>
                     <div className='text-[11px] font-extrabold uppercase tracking-[0.22em] text-amber-200'>
                       Companion Mood
                     </div>
 
                     <h3 className='mt-2 text-2xl font-black tracking-tight text-white'>
-                      {moodText}
+                      {moodHeading}
                     </h3>
 
                     <p className='mt-3 text-sm leading-7 text-stone-300'>
@@ -322,8 +346,9 @@ export default async function ChatPage({
                       pet and its memory context.
                     </p>
 
-                    <div className='mt-4 rounded-[22px] border border-white/10 bg-black/20 px-4 py-4 text-sm leading-7 text-stone-300'>
-                      {shortProfile || 'Keep chatting to build more personality and memory details for this companion.'}
+                    <div className='mt-4 rounded-[22px] border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-stone-300'>
+                      {shortProfile ||
+                        'Keep chatting to build more personality and memory details for this companion.'}
                     </div>
 
                     <div className='mt-4 grid gap-3'>
@@ -333,9 +358,9 @@ export default async function ChatPage({
                       </div>
 
                       <div className='rounded-[20px] border border-white/8 bg-white/4 px-4 py-3 text-sm text-stone-300'>
-                        Switching pets preserves the correct{' '}
+                        Switching pets preserves the current{' '}
                         <span className='font-bold text-amber-200'>pet_id</span>{' '}
-                        in the URL and opens the matching conversation.
+                        and keeps Chat / Pets / Memories aligned.
                       </div>
                     </div>
                   </section>
@@ -360,7 +385,7 @@ export default async function ChatPage({
           </main>
 
           <div className='relative z-10'>
-            <SiteFooter text='© 2026 EchoPaws.ai. Noir companion chat experience.' />
+            <SiteFooter text='© 2026 EchoPaws.ai. Noir companion chat workspace.' />
           </div>
         </div>
       </div>

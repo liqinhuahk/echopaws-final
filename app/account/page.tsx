@@ -130,8 +130,8 @@ export default async function AccountPage() {
         ctaHref='/pricing'
       />
 
-      <main className='container-shell py-5 md:py-8'>
-        <section className='rounded-[32px] border border-white/55 bg-white/76 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-8'>
+      <main className='container-shell py-8 md:py-10'>
+        <section className='rounded-[32px] border border-white/55 bg-white/84 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md md:p-8'>
           <div className='inline-flex items-center gap-2 rounded-full border border-orange-200 bg-orange-50/90 px-4 py-2 text-[0.72rem] font-extrabold uppercase tracking-[0.18em] text-orange-700'>
             👤 My Account
           </div>
@@ -148,7 +148,7 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-[1.1fr_.9fr]'>
-          <div className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='flex flex-wrap items-center gap-3'>
               <h2 className='text-2xl font-extrabold text-slate-900'>Account Status</h2>
               <span
@@ -161,7 +161,7 @@ export default async function AccountPage() {
             </div>
 
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Email</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{maskedEmail}</div>
 
@@ -179,13 +179,13 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Current Plan</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{currentPlan}</div>
                 <div className='mt-1 text-xs text-muted'>{planStatus}</div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>Pets</div>
                 <div className='mt-2 text-base font-semibold text-slate-900'>{petCount}</div>
                 <div className='mt-1 text-xs text-muted'>
@@ -193,7 +193,7 @@ export default async function AccountPage() {
                 </div>
               </div>
 
-              <div className='rounded-2xl border border-black/5 bg-white/92 p-4 shadow-sm'>
+              <div className='rounded-2xl border border-black/5 bg-white/94 p-4 shadow-sm'>
                 <div className='text-sm font-bold text-muted'>
                   {vipActive ? 'Chat Access' : 'Free Chat Allowance'}
                 </div>
@@ -232,7 +232,7 @@ export default async function AccountPage() {
             )}
           </div>
 
-          <div className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <div className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='flex flex-wrap items-center gap-3'>
               <h2 className='text-2xl font-extrabold text-slate-900'>Membership & Security</h2>
               <span className='inline-flex rounded-full bg-stone-100 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.12em] text-stone-700'>
@@ -275,7 +275,7 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
               Free plan
             </div>
@@ -299,7 +299,7 @@ export default async function AccountPage() {
             </div>
           </article>
 
-          <article className='glass-card border border-orange-100 bg-gradient-to-b from-white/86 via-orange-50/78 to-amber-50/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card border border-orange-100 bg-gradient-to-b from-white/90 via-orange-50/80 to-amber-50/84 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-orange-800'>
               VIP membership
             </div>
@@ -328,7 +328,7 @@ export default async function AccountPage() {
         </section>
 
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
+          <article className='glass-card border border-white/55 bg-white/88 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
             <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
               Plan rules
             </div>
@@ -337,23 +337,4 @@ export default async function AccountPage() {
               {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
               unlocks more pet capacity, and gives your pet deeper memory continuity.
             </p>
-          </article>
-
-          <article className='glass-card border border-white/55 bg-white/82 p-6 shadow-[0_18px_40px_rgba(15,23,42,0.08)] backdrop-blur-md'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.08em] text-stone-700'>
-              Privacy & control
-            </div>
-            <p className='mt-3 text-sm leading-8 text-muted'>
-              You can manage pets, open billing, and sign out from this page. For the cleanest
-              mobile experience, Sign In and Upgrade actions are handled by the shared mobile top
-              bar, while the desktop site keeps the full site header.
-            </p>
-          </article>
-        </section>
-      </main>
-
-      <SiteFooter />
-      <script dangerouslySetInnerHTML={{ __html: getCopyEmailScript() }} />
-    </div>
-  );
-}
+          </article

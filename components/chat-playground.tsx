@@ -1,161 +1,302 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-
-type ChatMessage = {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  createdAt?: string;
-};
+import { Fragment, FormEvent, ReactNode, useEffect, useMemo, useRef, useState } from 'react';
 
 type ChatPlaygroundProps = {
-  petId: string | number;
+  petId?: string | null;
   petName: string;
-  petImage?: string | null;
-  initialMessages?: ChatMessage[];
-  usageLabel?: string;
+  petImageUrl?: string | null;
+  initialMessages: Array<{ role: 'user' | 'assistant'; content: string }>;
+  initialRemainingLabel: string;
+  initialMemorySummary?: string;
 };
 
-function uid() {
-  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+type UsagePayload = {
+  plan: string;
+  used: number;
+  limit: number | null;
+  remaining: number | null;
+  vip: boolean;
+};
+
+type ChatResponse = {
+  error?: string;
+  reply?: string;
+  usage?: UsagePayload;
+  memory?: {
+    storedCount: number;
+    emotionTag: string | null;
+    hints?: string[];
+    summary?: string;
+  };
+};
+
+type ParsedSegment =
+  | { type: 'text'; content: string }
+  | { type: 'action'; content: string }
+  | { type: 'emphasis'; content: string };
+
+function formatUsageLabel(usage: UsagePayload) {
+  if (usage.vip) return 'VIP — Unlimited Chat';
+  const remaining = usage.remaining ?? 0;
+  const limit = usage.limit ?? 20;
+  return `${remaining} / ${limit} lifetime chats left`;
 }
 
-function normalizeMessages(input?: ChatMessage[]) {
-  if (!Array.isArray(input)) return [];
-  return input
-    .filter(Boolean)
-    .map((item, index) => ({
-      id: item.id || `msg-${index}-${uid()}`,
-      role:
-        item.role === 'assistant' || item.role === 'system' || item.role === 'user'
-          ? item.role
-          : 'assistant',
-      content: String(item.content ?? ''),
-      createdAt: item.createdAt,
-    }))
-    .filter((item) => item.content.trim().length > 0);
-}
-
-function extractAssistantText(payload: any): string {
-  if (!payload) return '';
-
-  if (typeof payload === 'string') return payload;
-  if (typeof payload?.reply === 'string') return payload.reply;
-  if (typeof payload?.message === 'string') return payload.message;
-  if (typeof payload?.content === 'string') return payload.content;
-  if (typeof payload?.text === 'string') return payload.text;
-  if (typeof payload?.response === 'string') return payload.response;
-  if (typeof payload?.answer === 'string') return payload.answer;
-
-  if (typeof payload?.data?.reply === 'string') return payload.data.reply;
-  if (typeof payload?.data?.message === 'string') return payload.data.message;
-  if (typeof payload?.data?.content === 'string') return payload.data.content;
-  if (typeof payload?.data?.text === 'string') return payload.data.text;
-
-  if (Array.isArray(payload?.messages)) {
-    const lastAssistant = [...payload.messages]
-      .reverse()
-      .find((item) => item?.role === 'assistant' && typeof item?.content === 'string');
-    if (lastAssistant?.content) return lastAssistant.content;
+function formatUsageDetail(usage: UsagePayload) {
+  if (usage.vip) {
+    return 'VIP active: unlimited chats across your account and all pets.';
   }
 
-  if (Array.isArray(payload?.choices) && payload.choices[0]) {
-    const choice = payload.choices[0];
-    if (typeof choice?.message?.content === 'string') return choice.message.content;
-    if (typeof choice?.text === 'string') return choice.text;
-  }
-
-  return '';
+  const used = usage.used ?? 0;
+  const limit = usage.limit ?? 20;
+  return `Used ${used} of ${limit} lifetime chats. Free chats are shared across your account.`;
 }
 
-function AssistantAvatar({
+function normalizeErrorMessage(message: string) {
+  const lowered = message.toLowerCase();
+
+  if (
+    lowered.includes('daily chat limit') ||
+    lowered.includes('come back tomorrow') ||
+    lowered.includes('daily limit')
+  ) {
+    return 'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
+  }
+
+  return message;
+}
+
+function normalizeActionText(value: string) {
+  return value.replace(/\s+/g, ' ').trim();
+}
+
+function isLikelyPetAction(raw: string) {
+  const value = normalizeActionText(raw).toLowerCase();
+  if (!value) return false;
+  if (value.length > 90) return false;
+
+  const actionRoots = [
+    'blink',
+    'nuzzle',
+    'stretch',
+    'yawn',
+    'purr',
+    'wag',
+    'snuggle',
+    'cuddle',
+    'boop',
+    'bonk',
+    'tilt',
+    'lick',
+    'paw',
+    'rub',
+    'curl',
+    'hop',
+    'bounce',
+    'snooze',
+    'nap',
+    'chirp',
+    'meow',
+    'woof',
+    'sniff',
+    'shuffle',
+    'flop',
+    'roll',
+    'bump',
+    'press',
+    'lean',
+    'trot',
+    'pounce',
+    'sway',
+    'swish',
+    'nestle',
+    'bark',
+    'yip',
+    'arf',
+    'mrow',
+  ];
+
+  const emotionPrefixes = [
+    'happy bark',
+    'happy bark!',
+    'soft bark',
+    'soft bark!',
+    'excited bark',
+    'excited bark!',
+    'playful bark',
+    'playful bark!',
+    'gentle bark',
+    'gentle bark!',
+    'wag wag wag',
+    'wag wag wag!',
+    'wiggle wiggle',
+    'wiggle wiggle!',
+    'mrow',
+    'mrow!',
+    'meow',
+    'meow!',
+    'purr',
+    'purr!',
+  ];
+
+  if (emotionPrefixes.some((prefix) => value.startsWith(prefix))) {
+    return true;
+  }
+
+  const compact = value.replace(/\s+/g, '');
+  const soundPatterns = [
+    /^p+u+r+r+/,
+    /^m+e+o+w+/,
+    /^w+o+o+f+/,
+    /^a+r+f+/,
+    /^b+a+r+k+/,
+    /^y+i+p+/,
+    /^m+r+o+w+/,
+    /^w+a+g+/,
+    /^c+h+i+r+p+/,
+  ];
+
+  if (soundPatterns.some((pattern) => pattern.test(compact))) {
+    return true;
+  }
+
+  const normalizedWords = value
+    .replace(/[^a-z0-9\s!'’-]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean);
+
+  return normalizedWords.some((word) =>
+    actionRoots.some(
+      (root) => word === root || word === `${root}s` || word === `${root}ed` || word === `${root}ing`
+    )
+  );
+}
+
+function splitLeadingActionPrefix(content: string): ParsedSegment[] | null {
+  const trimmed = content.trim();
+  if (!trimmed) return null;
+
+  const patterns = [/^([A-Z][A-Za-z\s]{1,28}!\s+)(.+)$/s, /^([A-Za-z]+(?:\s+[A-Za-z]+){0,3}!\s+)(.+)$/s];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (!match) continue;
+
+    const prefix = normalizeActionText(match[1].replace(/\s+$/, ''));
+    const rest = match[2];
+
+    if (isLikelyPetAction(prefix)) {
+      return [
+        { type: 'action', content: prefix },
+        { type: 'text', content: ` ${rest}` },
+      ];
+    }
+  }
+
+  return null;
+}
+
+function parseAssistantMessage(content: string): ParsedSegment[] {
+  const prefixed = splitLeadingActionPrefix(content);
+  if (prefixed) return prefixed;
+
+  const segments: ParsedSegment[] = [];
+  const regex = /\*([^*]+)\*/g;
+
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(content)) !== null) {
+    const fullMatch = match[0];
+    const inner = match[1];
+    const start = match.index;
+
+    if (start > lastIndex) {
+      const leading = content.slice(lastIndex, start);
+      if (leading) {
+        segments.push({ type: 'text', content: leading });
+      }
+    }
+
+    const cleaned = normalizeActionText(inner);
+
+    if (cleaned) {
+      segments.push({
+        type: isLikelyPetAction(cleaned) ? 'action' : 'emphasis',
+        content: cleaned,
+      });
+    } else {
+      segments.push({ type: 'text', content: fullMatch });
+    }
+
+    lastIndex = start + fullMatch.length;
+  }
+
+  if (lastIndex < content.length) {
+    segments.push({ type: 'text', content: content.slice(lastIndex) });
+  }
+
+  if (!segments.length) {
+    return [{ type: 'text', content }];
+  }
+
+  return segments;
+}
+
+function renderAssistantContent(content: string): ReactNode {
+  const segments = parseAssistantMessage(content);
+
+  return (
+    <div className="whitespace-pre-wrap break-words leading-6 sm:leading-7">
+      {segments.map((segment, index) => {
+        if (segment.type === 'text') {
+          return <Fragment key={`text-${index}`}>{segment.content}</Fragment>;
+        }
+
+        if (segment.type === 'emphasis') {
+          return (
+            <em key={`emphasis-${index}`} className="font-medium italic text-amber-100">
+              {segment.content}
+            </em>
+          );
+        }
+
+        return (
+          <span
+            key={`action-${index}`}
+            className="mx-[2px] inline rounded-full border border-[rgba(255,184,107,0.18)] bg-[rgba(245,158,11,0.12)] px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-amber-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
+          >
+            {segment.content}
+          </span>
+        );
+      })}
+    </div>
+  );
+}
+
+function PetReplyAvatar({
   petName,
-  petImage,
+  petImageUrl,
 }: {
   petName: string;
-  petImage?: string | null;
+  petImageUrl?: string | null;
 }) {
-  if (petImage) {
+  if (petImageUrl) {
     return (
-      <img
-        src={petImage}
-        alt={petName}
-        className='h-8 w-8 shrink-0 rounded-full object-cover ring-1 ring-white/10 md:h-9 md:w-9'
-      />
+      <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-[0_6px_16px_rgba(0,0,0,0.24)] sm:h-11 sm:w-11">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={petImageUrl} alt={`${petName} avatar`} className="h-full w-full object-cover" />
+      </div>
     );
   }
 
   return (
-    <div className='inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-amber-300 to-orange-500 text-[11px] font-black text-[#24150b] ring-1 ring-white/10 md:h-9 md:w-9'>
-      {petName.slice(0, 1).toUpperCase()}
-    </div>
-  );
-}
-
-function UserAvatar() {
-  return (
-    <div className='inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f7b733,#fc8f2b)] text-[11px] font-black text-[#2a1609] shadow-[0_8px_24px_rgba(249,115,22,0.24)] md:h-9 md:w-9'>
-      You
-    </div>
-  );
-}
-
-function TypingBubble({ petName, petImage }: { petName: string; petImage?: string | null }) {
-  return (
-    <div className='flex items-end gap-3'>
-      <AssistantAvatar petName={petName} petImage={petImage} />
-      <div className='inline-flex min-h-[44px] items-center rounded-[18px] border border-white/8 bg-[rgba(255,255,255,0.055)] px-4 py-3 shadow-[0_8px_24px_rgba(0,0,0,0.18)]'>
-        <div className='flex items-center gap-1.5'>
-          <span className='h-2 w-2 animate-bounce rounded-full bg-amber-200 [animation-delay:-0.2s]' />
-          <span className='h-2 w-2 animate-bounce rounded-full bg-amber-200 [animation-delay:-0.1s]' />
-          <span className='h-2 w-2 animate-bounce rounded-full bg-amber-200' />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MessageBubble({
-  message,
-  petName,
-  petImage,
-}: {
-  message: ChatMessage;
-  petName: string;
-  petImage?: string | null;
-}) {
-  const isAssistant = message.role === 'assistant' || message.role === 'system';
-
-  if (isAssistant) {
-    return (
-      <div className='flex items-end gap-3'>
-        <AssistantAvatar petName={petName} petImage={petImage} />
-        <div className='max-w-[82%] md:max-w-[78%]'>
-          <div className='mb-1 pl-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[rgba(255,244,230,0.44)]'>
-            {petName}
-          </div>
-          <div className='rounded-[18px] border border-white/8 bg-[rgba(255,255,255,0.055)] px-4 py-3 text-sm leading-7 text-[#fff7ed] shadow-[0_8px_24px_rgba(0,0,0,0.18)]'>
-            {message.content}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className='flex justify-end'>
-      <div className='max-w-[78%] md:max-w-[72%]'>
-        <div className='mb-1 pr-1 text-right text-[10px] font-bold uppercase tracking-[0.18em] text-[rgba(255,244,230,0.44)]'>
-          You
-        </div>
-        <div className='flex items-end justify-end gap-3'>
-          <div className='rounded-[18px] bg-[linear-gradient(135deg,#f7b733,#fc8f2b)] px-4 py-3 text-sm font-semibold leading-7 text-[#2a1609] shadow-[0_8px_24px_rgba(249,115,22,0.24)]'>
-            {message.content}
-          </div>
-          <UserAvatar />
-        </div>
-      </div>
+    <div
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-sm shadow-[0_6px_16px_rgba(0,0,0,0.24)] sm:h-11 sm:w-11 sm:text-base"
+      aria-label={`${petName} avatar placeholder`}
+    >
+      🐾
     </div>
   );
 }
@@ -163,67 +304,54 @@ function MessageBubble({
 export function ChatPlayground({
   petId,
   petName,
-  petImage,
-  initialMessages = [],
-  usageLabel = 'Companion chat',
+  petImageUrl,
+  initialMessages,
+  initialRemainingLabel,
+  initialMemorySummary,
 }: ChatPlaygroundProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>(() => normalizeMessages(initialMessages));
+  const [messages, setMessages] = useState(initialMessages);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const [errorText, setErrorText] = useState('');
-  const [inputRows, setInputRows] = useState(1);
-
-  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
-  const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-
-  useEffect(() => {
-    setMessages(normalizeMessages(initialMessages));
-  }, [initialMessages]);
+  const [error, setError] = useState<string | null>(null);
+  const [usageLabel, setUsageLabel] = useState(initialRemainingLabel);
+  const [usageDetail, setUsageDetail] = useState<string | null>(null);
+  const [memoryHints, setMemoryHints] = useState<string[]>([]);
+  const messageViewportRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    const el = scrollViewportRef.current;
+    setMessages(initialMessages);
+    setInput('');
+    setLoading(false);
+    setError(null);
+    setUsageLabel(initialRemainingLabel);
+    setUsageDetail(null);
+    setMemoryHints([]);
+  }, [petId, petName, petImageUrl, initialMessages, initialRemainingLabel, initialMemorySummary]);
+
+  useEffect(() => {
+    const el = messageViewportRef.current;
     if (!el) return;
-    el.scrollTo({
-      top: el.scrollHeight,
-      behavior: 'smooth',
-    });
+    el.scrollTop = el.scrollHeight;
   }, [messages, loading]);
 
-  useEffect(() => {
-    if (!textareaRef.current) return;
-    const el = textareaRef.current;
-    el.style.height = '0px';
-    const next = Math.min(el.scrollHeight, 132);
-    el.style.height = `${next}px`;
-    setInputRows(next > 72 ? 3 : next > 48 ? 2 : 1);
-  }, [input]);
+  const trimmedLength = input.trim().length;
 
-  const remainingHint = useMemo(() => {
-    if (/vip/i.test(usageLabel) || /unlimited/i.test(usageLabel)) {
-      return 'VIP active · unlimited chats across your account and all pets.';
-    }
-    return 'Keep chatting to build a warmer, richer long-term memory with your companion.';
-  }, [usageLabel]);
+  const canSubmit = useMemo(() => {
+    return trimmedLength > 0 && trimmedLength <= 800 && !loading;
+  }, [trimmedLength, loading]);
 
-  async function handleSubmit(e?: React.FormEvent) {
-    e?.preventDefault();
+  const memoriesHref = petId ? `/memories?pet_id=${encodeURIComponent(petId)}` : '/memories';
 
-    const text = input.trim();
-    if (!text || loading) return;
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!canSubmit) return;
 
-    setErrorText('');
+    const message = input.trim();
 
-    const nextUserMessage: ChatMessage = {
-      id: uid(),
-      role: 'user',
-      content: text,
-      createdAt: new Date().toISOString(),
-    };
-
-    const optimisticMessages = [...messages, nextUserMessage];
-    setMessages(optimisticMessages);
-    setInput('');
     setLoading(true);
+    setError(null);
+    setMemoryHints([]);
+    setInput('');
 
     try {
       const response = await fetch('/api/chat', {
@@ -231,152 +359,195 @@ export function ChatPlayground({
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          petId,
-          petName,
-          message: text,
-          messages: optimisticMessages.map((item) => ({
-            role: item.role,
-            content: item.content,
-          })),
-        }),
+        body: JSON.stringify({ message, petId }),
       });
 
-      if (!response.ok) {
-        throw new Error(`Request failed with status ${response.status}`);
+      let data: ChatResponse | null = null;
+
+      try {
+        data = (await response.json()) as ChatResponse;
+      } catch {
+        data = null;
       }
 
-      const payload = await response.json().catch(() => null);
-      const assistantText =
-        extractAssistantText(payload) ||
-        "I'm here with you. Tell me more, and I'll stay close with every memory we make together.";
+      if (!response.ok || !data?.reply) {
+        throw new Error(data?.error || 'Chat request failed. Please try again.');
+      }
 
-      const nextAssistantMessage: ChatMessage = {
-        id: uid(),
-        role: 'assistant',
-        content: assistantText,
-        createdAt: new Date().toISOString(),
-      };
+      setMessages((current) => [
+        ...current,
+        { role: 'user', content: message },
+        { role: 'assistant', content: data.reply as string },
+      ]);
 
-      setMessages((prev) => [...prev, nextAssistantMessage]);
-    } catch (error) {
-      console.error(error);
-      setErrorText('发送消息失败，请稍后重试。');
+      if (data.usage) {
+        setUsageLabel(formatUsageLabel(data.usage));
+        setUsageDetail(formatUsageDetail(data.usage));
+      } else {
+        setUsageDetail(null);
+      }
+
+      if (data.memory?.hints?.length) {
+        setMemoryHints(data.memory.hints);
+      } else {
+        setMemoryHints([]);
+      }
+    } catch (submitError) {
+      const messageText =
+        submitError instanceof Error
+          ? normalizeErrorMessage(submitError.message)
+          : 'Chat request failed. Please try again.';
+
+      setError(messageText);
+      setInput(message);
     } finally {
       setLoading(false);
-      textareaRef.current?.focus();
-    }
-  }
-
-  function handleTextareaKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      void handleSubmit();
     }
   }
 
   return (
-    <div className='flex h-full min-h-0 flex-col bg-transparent text-[#fff7ed]'>
-      {/* 顶部小条，保留当前视觉 */}
-      <div className='flex shrink-0 items-center justify-between gap-3 border-b border-white/8 px-4 py-3 md:px-5'>
-        <div className='flex min-w-0 flex-wrap items-center gap-2'>
-          <span className='inline-flex h-7 items-center rounded-full border border-amber-300/25 bg-amber-300/10 px-3 text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-[#f6cf7b]'>
-            {usageLabel}
-          </span>
-
-          <span className='text-[11px] font-bold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.52)]'>
-            Open Memories
-          </span>
+    <div className="mobile-chat-shell flex h-full min-h-[56vh] flex-col xl:min-h-0">
+      <div className="mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="chat-noir-pill truncate rounded-full px-3 py-2 text-center text-[11px] font-bold sm:text-xs">
+          {usageLabel}
         </div>
+
+        <a
+          href={memoriesHref}
+          className="chat-noir-link rounded-full px-3 py-2 text-center text-[11px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition sm:text-xs"
+        >
+          Open Memories
+        </a>
       </div>
 
-      {/* 关键修复：固定高度框里的内部滚动区 */}
-      <div
-        ref={scrollViewportRef}
-        className='min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5'
-        style={{
-          scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.18) transparent',
-        }}
-      >
-        <div className='space-y-4'>
-          {messages.length === 0 ? (
-            <div className='flex h-full min-h-[280px] items-center justify-center'>
-              <div className='max-w-md rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-5 py-4 text-center shadow-[0_10px_28px_rgba(0,0,0,0.16)]'>
-                <div className='mx-auto mb-3 flex w-fit items-center gap-3'>
-                  <AssistantAvatar petName={petName} petImage={petImage} />
-                  <div className='text-left'>
-                    <div className='text-sm font-extrabold text-[#fff7ed]'>Chat with {petName}</div>
-                    <div className='text-xs text-[rgba(255,244,230,0.56)]'>
-                      Start with something warm and personal.
+      <div className="mobile-chat-card mt-3 flex h-[560px] min-h-[560px] min-w-0 flex-col rounded-[22px] p-3 sm:mt-5 sm:h-[620px] sm:min-h-[620px] sm:rounded-[28px] sm:p-4 xl:h-full xl:min-h-0">
+        <div
+          ref={messageViewportRef}
+          className="mobile-chat-scroll h-full min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.18) transparent',
+          }}
+        >
+          <div className="grid gap-3 pb-2 sm:gap-4">
+            {messages.map((message, index) => {
+              const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
+
+              if (message.role === 'assistant') {
+                return (
+                  <div key={messageKey} className="flex items-end gap-2.5 sm:gap-3">
+                    <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+                    <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                      <div className="chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]">
+                        {petName}
+                      </div>
+
+                      <div className="chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 text-[14px] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                        <span className="chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3" />
+                        <div className="relative z-[1]">{renderAssistantContent(message.content)}</div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+
+              return (
+                <div key={messageKey} className="flex justify-end">
+                  <div className="min-w-0 max-w-[82%] sm:max-w-[72%]">
+                    <div className="chat-noir-user-label mb-1 px-1 text-right text-[10px] font-bold tracking-wide sm:text-[11px]">
+                      You
+                    </div>
+
+                    <div className="chat-noir-user-bubble relative rounded-[18px] rounded-br-md px-3.5 py-2.5 text-[14px] font-medium sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                      <span className="chat-noir-user-bubble-tail absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-right-[6px] sm:h-3 sm:w-3" />
+                      <div className="relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7">
+                        {message.content}
+                      </div>
                     </div>
                   </div>
                 </div>
-                <p className='text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                  试着发送一句：「Hi {petName}，今天过得怎么样？」或分享一个你们共同的回忆。
-                </p>
+              );
+            })}
+
+            {loading ? (
+              <div className="flex items-end gap-2.5 sm:gap-3">
+                <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
+                <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                  <div className="chat-noir-ai-label mb-1 px-1 text-[10px] font-bold tracking-wide sm:text-[11px]">
+                    {petName}
+                  </div>
+
+                  <div className="chat-noir-ai-bubble relative rounded-[18px] rounded-bl-md px-3.5 py-2.5 sm:rounded-[20px] sm:px-4 sm:py-3">
+                    <span className="chat-noir-ai-bubble-tail absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 sm:-left-[6px] sm:h-3 sm:w-3" />
+                    <div className="chat-noir-loading relative z-[1] flex items-center gap-2">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-amber-300" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400 [animation-delay:240ms]" />
+                    </div>
+                  </div>
+                </div>
               </div>
+            ) : null}
+          </div>
+        </div>
+
+        {error ? (
+          <div className="chat-noir-error mt-3 shrink-0 rounded-2xl px-4 py-3 text-sm font-bold">
+            {error}
+          </div>
+        ) : null}
+
+        {memoryHints.length ? (
+          <div className="chat-noir-hints mt-3 shrink-0 rounded-[20px] px-3 py-3 sm:rounded-[24px] sm:px-4">
+            <div className="chat-noir-hints-title text-[11px] font-bold uppercase tracking-[0.18em] sm:text-xs">
+              New Memory Triggers
             </div>
-          ) : (
-            messages.map((message) => (
-              <MessageBubble
-                key={message.id}
-                message={message}
-                petName={petName}
-                petImage={petImage}
-              />
-            ))
-          )}
 
-          {loading ? <TypingBubble petName={petName} petImage={petImage} /> : null}
-        </div>
+            <div className="mt-2.5 flex flex-wrap gap-2 sm:mt-3">
+              {memoryHints.map((hint, index) => (
+                <span
+                  key={`${hint}-${index}`}
+                  className="chat-noir-hint-chip rounded-full px-3 py-1.5 text-[11px] font-semibold shadow-[0_4px_10px_rgba(0,0,0,0.14)] sm:px-3 sm:py-2 sm:text-xs"
+                >
+                  Remembered: {hint}
+                </span>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <form className="mobile-chat-composer mt-3 shrink-0 sm:mt-4" onSubmit={handleSubmit}>
+          <div className="chat-noir-composer-card rounded-[22px] p-2.5 sm:rounded-[26px] sm:p-3">
+            <div className="flex items-end gap-2 sm:gap-3">
+              <div className="min-w-0 flex-1">
+                <input
+                  className="chat-noir-input w-full rounded-full px-4 py-3 text-[15px] outline-none transition"
+                  type="text"
+                  placeholder="Type a message..."
+                  value={input}
+                  maxLength={800}
+                  onChange={(event) => setInput(event.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="chat-noir-submit inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full px-4 text-sm font-extrabold transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3"
+                disabled={!canSubmit}
+              >
+                {loading ? '...' : 'Send'}
+              </button>
+            </div>
+
+            <div className="chat-noir-meta mt-2.5 flex items-center justify-between px-1 text-[11px] sm:mt-3 sm:px-2 sm:text-xs">
+              <span className="truncate pr-3">
+                {usageDetail || 'Free chats are shared across your account.'}
+              </span>
+              <span className="shrink-0">{input.length} / 800</span>
+            </div>
+          </div>
+        </form>
       </div>
-
-      {errorText ? (
-        <div className='shrink-0 px-4 pb-3 md:px-5'>
-          <div className='rounded-2xl border border-red-400/20 bg-red-400/8 px-4 py-3 text-sm text-red-100'>
-            {errorText}
-          </div>
-        </div>
-      ) : null}
-
-      {/* 输入区固定在底部 */}
-      <form
-        onSubmit={handleSubmit}
-        className='shrink-0 border-t border-white/8 bg-[rgba(8,5,4,0.72)] px-4 pb-4 pt-4 backdrop-blur-sm md:px-5 md:pb-5'
-      >
-        <div className='flex items-end gap-3'>
-          <div className='min-w-0 flex-1 rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.045)] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'>
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyDown={handleTextareaKeyDown}
-              rows={inputRows}
-              placeholder={`Type a message for ${petName}...`}
-              className='max-h-[132px] min-h-[24px] w-full resize-none overflow-y-auto bg-transparent text-sm leading-6 text-[#fff7ed] placeholder:text-[rgba(255,244,230,0.34)] focus:outline-none'
-              disabled={loading}
-            />
-          </div>
-
-          <button
-            type='submit'
-            disabled={loading || !input.trim()}
-            className='inline-flex h-[46px] shrink-0 items-center justify-center rounded-full bg-[linear-gradient(135deg,#f7b733,#fc8f2b)] px-5 text-sm font-extrabold text-[#2a1609] shadow-[0_10px_24px_rgba(249,115,22,0.28)] transition hover:-translate-y-[1px] disabled:cursor-not-allowed disabled:opacity-50'
-          >
-            {loading ? 'Sending...' : 'Send'}
-          </button>
-        </div>
-
-        <div className='mt-2 flex items-center justify-between gap-3 px-1'>
-          <div className='text-[11px] leading-5 text-[rgba(255,244,230,0.42)]'>{remainingHint}</div>
-          <div className='shrink-0 text-[11px] font-medium text-[rgba(255,244,230,0.34)]'>
-            {input.length}/800
-          </div>
-        </div>
-      </form>
     </div>
   );
 }
-
-export default ChatPlayground;

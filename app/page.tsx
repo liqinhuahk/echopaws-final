@@ -33,10 +33,10 @@ const whyCards = [
 function FooterBrandMark() {
   const paw = (x: number, y: number, scale = 1) => (
     <g transform={`translate(${x} ${y}) scale(${scale})`}>
-      <circle cx='6.2' cy='4.8' r='1.55' />
-      <circle cx='9.2' cy='3.2' r='1.45' />
-      <circle cx='12.2' cy='4.8' r='1.55' />
-      <ellipse cx='9.1' cy='10.2' rx='3.6' ry='2.95' />
+      <circle cx='6.1' cy='4.8' r='1.5' />
+      <circle cx='9.1' cy='3.3' r='1.35' />
+      <circle cx='12' cy='4.8' r='1.5' />
+      <ellipse cx='9' cy='10' rx='3.45' ry='2.85' />
     </g>
   );
 
@@ -44,12 +44,12 @@ function FooterBrandMark() {
     <svg
       viewBox='0 0 32 32'
       aria-hidden='true'
-      className='h-[18px] w-[18px] shrink-0 text-[#3d2a1d]'
+      className='h-[17px] w-[17px] shrink-0 text-[#3b281b]'
       fill='currentColor'
     >
       <g transform='rotate(-18 16 16)'>
-        {paw(2.4, 2.2, 0.85)}
-        {paw(11.8, 11.2, 0.92)}
+        {paw(2.5, 2.4, 0.84)}
+        {paw(12.1, 11.3, 0.9)}
       </g>
     </svg>
   );
@@ -80,7 +80,7 @@ export default function HomePage() {
   return (
     <div className='min-h-screen bg-[#f6f1e8] text-white'>
       <div className='relative isolate min-h-screen overflow-hidden'>
-        {/* 背景层：只负责视觉，不可拦截点击 */}
+        {/* 背景装饰层：不可阻挡点击 */}
         <div className='pointer-events-none absolute inset-0 z-0'>
           <div
             className='absolute inset-0 bg-cover bg-center'
@@ -91,12 +91,10 @@ export default function HomePage() {
           <div className='absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(246,241,232,0)_0%,rgba(246,241,232,0.96)_100%)]' />
         </div>
 
-        {/* 桌面 Header：抬高层级，保证可点击 */}
-        <div className='relative z-30 hidden md:block'>
+        <div className='relative z-30'>
           <SiteHeader theme='dark' ctaLabel='Get Started' ctaHref='/create-pet' />
         </div>
 
-        {/* Hero 主内容：抬高层级，保证所有按钮可点 */}
         <main className='relative z-20'>
           <section className='container-shell flex min-h-[calc(100vh-96px)] items-center py-10 md:py-16'>
             <div className='grid w-full items-center gap-10 lg:grid-cols-[1.02fr_0.98fr]'>
@@ -151,7 +149,6 @@ export default function HomePage() {
         </main>
       </div>
 
-      {/* Why EchoPaws */}
       <section className='bg-[#f7f2e8] py-16 text-slate-900 md:py-20'>
         <div className='container-shell'>
           <div className='max-w-3xl'>
@@ -193,7 +190,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Our Story */}
       <section className='bg-[#f3ede1] py-16 text-slate-900 md:py-20'>
         <div className='container-shell'>
           <div className='rounded-[34px] border border-white/60 bg-[#fbf7ef] px-8 py-10 shadow-[0_18px_40px_rgba(15,23,42,0.06)] md:px-10 md:py-12'>
@@ -218,7 +214,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* CTA */}
+      {/* 恢复之前版本的底部 CTA 卡片 */}
       <section className='bg-[#ece7dc] py-16 text-slate-900 md:py-20'>
         <div className='container-shell'>
           <div className='mx-auto max-w-[760px] rounded-[34px] border border-white/70 bg-[#fbfbfb] px-6 py-10 text-center shadow-[0_22px_48px_rgba(15,23,42,0.08)] md:px-10 md:py-12'>
@@ -254,42 +250,6 @@ export default function HomePage() {
             <p className='mt-5 text-xs text-[#9ca3af]'>
               No credit card required · Free plan includes 20 chats · Upgrade anytime
             </p>
-          </div>
-        </div>
-      </section>
-
-      {/* Contact 锚点区：让 Header 的 Contact 可点击并有实际落点 */}
-      <section id='contact' className='bg-[#eae4d7] py-16 text-slate-900 md:py-20'>
-        <div className='container-shell'>
-          <div className='rounded-[30px] border border-white/60 bg-[#f9f5ee] px-8 py-10 shadow-[0_18px_40px_rgba(15,23,42,0.05)] md:px-10 md:py-12'>
-            <div className='text-xs font-extrabold uppercase tracking-[0.18em] text-orange-700'>
-              Contact
-            </div>
-
-            <h2 className='mt-4 text-[clamp(1.9rem,3.8vw,3.2rem)] font-black leading-[1.05] tracking-[-0.05em] text-[#0f1733]'>
-              Need help getting started with EchoPaws?
-            </h2>
-
-            <p className='mt-5 max-w-3xl text-[1rem] leading-[1.9] text-[#4b5563]'>
-              Start by creating your first AI pet, explore the Free plan, or review membership
-              options if you want deeper memory and uninterrupted companionship.
-            </p>
-
-            <div className='mt-7 flex flex-wrap gap-3'>
-              <Link
-                href='/create-pet'
-                className='inline-flex min-h-[48px] items-center justify-center rounded-full bg-gradient-to-r from-[#ffb11f] to-[#ff8a00] px-6 text-sm font-extrabold text-white shadow-[0_12px_24px_rgba(249,115,22,0.20)] transition hover:-translate-y-[1px]'
-              >
-                Create My Pet
-              </Link>
-
-              <Link
-                href='/pricing'
-                className='inline-flex min-h-[48px] items-center justify-center rounded-full border border-black/10 bg-white px-6 text-sm font-extrabold text-[#0f1733] transition hover:bg-[#fafafa]'
-              >
-                View Pricing
-              </Link>
-            </div>
           </div>
         </div>
       </section>

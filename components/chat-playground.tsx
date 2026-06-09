@@ -69,16 +69,6 @@ function extractAssistantText(payload: any): string {
   return '';
 }
 
-function extractMemoryTrigger(payload: any): string {
-  if (!payload) return '';
-  if (typeof payload?.memoryTrigger === 'string') return payload.memoryTrigger;
-  if (typeof payload?.memory_trigger === 'string') return payload.memory_trigger;
-  if (typeof payload?.memory === 'string') return payload.memory;
-  if (typeof payload?.data?.memoryTrigger === 'string') return payload.data.memoryTrigger;
-  if (typeof payload?.data?.memory === 'string') return payload.data.memory;
-  return '';
-}
-
 function AssistantAvatar({
   petName,
   petImage,
@@ -181,7 +171,6 @@ export function ChatPlayground({
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [errorText, setErrorText] = useState('');
-  const [memoryTrigger, setMemoryTrigger] = useState('');
   const [inputRows, setInputRows] = useState(1);
 
   const scrollViewportRef = useRef<HTMLDivElement | null>(null);
@@ -198,7 +187,7 @@ export function ChatPlayground({
       top: el.scrollHeight,
       behavior: 'smooth',
     });
-  }, [messages, loading, memoryTrigger]);
+  }, [messages, loading]);
 
   useEffect(() => {
     if (!textareaRef.current) return;
@@ -223,7 +212,6 @@ export function ChatPlayground({
     if (!text || loading) return;
 
     setErrorText('');
-    setMemoryTrigger('');
 
     const nextUserMessage: ChatMessage = {
       id: uid(),
@@ -263,8 +251,6 @@ export function ChatPlayground({
         extractAssistantText(payload) ||
         "I'm here with you. Tell me more, and I'll stay close with every memory we make together.";
 
-      const newMemoryTrigger = extractMemoryTrigger(payload);
-
       const nextAssistantMessage: ChatMessage = {
         id: uid(),
         role: 'assistant',
@@ -273,9 +259,6 @@ export function ChatPlayground({
       };
 
       setMessages((prev) => [...prev, nextAssistantMessage]);
-      if (newMemoryTrigger) {
-        setMemoryTrigger(newMemoryTrigger);
-      }
     } catch (error) {
       console.error(error);
       setErrorText('发送消息失败，请稍后重试。');
@@ -294,7 +277,7 @@ export function ChatPlayground({
 
   return (
     <div className='flex h-full min-h-0 flex-col bg-transparent text-[#fff7ed]'>
-      {/* top strip */}
+      {/* 顶部小条，保留当前视觉 */}
       <div className='flex shrink-0 items-center justify-between gap-3 border-b border-white/8 px-4 py-3 md:px-5'>
         <div className='flex min-w-0 flex-wrap items-center gap-2'>
           <span className='inline-flex h-7 items-center rounded-full border border-amber-300/25 bg-amber-300/10 px-3 text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-[#f6cf7b]'>
@@ -307,19 +290,19 @@ export function ChatPlayground({
         </div>
       </div>
 
-      {/* scroll area */}
+      {/* 关键修复：固定高度框里的内部滚动区 */}
       <div
         ref={scrollViewportRef}
         className='min-h-0 flex-1 overflow-y-auto px-4 py-4 md:px-5 md:py-5'
         style={{
           scrollbarWidth: 'thin',
-          scrollbarColor: 'rgba(255,255,255,0.16) transparent',
+          scrollbarColor: 'rgba(255,255,255,0.18) transparent',
         }}
       >
         <div className='space-y-4'>
           {messages.length === 0 ? (
-            <div className='flex h-full min-h-[260px] items-center justify-center'>
-              <div className='max-w-md rounded-[22px] border border-white/8 bg-[rgba(255,255,255,0.04)] px-5 py-4 text-center shadow-[0_10px_28px_rgba(0,0,0,0.16)]'>
+            <div className='flex h-full min-h-[280px] items-center justify-center'>
+              <div className='max-w-md rounded-[22px] border border-white/10 bg-[rgba(255,255,255,0.05)] px-5 py-4 text-center shadow-[0_10px_28px_rgba(0,0,0,0.16)]'>
                 <div className='mx-auto mb-3 flex w-fit items-center gap-3'>
                   <AssistantAvatar petName={petName} petImage={petImage} />
                   <div className='text-left'>
@@ -349,21 +332,6 @@ export function ChatPlayground({
         </div>
       </div>
 
-      {/* memory trigger: 改为小型次级提示，不再占据大块中部空间 */}
-      {memoryTrigger ? (
-        <div className='shrink-0 px-4 pb-3 md:px-5'>
-          <div className='rounded-2xl border border-amber-300/16 bg-amber-300/[0.06] px-4 py-3'>
-            <div className='text-[10px] font-extrabold uppercase tracking-[0.22em] text-[#f3c86b]'>
-              Memory trigger
-            </div>
-            <div className='mt-1 text-xs leading-6 text-[rgba(255,244,230,0.82)]'>
-              {memoryTrigger}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* error */}
       {errorText ? (
         <div className='shrink-0 px-4 pb-3 md:px-5'>
           <div className='rounded-2xl border border-red-400/20 bg-red-400/8 px-4 py-3 text-sm text-red-100'>
@@ -372,7 +340,7 @@ export function ChatPlayground({
         </div>
       ) : null}
 
-      {/* input area */}
+      {/* 输入区固定在底部 */}
       <form
         onSubmit={handleSubmit}
         className='shrink-0 border-t border-white/8 bg-[rgba(8,5,4,0.72)] px-4 pb-4 pt-4 backdrop-blur-sm md:px-5 md:pb-5'

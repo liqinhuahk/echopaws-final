@@ -82,7 +82,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const petDescription =
     (selectedPet as any)?.personality ||
     (selectedPet as any)?.breed ||
-    'A warm, emotionally present companion ready to keep talking with you.';
+    'A warmer, calmer chat space designed to keep your companion emotionally front and center.';
 
   return (
     <div className='app-brand-backdrop'>
@@ -98,7 +98,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
               <div>
                 <h1 className='page-title text-[clamp(2.4rem,4vw,4rem)]'>Chat with {selectedPet.name}</h1>
-                <p className='page-subtitle mt-3 max-w-2xl text-[0.98rem] leading-[1.9]'>
+                <p className='mt-3 max-w-2xl text-[0.98rem] leading-[1.9] text-[rgba(255,244,230,0.78)]'>
                   {petDescription}
                 </p>
 
@@ -152,8 +152,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                       <div className='flex items-center gap-3'>
                         <PetAvatar src={itemImage} name={pet.name} className='h-11 w-11' />
                         <div className='min-w-0'>
-                          <div className='truncate text-sm font-bold text-strong'>{pet.name}</div>
-                          <div className='text-xs text-soft'>
+                          <div className='truncate text-sm font-bold text-[color:#fff7ed]'>{pet.name}</div>
+                          <div className='text-xs text-[rgba(255,244,230,0.56)]'>
                             {pet.id === petOverview?.defaultPetId ? 'Primary pet' : 'Companion'}
                           </div>
                         </div>
@@ -167,7 +167,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
             <section className='glass-card p-5'>
               <div className='eyebrow'>Companion mood</div>
               <h2 className='section-title mt-4 text-xl'>A softer place to chat</h2>
-              <p className='mt-3 text-sm leading-7 text-body'>
+              <p className='mt-3 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                 Warm cream tones, gentler bubbles, and cleaner message focus help the conversation
                 feel more personal, calm, and emotionally close.
               </p>

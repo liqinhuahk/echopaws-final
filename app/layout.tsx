@@ -1,8 +1,7 @@
 import type { Metadata } from 'next';
-import { Suspense } from 'react';
 import { SupabaseProvider } from '@/components/supabase-provider';
-import { MobileAppChrome } from '@/components/mobile-app-chrome';
 import { ContactModalProvider } from '@/components/contact-modal-provider';
+import { MobileAppChrome } from '@/components/mobile-app-chrome';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -16,14 +15,11 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang='en'>
-      <body>
+      <body className='overflow-x-hidden'>
         <SupabaseProvider>
           <ContactModalProvider>
-            <Suspense fallback={null}>
-              <MobileAppChrome />
-            </Suspense>
-
             <div className='mobile-app-content'>{children}</div>
+            <MobileAppChrome />
           </ContactModalProvider>
         </SupabaseProvider>
       </body>

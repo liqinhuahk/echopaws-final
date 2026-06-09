@@ -134,7 +134,7 @@ export default async function AccountPage() {
             Welcome back, {displayName}
           </h1>
 
-          <p className='page-subtitle mt-4 max-w-4xl text-[1rem] leading-[1.95]'>
+          <p className='mt-4 max-w-4xl text-[1rem] leading-[1.95] text-[rgba(255,244,230,0.78)]'>
             Review your current membership, pet setup, Free versus VIP benefits, billing access,
             and security controls in one warm, unified space that matches the EchoPaws home
             experience.
@@ -152,8 +152,8 @@ export default async function AccountPage() {
 
             <div className='mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4'>
               <div className='dark-shell-panel p-4'>
-                <div className='text-sm font-bold text-soft'>Email</div>
-                <div className='mt-2 text-base font-semibold text-strong'>{maskedEmail}</div>
+                <div className='text-sm font-bold text-[rgba(255,244,230,0.56)]'>Email</div>
+                <div className='mt-2 text-base font-semibold text-[color:#fff7ed]'>{maskedEmail}</div>
 
                 <div className='mt-3 flex flex-wrap items-center gap-2'>
                   <button
@@ -165,32 +165,32 @@ export default async function AccountPage() {
                     <span id='copy-email-feedback'>Copy email</span>
                   </button>
 
-                  <span className='text-xs text-soft'>Full email hidden for privacy</span>
+                  <span className='text-xs text-[rgba(255,244,230,0.56)]'>Full email hidden for privacy</span>
                 </div>
               </div>
 
               <div className='dark-shell-panel p-4'>
-                <div className='text-sm font-bold text-soft'>Current Plan</div>
-                <div className='mt-2 text-base font-semibold text-strong'>{currentPlan}</div>
-                <div className='mt-1 text-xs text-soft'>{planStatus}</div>
+                <div className='text-sm font-bold text-[rgba(255,244,230,0.56)]'>Current Plan</div>
+                <div className='mt-2 text-base font-semibold text-[color:#fff7ed]'>{currentPlan}</div>
+                <div className='mt-1 text-xs text-[rgba(255,244,230,0.56)]'>{planStatus}</div>
               </div>
 
               <div className='dark-shell-panel p-4'>
-                <div className='text-sm font-bold text-soft'>Pets</div>
-                <div className='mt-2 text-base font-semibold text-strong'>{petCount}</div>
-                <div className='mt-1 text-xs text-soft'>
+                <div className='text-sm font-bold text-[rgba(255,244,230,0.56)]'>Pets</div>
+                <div className='mt-2 text-base font-semibold text-[color:#fff7ed]'>{petCount}</div>
+                <div className='mt-1 text-xs text-[rgba(255,244,230,0.56)]'>
                   {defaultPet ? `Default pet: ${defaultPet.name}` : 'No default pet set'}
                 </div>
               </div>
 
               <div className='dark-shell-panel p-4'>
-                <div className='text-sm font-bold text-soft'>
+                <div className='text-sm font-bold text-[rgba(255,244,230,0.56)]'>
                   {vipActive ? 'Chat Access' : 'Free Chat Allowance'}
                 </div>
-                <div className='mt-2 text-base font-semibold text-strong'>
+                <div className='mt-2 text-base font-semibold text-[color:#fff7ed]'>
                   {vipActive ? 'Unlimited' : `${FREE_TOTAL_CHAT_LIMIT} total`}
                 </div>
-                <div className='mt-1 text-xs text-soft'>
+                <div className='mt-1 text-xs text-[rgba(255,244,230,0.56)]'>
                   {vipActive ? 'Unlimited chats with VIP' : 'Lifetime chats, not daily reset'}
                 </div>
               </div>
@@ -256,7 +256,7 @@ export default async function AccountPage() {
               </form>
             </div>
 
-            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm text-body'>
+            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm text-[rgba(255,244,230,0.78)]'>
               If you just upgraded, your VIP status may take a moment to appear here after checkout.
             </div>
           </div>
@@ -274,7 +274,7 @@ export default async function AccountPage() {
               <BenefitItem text='Pet profile and photo upload' />
             </ul>
 
-            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-body'>
+            <div className='mt-5 rounded-2xl border border-white/8 bg-white/4 px-4 py-3 text-sm text-[rgba(255,244,230,0.78)]'>
               {petCount >= FREE_TIER_MAX_PETS && !vipActive
                 ? `You currently have ${petCount} pets on the Free plan. You've reached the Free pet limit. Upgrade to VIP if you want more pet capacity.`
                 : !vipActive
@@ -290,10 +290,10 @@ export default async function AccountPage() {
             <h2 className='section-title mt-4 text-2xl'>What VIP unlocks</h2>
 
             <div className='mt-4 flex items-end gap-1'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-[color:#fff7ed]'>
                 $9.99
               </strong>
-              <span className='mb-1 text-sm font-semibold text-soft'>/Month</span>
+              <span className='mb-1 text-sm font-semibold text-[rgba(255,244,230,0.56)]'>/Month</span>
             </div>
 
             <ul className='mt-5 grid gap-3 text-sm leading-7'>
@@ -314,13 +314,13 @@ export default async function AccountPage() {
         <section className='mt-8 grid gap-5 md:grid-cols-2'>
           <article className='glass-card p-6'>
             <div className='eyebrow'>Plan rules</div>
-            <p className='mt-4 text-sm leading-8 text-body'>
+            <p className='mt-4 text-sm leading-8 text-[rgba(255,244,230,0.78)]'>
               Free accounts include {FREE_TOTAL_CHAT_LIMIT} total lifetime chats and can keep up to{' '}
               {FREE_TIER_MAX_PETS} pets. VIP removes the {FREE_TOTAL_CHAT_LIMIT}-chat limit,
               unlocks more pet capacity, and gives your pet deeper memory continuity.
             </p>
 
-            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-body'>
+            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               Keep in mind that plan changes may take a short moment to sync after checkout or
               billing updates. If your plan status looks outdated, refresh once after returning
               from billing.
@@ -329,13 +329,13 @@ export default async function AccountPage() {
 
           <article className='glass-card p-6'>
             <div className='eyebrow'>Privacy & Control</div>
-            <p className='mt-4 text-sm leading-8 text-body'>
+            <p className='mt-4 text-sm leading-8 text-[rgba(255,244,230,0.78)]'>
               Your account gives you control over sign-in status, pet management, and subscription
               access. You can sign out at any time, manage your membership from the billing portal,
               and review which pet is set as your current default companion.
             </p>
 
-            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-body'>
+            <div className='mt-4 rounded-2xl border border-white/8 bg-white/4 px-4 py-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               For privacy, your full email address is hidden in the UI. Use the copy button if you
               need the complete address for support, billing, or login troubleshooting.
             </div>

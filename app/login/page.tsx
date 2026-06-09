@@ -71,7 +71,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 world.
               </h1>
 
-              <p className='page-subtitle mt-6 max-w-[560px] text-[1.02rem] leading-[1.95]'>
+              <p className='mt-6 max-w-[560px] text-[1.02rem] leading-[1.95] text-[rgba(255,244,230,0.78)]'>
                 Keep the same warm EchoPaws feeling from Home while entering your account. Sign in
                 first, then create or continue with your AI pet in just a few steps.
               </p>
@@ -100,12 +100,14 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
           <section className='glass-card p-6 md:p-8'>
             <div className='eyebrow'>Welcome to EchoPaws</div>
+
             <h2 className='mt-5 text-3xl font-black tracking-[-0.04em] text-[color:#fff7ed]'>
               Continue with your account
             </h2>
+
             <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.72)]'>
-              Choose Google or email to continue. If this account was first created with Google,
-              continue with Google or set a password first.
+              Choose Google or email to continue. After signing in, you can return to your pet,
+              memories, and ongoing conversations right away.
             </p>
 
             {message ? (
@@ -126,14 +128,13 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                 className='subtle-button w-full gap-2 border-white/12 bg-white/6 text-white'
               >
                 <GoogleLogo />
-                Continue with Google
+                Sign in with Google
               </button>
             </form>
 
             <div className='mt-4 rounded-2xl border border-white/10 bg-white/4 px-4 py-4 text-center text-sm leading-7 text-[rgba(255,244,230,0.62)]'>
-              If you first created this account with Google, continue with Google.
-              <br />
-              If you want to use email sign-in later, set a password first.
+              Continue with Google for the fastest setup, or use email below to sign in and create
+              your EchoPaws account.
             </div>
 
             <div className='mt-6 flex items-center gap-4'>
@@ -146,9 +147,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
             <form action={signInWithPassword} className='mt-6 grid gap-4'>
               <label className='grid gap-2'>
-                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
-                  Email address
-                </span>
+                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Email address</span>
                 <input type='email' name='email' placeholder='name@example.com' required />
               </label>
 
@@ -158,9 +157,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
               </label>
 
               <label className='grid gap-2'>
-                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>
-                  Nickname (optional)
-                </span>
+                <span className='text-sm font-bold text-[rgba(255,244,230,0.86)]'>Nickname (optional)</span>
                 <input type='text' name='nickname' placeholder='What should your pet call you' />
               </label>
 
@@ -169,15 +166,15 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
                   Sign In
                 </button>
 
-                <button
-                  formAction={signUpWithPassword}
-                  type='submit'
-                  className='subtle-button w-full'
-                >
+                <button formAction={signUpWithPassword} type='submit' className='subtle-button w-full'>
                   Create Account
                 </button>
               </div>
             </form>
+
+            <p className='mt-4 text-center text-xs text-[rgba(255,244,230,0.42)]'>
+              No account yet? Create one to bring your first AI pet to life.
+            </p>
           </section>
         </section>
       </main>

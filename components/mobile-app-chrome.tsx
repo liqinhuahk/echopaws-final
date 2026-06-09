@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 
-const CONTACT_HREF = 'mailto:YOUR_EMAIL_HERE';
+const CONTACT_HREF = '/#contact';
 
 type ChatPetPayload = {
   activePetId: string | null;
@@ -60,7 +60,14 @@ function readChatPetsFromDom(): ChatPetPayload | null {
 
 function HomeIcon() {
   return (
-    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+    <svg
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      className='h-5 w-5 shrink-0'
+      aria-hidden='true'
+    >
       <path d='M3 10.5 12 3l9 7.5' />
       <path d='M5 9.5V20h14V9.5' />
     </svg>
@@ -69,7 +76,14 @@ function HomeIcon() {
 
 function ChatIcon() {
   return (
-    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+    <svg
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      className='h-5 w-5 shrink-0'
+      aria-hidden='true'
+    >
       <path d='M5 6h14a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H9l-4 3v-3H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z' />
     </svg>
   );
@@ -77,7 +91,14 @@ function ChatIcon() {
 
 function MemoriesIcon() {
   return (
-    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+    <svg
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      className='h-5 w-5 shrink-0'
+      aria-hidden='true'
+    >
       <path d='M12 20s-7-4.35-7-10a4 4 0 0 1 7-2.65A4 4 0 0 1 19 10c0 5.65-7 10-7 10Z' />
     </svg>
   );
@@ -85,7 +106,14 @@ function MemoriesIcon() {
 
 function AccountIcon() {
   return (
-    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+    <svg
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      className='h-5 w-5 shrink-0'
+      aria-hidden='true'
+    >
       <path d='M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z' />
       <path d='M4 20a8 8 0 0 1 16 0' />
     </svg>
@@ -94,7 +122,14 @@ function AccountIcon() {
 
 function ContactIcon() {
   return (
-    <svg viewBox='0 0 24 24' fill='none' stroke='currentColor' strokeWidth='1.8'>
+    <svg
+      viewBox='0 0 24 24'
+      fill='none'
+      stroke='currentColor'
+      strokeWidth='1.8'
+      className='h-5 w-5 shrink-0'
+      aria-hidden='true'
+    >
       <path d='M4 6h16v12H4z' />
       <path d='m4 8 8 6 8-6' />
     </svg>
@@ -108,7 +143,8 @@ function ChevronDownIcon({ open }: { open: boolean }) {
       fill='none'
       stroke='currentColor'
       strokeWidth='1.8'
-      className={open ? 'is-open' : ''}
+      className={`h-5 w-5 shrink-0 ${open ? 'is-open' : ''}`}
+      aria-hidden='true'
     >
       <path d='m6 9 6 6 6-6' />
     </svg>
@@ -183,7 +219,7 @@ function BottomNavItem({ item }: { item: NavItem }) {
   }
 
   return (
-    <Link href={item.href} className={className}>
+    <Link href={item.href} className={className} aria-label={item.label}>
       <span className='mobile-app-bottomnav__icon'>{item.icon}</span>
       <span className='mobile-app-bottomnav__label'>{item.label}</span>
     </Link>
@@ -191,7 +227,7 @@ function BottomNavItem({ item }: { item: NavItem }) {
 }
 
 export function MobileAppChrome() {
-  const pathname = usePathname();
+  const pathname = usePathname() || '/';
   const showTopBar = shouldShowTopBar(pathname);
   const showBottomNav = shouldShowBottomNav(pathname);
   const isChatPage = pathname.startsWith('/chat');
@@ -199,6 +235,7 @@ export function MobileAppChrome() {
   const isAccountPage = pathname.startsWith('/account');
   const isHomePage = pathname === '/';
 
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [chatPetPayload, setChatPetPayload] = useState<ChatPetPayload | null>(null);
   const [optimisticPetId, setOptimisticPetId] = useState<string | null>(null);
@@ -206,7 +243,42 @@ export function MobileAppChrome() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const media = window.matchMedia('(max-width: 767px)');
+
+    const sync = () => {
+      setIsMobileViewport(media.matches);
+    };
+
+    sync();
+
+    if (typeof media.addEventListener === 'function') {
+      media.addEventListener('change', sync);
+      return () => media.removeEventListener('change', sync);
+    }
+
+    media.addListener(sync);
+    return () => media.removeListener(sync);
+  }, []);
+
+  useEffect(() => {
     if (typeof document === 'undefined') return;
+
+    const classNames = [
+      'mobile-chrome-active',
+      'mobile-topbar-active',
+      'mobile-bottomnav-active',
+      'mobile-route-home',
+      'mobile-route-chat',
+      'mobile-route-memories',
+      'mobile-route-account',
+      'mobile-route-pets',
+    ];
+
+    document.body.classList.remove(...classNames);
+
+    if (!isMobileViewport) return;
 
     document.body.classList.toggle('mobile-chrome-active', showTopBar || showBottomNav);
     document.body.classList.toggle('mobile-topbar-active', showTopBar);
@@ -219,30 +291,22 @@ export function MobileAppChrome() {
     document.body.classList.toggle('mobile-route-pets', pathname.startsWith('/pets'));
 
     return () => {
-      document.body.classList.remove(
-        'mobile-chrome-active',
-        'mobile-topbar-active',
-        'mobile-bottomnav-active',
-        'mobile-route-home',
-        'mobile-route-chat',
-        'mobile-route-memories',
-        'mobile-route-account',
-        'mobile-route-pets'
-      );
+      document.body.classList.remove(...classNames);
     };
-  }, [pathname, showTopBar, showBottomNav]);
+  }, [pathname, showTopBar, showBottomNav, isMobileViewport]);
 
   useEffect(() => {
     setIsOpen(false);
 
     if (typeof window !== 'undefined') {
-      const value = new URLSearchParams(window.location.search).get('pet_id') ?? '';
+      const params = new URLSearchParams(window.location.search);
+      const value = params.get('petId') ?? params.get('pet_id') ?? '';
       setCurrentPetIdFromUrl(value);
     }
   }, [pathname]);
 
   useEffect(() => {
-    if (!isChatPage) {
+    if (!isChatPage || !isMobileViewport) {
       setChatPetPayload(null);
       return;
     }
@@ -254,8 +318,9 @@ export function MobileAppChrome() {
 
     sync();
     const timer = window.setInterval(sync, 500);
+
     return () => window.clearInterval(timer);
-  }, [isChatPage]);
+  }, [isChatPage, isMobileViewport]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -281,7 +346,7 @@ export function MobileAppChrome() {
     );
   }, [chatPetPayload, effectiveActivePetId]);
 
-  const memoriesChatHref = currentPetIdFromUrl ? `/chat?pet_id=${currentPetIdFromUrl}` : '/chat';
+  const memoriesChatHref = currentPetIdFromUrl ? `/chat?petId=${currentPetIdFromUrl}` : '/chat';
 
   const topActions = useMemo(() => {
     if (isHomePage) {
@@ -300,7 +365,7 @@ export function MobileAppChrome() {
         <div className='mobile-app-topbar__actions'>
           <TopActionLink href='/login'>Sign In</TopActionLink>
           <TopActionLink href='/pricing' tone='brand'>
-            Upgrade to VIP
+            Manage Membership
           </TopActionLink>
         </div>
       );
@@ -341,16 +406,15 @@ export function MobileAppChrome() {
         label: 'Contact',
         icon: <ContactIcon />,
         active: false,
-        external: true,
       },
     ],
     [pathname]
   );
 
-  if (!showTopBar && !showBottomNav) return null;
+  if (!isMobileViewport || (!showTopBar && !showBottomNav)) return null;
 
   return (
-    <>
+    <div className='md:hidden'>
       {showTopBar ? (
         <div className='mobile-app-topbar' aria-label='EchoPaws mobile top bar'>
           <Link href='/' className='mobile-app-topbar__brand'>
@@ -416,12 +480,15 @@ export function MobileAppChrome() {
         <nav
           className='mobile-app-bottomnav'
           style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+          aria-label='EchoPaws mobile bottom navigation'
         >
           {navItems.map((item) => (
             <BottomNavItem key={`${item.label}-${item.href}`} item={item} />
           ))}
         </nav>
       ) : null}
-    </>
+    </div>
   );
 }
+
+export default MobileAppChrome;

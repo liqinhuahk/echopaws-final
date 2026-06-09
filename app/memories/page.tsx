@@ -169,10 +169,8 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <PetAvatar src={petImage} name={selectedPet.name} className='h-16 w-16' />
 
               <div>
-                <h1 className='page-title text-[clamp(2.4rem,4vw,4rem)]'>
-                  Memories of {selectedPet.name}
-                </h1>
-                <p className='page-subtitle mt-3 max-w-2xl text-[0.98rem] leading-[1.9]'>
+                <h1 className='page-title text-[clamp(2.4rem,4vw,4rem)]'>Memories of {selectedPet.name}</h1>
+                <p className='mt-3 max-w-2xl text-[0.98rem] leading-[1.9] text-[rgba(255,244,230,0.78)]'>
                   Searchable memories, cleaner filters, and a softer brand shell so the page feels
                   like a natural continuation of Home, Chat, and Account.
                 </p>
@@ -196,11 +194,11 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
               <div className='flex items-start gap-3'>
                 <PetAvatar src={petImage} name={selectedPet.name} className='h-14 w-14' />
                 <div>
-                  <div className='text-lg font-extrabold text-strong'>{selectedPet.name}</div>
-                  <div className='mt-1 text-sm text-body'>
+                  <div className='text-lg font-extrabold text-[color:#fff7ed]'>{selectedPet.name}</div>
+                  <div className='mt-1 text-sm text-[rgba(255,244,230,0.78)]'>
                     {filteredMemories.length} memories
                   </div>
-                  <div className='mt-1 text-xs text-soft'>
+                  <div className='mt-1 text-xs text-[rgba(255,244,230,0.56)]'>
                     Updated {formatDateLabel(summaryRow?.updated_at)}
                   </div>
                 </div>
@@ -235,8 +233,8 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                       <div className='flex items-center gap-3'>
                         <PetAvatar src={itemImage} name={pet.name} className='h-11 w-11' />
                         <div className='min-w-0'>
-                          <div className='truncate text-sm font-bold text-strong'>{pet.name}</div>
-                          <div className='text-xs text-soft'>
+                          <div className='truncate text-sm font-bold text-[color:#fff7ed]'>{pet.name}</div>
+                          <div className='text-xs text-[rgba(255,244,230,0.56)]'>
                             {pet.id === petOverview?.defaultPetId ? 'Primary pet' : 'Companion'}
                           </div>
                         </div>
@@ -249,7 +247,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
 
             <section className='glass-card p-5'>
               <div className='eyebrow'>Companion snapshot</div>
-              <p className='mt-4 text-sm leading-7 text-body'>
+              <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                 {summaryRow?.summary ||
                   `${selectedPet.name} is building an ongoing emotional memory space with you.`}
               </p>
@@ -260,7 +258,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
             <section className='glass-card p-5'>
               <form className='grid gap-3 md:grid-cols-[minmax(0,1.4fr)_180px_180px_auto]'>
                 <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-soft'>
+                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
                     Search
                   </span>
                   <input
@@ -272,7 +270,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-soft'>
+                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
                     Type
                   </span>
                   <select name='type' defaultValue={pickFirst(resolvedSearchParams.type) ?? ''}>
@@ -285,7 +283,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </label>
 
                 <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-soft'>
+                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
                     Sort
                   </span>
                   <select name='sort' defaultValue={pickFirst(resolvedSearchParams.sort) ?? 'latest'}>
@@ -306,7 +304,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                 </div>
               </form>
 
-              <div className='mt-4 text-sm text-body'>
+              <div className='mt-4 text-sm text-[rgba(255,244,230,0.78)]'>
                 {filteredMemories.length} result{filteredMemories.length === 1 ? '' : 's'}
               </div>
             </section>
@@ -327,23 +325,23 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                             </span>
                           </div>
 
-                          <p className='mt-4 text-sm leading-7 text-body'>
+                          <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                             {buildExcerpt(memory.content)}
                           </p>
                         </div>
 
-                        <div className='shrink-0 text-xs text-soft'>
+                        <div className='shrink-0 text-xs text-[rgba(255,244,230,0.56)]'>
                           Updated {formatDateLabel(memory.updated_at)}
                         </div>
                       </div>
                     </summary>
 
-                    <div className='mt-5 border-t border-white/8 pt-5 text-sm leading-7 text-body'>
+                    <div className='mt-5 border-t border-white/8 pt-5 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                       {memory.content}
                     </div>
 
                     <div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-4'>
-                      <div className='text-xs text-soft'>
+                      <div className='text-xs text-[rgba(255,244,230,0.56)]'>
                         Created {formatDateLabel(memory.created_at)}
                       </div>
 
@@ -357,7 +355,7 @@ export default async function MemoriesPage({ searchParams }: MemoriesPageProps) 
                   </details>
                 ))
               ) : (
-                <div className='glass-card p-6 text-sm leading-7 text-body'>
+                <div className='glass-card p-6 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                   No memories matched your current filters yet.
                 </div>
               )}

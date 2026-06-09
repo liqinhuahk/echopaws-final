@@ -79,7 +79,7 @@ export default async function PricingPage() {
             Pricing designed for deeper companionship
           </h1>
 
-          <p className='page-subtitle mt-5 max-w-4xl text-[1rem] leading-[1.95]'>
+          <p className='mt-5 max-w-4xl text-[1rem] leading-[1.95] text-[rgba(255,244,230,0.78)]'>
             Start free, then upgrade only when the bond feels real. EchoPaws VIP is not about
             counting messages — it is about preserving continuity, emotional memory, and a
             companion that keeps growing with you.
@@ -92,16 +92,16 @@ export default async function PricingPage() {
             <h2 className='section-title mt-4 text-2xl'>Free</h2>
 
             <div className='mt-4 flex items-end gap-1'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>$0</strong>
-              <span className='mb-1 text-sm font-semibold text-soft'>/ forever</span>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-[color:#fff7ed]'>$0</strong>
+              <span className='mb-1 text-sm font-semibold text-[rgba(255,244,230,0.56)]'>/ forever</span>
             </div>
 
-            <p className='mt-4 text-sm leading-7 text-body'>
+            <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               A gentle starting point for first-time users who want to explore EchoPaws before
               upgrading.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-body'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               <li>✓ {FREE_TOTAL_CHAT_LIMIT} lifetime chats</li>
               <li>✓ Up to {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Basic memory capability</li>
@@ -124,18 +124,18 @@ export default async function PricingPage() {
             <h2 className='section-title mt-4 text-2xl'>VIP</h2>
 
             <div className='mt-4 flex items-end gap-1'>
-              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-strong'>
+              <strong className='text-4xl font-extrabold tracking-[-0.05em] text-[color:#fff7ed]'>
                 {VIP_PRICE}
               </strong>
-              <span className='mb-1 text-sm font-semibold text-soft'>/ month</span>
+              <span className='mb-1 text-sm font-semibold text-[rgba(255,244,230,0.56)]'>/ month</span>
             </div>
 
-            <p className='mt-4 text-sm leading-7 text-body'>
+            <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               Best for users who want uninterrupted companionship, deeper memory, and more pet
               capacity.
             </p>
 
-            <ul className='mt-5 grid gap-3 text-sm leading-7 text-body'>
+            <ul className='mt-5 grid gap-3 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
               <li>✓ Unlimited chats</li>
               <li>✓ More than {FREE_TIER_MAX_PETS} pets</li>
               <li>✓ Deeper long-term memory</li>
@@ -167,9 +167,9 @@ export default async function PricingPage() {
             {comparisonRows.map(([label, free, vip]) => (
               <div
                 key={label}
-                className='grid grid-cols-3 border-t border-white/8 px-4 py-4 text-sm leading-7 text-body'
+                className='grid grid-cols-3 border-t border-white/8 px-4 py-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'
               >
-                <div className='font-semibold text-strong'>{label}</div>
+                <div className='font-semibold text-[color:#fff7ed]'>{label}</div>
                 <div>{free}</div>
                 <div>{vip}</div>
               </div>
@@ -183,8 +183,8 @@ export default async function PricingPage() {
           <div className='mt-5 grid gap-4 md:grid-cols-2'>
             {faqs.map((item) => (
               <article key={item.q} className='dark-shell-panel p-5'>
-                <h3 className='text-base font-extrabold text-strong'>{item.q}</h3>
-                <p className='mt-2 text-sm leading-7 text-body'>{item.a}</p>
+                <h3 className='text-base font-extrabold text-[color:#fff7ed]'>{item.q}</h3>
+                <p className='mt-2 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>{item.a}</p>
               </article>
             ))}
           </div>

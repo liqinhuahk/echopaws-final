@@ -33,7 +33,7 @@ function getPetDescription(pet: any) {
     pet?.personality ||
     pet?.description ||
     pet?.breed ||
-    'A softer, darker, more intimate chat space designed to keep your companion emotionally front and center.'
+    'A softer, darker, more intimate chat space — designed to keep your companion emotionally front and center in the Noir experience.'
   );
 }
 
@@ -138,8 +138,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           }}
         />
 
-        {/* Top hero card */}
-        <section className='glass-card relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02))] p-5 md:p-6'>
+        {/* Top banner */}
+        <section className='glass-card relative overflow-hidden rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02))] p-6 md:p-7'>
           <div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left_center,rgba(249,115,22,0.12),transparent_26%),radial-gradient(circle_at_right_center,rgba(251,191,36,0.07),transparent_22%)]' />
 
           <div className='relative z-10'>
@@ -157,7 +157,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                 />
 
                 <div className='min-w-0'>
-                  <h1 className='page-title text-[clamp(2.3rem,4vw,4rem)] leading-[0.95]'>
+                  <h1 className='page-title text-[clamp(2.35rem,4vw,4.2rem)] leading-[0.95]'>
                     Chat with {selectedPet.name}
                   </h1>
 
@@ -166,7 +166,9 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                   </p>
 
                   <div className='mt-4 flex flex-wrap gap-2'>
-                    <span className='tag-chip tag-chip--warm'>Companion chat</span>
+                    <span className='tag-chip tag-chip--warm'>
+                      {isPrimaryPet ? 'VIP — Unlimited' : 'Companion chat'}
+                    </span>
                     <span className='tag-chip tag-chip--soft'>
                       {isPrimaryPet ? 'Primary pet' : 'Companion'}
                     </span>
@@ -175,11 +177,17 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                 </div>
               </div>
 
-              <div className='flex shrink-0 flex-row gap-3 md:flex-col'>
-                <Link href='/memories' className='subtle-button text-center'>
+              <div className='flex shrink-0 flex-col gap-3'>
+                <Link
+                  href='/memories'
+                  className='inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/22 bg-white/[0.03] px-5 text-sm font-bold text-white transition hover:bg-white/[0.06]'
+                >
                   Memories
                 </Link>
-                <Link href='/pets' className='subtle-button text-center'>
+                <Link
+                  href='/pets'
+                  className='inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/22 bg-white/[0.03] px-5 text-sm font-bold text-white transition hover:bg-white/[0.06]'
+                >
                   Manage Pets
                 </Link>
               </div>
@@ -187,7 +195,6 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           </div>
         </section>
 
-        {/* Main 2-column chat area */}
         <section className='mt-5 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]'>
           {/* Left rail */}
           <aside className='grid gap-5'>
@@ -258,8 +265,8 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
               </h3>
 
               <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                This Noir chat space keeps the tone calmer, deeper, and more emotionally connected,
-                while preserving the selected pet and its memory context.
+                This Noir chat space keeps the tone calmer, deeper, and more emotionally
+                connected, while preserving the selected pet and its memory context.
               </p>
 
               <div className='mt-5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-[rgba(255,244,230,0.74)]'>
@@ -273,23 +280,26 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           <section className='glass-card flex min-h-[640px] flex-col overflow-hidden rounded-[28px] border border-white/8 p-4 md:p-5'>
             <div className='mb-3 flex items-center justify-between gap-3'>
               <div className='flex flex-wrap items-center gap-2'>
-                <span className='tag-chip tag-chip--warm'>Companion chat</span>
-                <Link href='/memories' className='text-xs font-bold text-[rgba(255,244,230,0.78)] hover:text-white'>
+                <span className='tag-chip tag-chip--warm'>
+                  {isPrimaryPet ? 'VIP — Unlimited' : 'Companion chat'}
+                </span>
+                <Link
+                  href='/memories'
+                  className='text-xs font-bold text-[rgba(255,244,230,0.78)] hover:text-white'
+                >
                   Open Memories
                 </Link>
               </div>
             </div>
 
-            <div className='min-h-0 flex-1 overflow-hidden rounded-[24px] border border-white/6 bg-[rgba(8,5,4,0.55)]'>
-              <div className='h-full min-h-0 overflow-hidden'>
-                <ChatPlayground
-                  petId={selectedPet.id}
-                  petName={selectedPet.name}
-                  petImage={petImage}
-                  initialMessages={[]}
-                  usageLabel='Companion chat'
-                />
-              </div>
+            <div className='h-[560px] md:h-[620px] min-h-0 overflow-hidden rounded-[24px] border border-white/8 bg-[rgba(8,5,4,0.58)]'>
+              <ChatPlayground
+                petId={selectedPet.id}
+                petName={selectedPet.name}
+                petImage={petImage}
+                initialMessages={[]}
+                usageLabel={isPrimaryPet ? 'VIP — Unlimited' : 'Companion chat'}
+              />
             </div>
           </section>
         </section>

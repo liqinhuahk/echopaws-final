@@ -2,137 +2,209 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useContactModal } from '@/components/contact-modal-provider';
+
+type SiteHeaderProps = {
+  theme?: 'dark' | 'light';
+  ctaLabel?: string;
+  ctaHref?: string;
+  className?: string;
+};
 
 type NavItem = {
   label: string;
   href: string;
-  isContact?: boolean;
+  exact?: boolean;
 };
 
-type SiteHeaderProps = {
-  ctaLabel?: string;
-  ctaHref?: string;
-  theme?: 'light' | 'dark';
-};
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Home', href: '/', exact: true },
+  { label: 'Chat', href: '/chat' },
+  { label: 'Memories', href: '/memories' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'Account', href: '/account' },
+  { label: 'Contact', href: '/#contact', exact: false },
+];
 
-function isRouteLink(href: string) {
-  return href.startsWith('/');
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
+
+function isActivePath(pathname: string, item: NavItem) {
+  if (item.href === '/#contact') return false;
+  if (item.exact) return pathname === item.href;
+  return pathname === item.href || pathname.startsWith(`${item.href}/`);
+}
+
+function BrandMark({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox='0 0 32 32'
+      aria-hidden='true'
+      className={cn('h-5 w-5 shrink-0 text-[#2f180b]', className)}
+      fill='currentColor'
+    >
+      <g transform='rotate(-16 16 16)'>
+        <circle cx='10' cy='9' r='2.15' />
+        <circle cx='15.2' cy='6.7' r='2' />
+        <circle cx='20.1' cy='8.9' r='2.15' />
+        <ellipse cx='15.3' cy='17.8' rx='5.5' ry='4.7' />
+      </g>
+    </svg>
+  );
 }
 
 export function SiteHeader({
+  theme = 'dark',
   ctaLabel = 'Get Started',
   ctaHref = '/create-pet',
-  theme = 'dark',
+  className,
 }: SiteHeaderProps) {
-  const pathname = usePathname();
-  const { openContactModal } = useContactModal();
+  const pathname = usePathname() || '/';
   const isDark = theme === 'dark';
 
-  const navItems: NavItem[] = [
-    { label: 'Home', href: '/' },
-    { label: 'Chat', href: '/chat' },
-    { label: 'Memories', href: '/memories' },
-    { label: 'Account', href: '/account' },
-    { label: 'Contact', href: '#contact', isContact: true },
-  ];
+  const shellClassName = isDark
+    ? 'fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-[rgba(10,7,6,0.92)] backdrop-blur-xl'
+    : 'fixed inset-x-0 top-0 z-50 border-b border-black/8 bg-[rgba(255,255,255,0.92)] backdrop-blur-xl';
 
-  function isActive(href: string) {
-    if (!isRouteLink(href)) return false;
-    if (href === '/') return pathname === '/';
-    return pathname === href || pathname.startsWith(`${href}/`);
-  }
+  const brandTextClass = isDark ? 'text-[#ffb14d]' : 'text-[#f28a1f]';
+  const navBaseClass = isDark
+    ? 'text-[rgba(255,244,230,0.72)] hover:text-white'
+    : 'text-[rgba(38,24,16,0.72)] hover:text-[#1f140d]';
 
-  function getNavLinkClass(active: boolean) {
-    if (isDark) {
-      return active
-        ? 'inline-flex h-9 items-center rounded-full border border-white/16 bg-white/12 px-3.5 text-sm font-bold text-white shadow-[0_10px_24px_rgba(0,0,0,0.22)] transition'
-        : 'inline-flex h-9 items-center rounded-full px-3.5 text-sm font-semibold text-white/88 transition hover:bg-white/10 hover:text-orange-200 active:bg-white/14';
-    }
+  const navActiveClass = isDark
+    ? 'border-white/20 bg-white/[0.06] text-white shadow-[0_8px_22px_rgba(0,0,0,0.18)]'
+    : 'border-black/10 bg-black/[0.04] text-[#1f140d] shadow-[0_8px_22px_rgba(0,0,0,0.08)]';
 
-    return active
-      ? 'inline-flex h-9 items-center rounded-full bg-orange-50 px-3.5 text-sm font-bold text-orange-700 shadow-sm transition'
-      : 'inline-flex h-9 items-center rounded-full px-3.5 text-sm font-medium text-slate-600 transition hover:bg-orange-50 hover:text-orange-700 active:bg-orange-100';
-  }
+  const signInClass = isDark
+    ? 'border-white/16 bg-transparent text-white hover:bg-white/[0.05]'
+    : 'border-black/10 bg-white text-[#1f140d] hover:bg-black/[0.03]';
 
-  const headerShellClassName = isDark
-    ? 'border-b border-white/8 bg-[linear-gradient(90deg,#130b08_0%,#1b110d_48%,#130b08_100%)] shadow-[0_12px_30px_rgba(0,0,0,0.32)]'
-    : 'border-b border-[#eadfd2] bg-[#fffaf5] shadow-[0_10px_24px_rgba(15,23,42,0.08)]';
+  const ctaClass =
+    'bg-[linear-gradient(135deg,#ffb33a_0%,#ff8a1f_100%)] text-white shadow-[0_10px_24px_rgba(249,115,22,0.30)] hover:-translate-y-[1px] hover:brightness-105';
 
-  const brandTextClassName = isDark
-    ? 'bg-gradient-to-r from-amber-200 via-amber-300 to-orange-400 bg-clip-text text-lg font-black tracking-[-0.03em] text-transparent md:text-xl'
-    : 'bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 bg-clip-text text-lg font-black tracking-[-0.03em] text-transparent md:text-xl';
-
-  const pawWrapClassName = isDark
-    ? 'grid h-11 w-11 place-items-center rounded-[14px] bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 text-[1.05rem] shadow-[0_10px_24px_rgba(249,115,22,0.30)]'
-    : 'grid h-11 w-11 place-items-center rounded-[14px] bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 text-[1.05rem] shadow-[0_8px_18px_rgba(249,115,22,0.20)]';
-
-  const signInClassName = isDark
-    ? 'inline-flex h-10 items-center rounded-full border border-white/14 bg-white/8 px-4 text-sm font-bold text-white transition hover:bg-white/14 active:bg-white/18'
-    : 'inline-flex h-10 items-center rounded-full border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 transition hover:bg-slate-50 active:bg-orange-50';
-
-  const ctaClassName =
-    'inline-flex h-10 items-center rounded-full bg-orange-500 px-4 text-sm font-bold text-white shadow-[0_10px_20px_rgba(249,115,22,0.22)] transition hover:bg-orange-600 active:bg-orange-700';
+  const showSignIn = pathname !== '/login';
+  const showCTA = pathname !== ctaHref;
 
   return (
-    <>
-      {/* Desktop spacer: reserve exact fixed-header height */}
-      <div className='hidden h-[76px] md:block' aria-hidden='true' />
+    <header className={cn(shellClassName, className)}>
+      <div className='mx-auto flex h-[72px] w-full max-w-[1200px] items-center justify-between gap-4 px-4 md:h-[78px] md:px-8'>
+        {/* Brand */}
+        <Link href='/' className='flex shrink-0 items-center gap-3'>
+          <span className='inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 shadow-[0_10px_24px_rgba(249,115,22,0.28)]'>
+            <BrandMark />
+          </span>
 
-      <header className='fixed inset-x-0 top-0 z-[120] hidden md:block'>
-        <div className={headerShellClassName}>
-          <div className='container-shell flex min-h-[76px] items-center justify-between gap-4'>
-            <Link href='/' className='flex items-center gap-3'>
-              <span className={pawWrapClassName} aria-hidden='true'>
-                🐾
-              </span>
-              <span className={brandTextClassName}>EchoPaws</span>
-            </Link>
+          <span className='flex flex-col leading-none'>
+            <span className={cn('text-base font-black tracking-[-0.03em]', brandTextClass)}>
+              EchoPaws
+            </span>
+            <span
+              className={cn(
+                'mt-1 text-[0.56rem] font-bold uppercase tracking-[0.28em]',
+                isDark ? 'text-[rgba(255,244,230,0.58)]' : 'text-[rgba(38,24,16,0.48)]'
+              )}
+            >
+              AI COMPANION
+            </span>
+          </span>
+        </Link>
 
-            <nav className='hidden items-center gap-3 md:flex lg:gap-4'>
-              {navItems.map((item) => {
-                const active = item.isContact ? false : isActive(item.href);
-                const className = getNavLinkClass(active);
+        {/* Desktop nav */}
+        <nav className='hidden min-w-0 flex-1 items-center justify-center md:flex'>
+          <div className='flex items-center gap-1.5'>
+            {NAV_ITEMS.map((item) => {
+              const active = isActivePath(pathname, item);
 
-                if (item.isContact) {
-                  return (
-                    <button
-                      key='contact-modal-trigger'
-                      type='button'
-                      onClick={openContactModal}
-                      className={`${className} cursor-pointer border-0 bg-transparent`}
-                      aria-label='Contact EchoPaws support'
-                    >
-                      {item.label}
-                    </button>
-                  );
-                }
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={className}
-                    aria-current={active ? 'page' : undefined}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className='flex items-center gap-3'>
-              <Link href='/login' className={signInClassName}>
-                Sign In
-              </Link>
-              <Link href={ctaHref} className={ctaClassName}>
-                {ctaLabel}
-              </Link>
-            </div>
+              return (
+                <Link
+                  key={`${item.label}-${item.href}`}
+                  href={item.href}
+                  className={cn(
+                    'inline-flex min-h-[38px] items-center justify-center rounded-full border px-4 text-[0.82rem] font-bold transition',
+                    active
+                      ? navActiveClass
+                      : cn(
+                          'border-transparent bg-transparent',
+                          navBaseClass,
+                          isDark ? 'hover:bg-white/[0.04]' : 'hover:bg-black/[0.04]'
+                        )
+                  )}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
           </div>
+        </nav>
+
+        {/* Right actions */}
+        <div className='flex shrink-0 items-center gap-2 md:gap-3'>
+          {showSignIn ? (
+            <Link
+              href='/login'
+              className={cn(
+                'inline-flex min-h-[42px] items-center justify-center rounded-full border px-4 text-sm font-extrabold transition md:px-5',
+                signInClass
+              )}
+            >
+              Sign In
+            </Link>
+          ) : null}
+
+          {showCTA ? (
+            <Link
+              href={ctaHref}
+              className={cn(
+                'inline-flex min-h-[42px] items-center justify-center rounded-full px-4 text-sm font-extrabold transition md:px-5',
+                ctaClass
+              )}
+            >
+              {ctaLabel}
+            </Link>
+          ) : null}
         </div>
-      </header>
-    </>
+      </div>
+
+      {/* Mobile quick nav */}
+      <div className='border-t border-white/6 md:hidden'>
+        <div className='mx-auto flex w-full max-w-[1200px] items-center gap-2 overflow-x-auto px-4 py-2.5'>
+          {NAV_ITEMS.slice(0, 5).map((item) => {
+            const active = isActivePath(pathname, item);
+
+            return (
+              <Link
+                key={`mobile-${item.label}-${item.href}`}
+                href={item.href}
+                className={cn(
+                  'inline-flex shrink-0 min-h-[34px] items-center justify-center rounded-full border px-3 text-[0.76rem] font-bold transition',
+                  active
+                    ? navActiveClass
+                    : cn(
+                        'border-transparent bg-transparent',
+                        navBaseClass,
+                        isDark ? 'hover:bg-white/[0.04]' : 'hover:bg-black/[0.04]'
+                      )
+                )}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+
+          <Link
+            href='/#contact'
+            className={cn(
+              'inline-flex shrink-0 min-h-[34px] items-center justify-center rounded-full border px-3 text-[0.76rem] font-bold transition',
+              isDark
+                ? 'border-white/10 text-[rgba(255,244,230,0.72)] hover:bg-white/[0.04] hover:text-white'
+                : 'border-black/8 text-[rgba(38,24,16,0.72)] hover:bg-black/[0.04] hover:text-[#1f140d]'
+            )}
+          >
+            Contact
+          </Link>
+        </div>
+      </div>
+    </header>
   );
 }
 

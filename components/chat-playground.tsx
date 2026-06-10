@@ -36,10 +36,6 @@ type ParsedSegment =
   | { type: 'action'; content: string }
   | { type: 'emphasis'; content: string };
 
-function joinClasses(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(' ');
-}
-
 function formatUsageLabel(usage: UsagePayload) {
   if (usage.vip) return 'VIP — Unlimited Chat';
   const remaining = usage.remaining ?? 0;
@@ -65,7 +61,7 @@ function normalizeErrorMessage(message: string) {
     lowered.includes('come back tomorrow') ||
     lowered.includes('daily limit')
   ) {
-    return 'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
+    return 'Free plan limit reached. Free includes 20 total lifetime chats shared across your account. Upgrade to VIP for unlimited chats.';
   }
 
   return message;
@@ -119,6 +115,7 @@ function isLikelyPetAction(raw: string) {
     'yip',
     'arf',
     'mrow',
+    'wiggle',
   ];
 
   const emotionPrefixes = [
@@ -142,6 +139,10 @@ function isLikelyPetAction(raw: string) {
     'meow!',
     'purr',
     'purr!',
+    'woof woof',
+    'woof woof!',
+    'woof',
+    'woof!',
   ];
 
   if (emotionPrefixes.some((prefix) => value.startsWith(prefix))) {
@@ -255,7 +256,7 @@ function renderAssistantContent(content: string): ReactNode {
   const segments = parseAssistantMessage(content);
 
   return (
-    <div className='whitespace-pre-wrap break-words leading-6 text-[15px] sm:leading-7'>
+    <div className="whitespace-pre-wrap break-words leading-6 text-[rgba(255,247,237,0.92)] sm:leading-7">
       {segments.map((segment, index) => {
         if (segment.type === 'text') {
           return <Fragment key={`text-${index}`}>{segment.content}</Fragment>;
@@ -263,7 +264,7 @@ function renderAssistantContent(content: string): ReactNode {
 
         if (segment.type === 'emphasis') {
           return (
-            <em key={`emphasis-${index}`} className='font-medium italic text-amber-100'>
+            <em key={`emphasis-${index}`} className="font-medium italic text-amber-100">
               {segment.content}
             </em>
           );
@@ -272,7 +273,7 @@ function renderAssistantContent(content: string): ReactNode {
         return (
           <span
             key={`action-${index}`}
-            className='mx-[2px] inline rounded-full border border-amber-300/16 bg-amber-300/10 px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-amber-200 shadow-[0_2px_8px_rgba(0,0,0,0.18)]'
+            className="mx-[2px] inline rounded-full border border-[rgba(255,184,107,0.18)] bg-[rgba(245,158,11,0.12)] px-2 py-0.5 align-baseline text-[0.92em] font-medium italic text-amber-100 shadow-[0_2px_8px_rgba(0,0,0,0.18)]"
           >
             {segment.content}
           </span>
@@ -291,78 +292,19 @@ function PetReplyAvatar({
 }) {
   if (petImageUrl) {
     return (
-      <div className='h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/12 bg-white/5 shadow-[0_8px_18px_rgba(0,0,0,0.28)] sm:h-11 sm:w-11'>
+      <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-white/10 bg-white/5 shadow-[0_4px_12px_rgba(0,0,0,0.22)] sm:h-9 sm:w-9">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={petImageUrl} alt={`${petName} avatar`} className='h-full w-full object-cover' />
+        <img src={petImageUrl} alt={`${petName} avatar`} className="h-full w-full object-cover" />
       </div>
     );
   }
 
   return (
     <div
-      className='flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-white/12 bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 text-sm font-black text-stone-950 shadow-[0_8px_18px_rgba(249,115,22,0.24)] sm:h-11 sm:w-11 sm:text-base'
+      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-white/10 bg-white/5 text-xs shadow-[0_4px_12px_rgba(0,0,0,0.22)] sm:h-9 sm:w-9 sm:text-sm"
       aria-label={`${petName} avatar placeholder`}
     >
-      {petName.slice(0, 1).toUpperCase()}
-    </div>
-  );
-}
-
-function ToolbarChip({
-  children,
-  tone = 'default',
-}: {
-  children: ReactNode;
-  tone?: 'default' | 'accent';
-}) {
-  return (
-    <div
-      className={joinClasses(
-        'truncate rounded-full px-3 py-2 text-center text-[11px] font-bold shadow-[0_4px_12px_rgba(0,0,0,0.18)] sm:text-xs',
-        tone === 'accent'
-          ? 'border border-amber-300/18 bg-amber-300/10 text-amber-200'
-          : 'border border-white/10 bg-white/[0.05] text-stone-200'
-      )}
-    >
-      {children}
-    </div>
-  );
-}
-
-function AssistantBubble({
-  children,
-  petName,
-}: {
-  children: ReactNode;
-  petName: string;
-}) {
-  return (
-    <div className='min-w-0 max-w-[88%] sm:max-w-[82%]'>
-      <div className='mb-1 px-1 text-[10px] font-bold tracking-wide text-amber-200/80 sm:text-[11px]'>
-        {petName}
-      </div>
-
-      <div className='relative rounded-[18px] rounded-bl-md border border-white/10 bg-[linear-gradient(180deg,rgba(28,21,17,0.98),rgba(17,13,11,0.98))] px-3.5 py-2.5 text-stone-100 shadow-[0_14px_28px_rgba(0,0,0,0.28)] sm:rounded-[20px] sm:px-4 sm:py-3'>
-        <span className='absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-b border-l border-white/10 bg-[rgba(21,16,13,0.98)] sm:-left-[6px] sm:h-3 sm:w-3' />
-        <div className='relative z-[1]'>{children}</div>
-      </div>
-    </div>
-  );
-}
-
-function UserBubble({ children }: { children: ReactNode }) {
-  return (
-    <div className='min-w-0 max-w-[82%] sm:max-w-[72%]'>
-      <div className='mb-1 px-1 text-right text-[10px] font-bold tracking-wide text-amber-200/80 sm:text-[11px]'>
-        You
-      </div>
-
-      <div className='relative rounded-[18px] rounded-br-md bg-gradient-to-br from-amber-300 via-orange-400 to-orange-500 px-3.5 py-2.5 text-[14px] font-semibold text-stone-950 shadow-[0_12px_28px_rgba(249,115,22,0.28)] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]'>
-        <span className='absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 bg-orange-500 sm:-right-[6px] sm:h-3 sm:w-3' />
-        <div className='relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7'>
-          {children}
-        </div>
-      </div>
+      🐾
     </div>
   );
 }
@@ -398,7 +340,7 @@ export function ChatPlayground({
     const el = messageViewportRef.current;
     if (!el) return;
     el.scrollTop = el.scrollHeight;
-  }, [messages, loading]);
+  }, [messages, loading, memoryHints]);
 
   const trimmedLength = input.trim().length;
 
@@ -472,77 +414,108 @@ export function ChatPlayground({
   }
 
   return (
-    <div className='mobile-chat-shell flex min-h-[56vh] flex-col xl:h-full xl:min-h-0'>
-      <div className='mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3'>
-        <ToolbarChip tone='accent'>{usageLabel}</ToolbarChip>
+    <div className="mobile-chat-shell flex h-full min-h-[56vh] flex-col xl:min-h-0">
+      <div className="mobile-chat-toolbar grid grid-cols-2 gap-2 sm:flex sm:flex-wrap sm:items-center sm:gap-3">
+        <div className="truncate rounded-full border border-amber-300/20 bg-[rgba(255,183,59,0.10)] px-3 py-2 text-center text-[11px] font-bold text-[#f5d27a] shadow-[0_4px_12px_rgba(0,0,0,0.14)] sm:text-xs">
+          {usageLabel}
+        </div>
 
         <a
           href={memoriesHref}
-          className='rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-center text-[11px] font-bold text-stone-200 shadow-[0_4px_12px_rgba(0,0,0,0.18)] transition hover:border-amber-300/20 hover:bg-amber-300/10 hover:text-amber-200 sm:text-xs'
+          className="rounded-full border border-white/12 bg-[rgba(255,255,255,0.05)] px-3 py-2 text-center text-[11px] font-bold text-[rgba(255,247,237,0.82)] shadow-[0_4px_12px_rgba(0,0,0,0.14)] transition hover:bg-[rgba(255,255,255,0.08)] sm:text-xs"
         >
           Open Memories
         </a>
       </div>
 
-      <div className='mobile-chat-card mt-3 flex min-h-0 flex-1 flex-col rounded-[24px] border border-white/10 bg-[linear-gradient(180deg,rgba(15,12,10,0.98),rgba(9,8,7,0.98))] p-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.03),0_16px_34px_rgba(0,0,0,0.28)] sm:mt-5 sm:rounded-[28px] sm:p-4'>
+      <div className="mobile-chat-card mt-3 flex h-[560px] min-h-[560px] min-w-0 flex-col overflow-hidden rounded-[22px] border border-white/10 bg-[rgba(18,10,8,0.92)] p-3 shadow-[0_12px_34px_rgba(0,0,0,0.22)] sm:mt-5 sm:h-[620px] sm:min-h-[620px] sm:rounded-[28px] sm:p-4 xl:h-[680px] xl:min-h-[680px]">
         <div
           ref={messageViewportRef}
-          className='mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth'
+          className="mobile-chat-scroll min-h-0 flex-1 overflow-y-auto pr-1 overscroll-contain scroll-smooth"
+          style={{
+            scrollbarWidth: 'thin',
+            scrollbarColor: 'rgba(255,255,255,0.22) transparent',
+          }}
         >
-          <div className='grid gap-3 pb-2 sm:gap-4'>
+          <div className="grid gap-3 pb-2 sm:gap-4">
             {messages.map((message, index) => {
               const messageKey = `${message.role}-${index}-${message.content.slice(0, 24)}`;
 
               if (message.role === 'assistant') {
                 return (
-                  <div key={messageKey} className='flex items-end gap-2.5 sm:gap-3'>
+                  <div key={messageKey} className="flex items-end gap-2.5 sm:gap-3">
                     <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-                    <AssistantBubble petName={petName}>
-                      {renderAssistantContent(message.content)}
-                    </AssistantBubble>
+                    <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                      <div className="mb-1 px-1 text-[10px] font-bold tracking-wide text-[rgba(255,244,230,0.56)] sm:text-[11px]">
+                        {petName}
+                      </div>
+
+                      <div className="relative rounded-[18px] rounded-bl-md border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] px-3.5 py-2.5 text-[14px] shadow-[0_8px_24px_rgba(0,0,0,0.18)] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                        <span className="absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-l border-b border-white/8 bg-[rgba(255,255,255,0.04)] sm:-left-[6px] sm:h-3 sm:w-3" />
+                        <div className="relative z-[1]">{renderAssistantContent(message.content)}</div>
+                      </div>
+                    </div>
                   </div>
                 );
               }
 
               return (
-                <div key={messageKey} className='flex justify-end'>
-                  <UserBubble>{message.content}</UserBubble>
+                <div key={messageKey} className="flex justify-end">
+                  <div className="min-w-0 max-w-[82%] sm:max-w-[72%]">
+                    <div className="mb-1 px-1 text-right text-[10px] font-bold tracking-wide text-[rgba(255,244,230,0.56)] sm:text-[11px]">
+                      You
+                    </div>
+
+                    <div className="relative rounded-[18px] rounded-br-md bg-[linear-gradient(135deg,#f6b73c,#f28a2e)] px-3.5 py-2.5 text-[14px] font-semibold text-[#2a1609] shadow-[0_8px_24px_rgba(249,115,22,0.20)] sm:rounded-[20px] sm:px-4 sm:py-3 sm:text-[15px]">
+                      <span className="absolute -right-[5px] bottom-3 h-2.5 w-2.5 rotate-45 bg-[#f39a33] sm:-right-[6px] sm:h-3 sm:w-3" />
+                      <div className="relative z-[1] whitespace-pre-wrap break-words leading-6 sm:leading-7">
+                        {message.content}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             })}
 
             {loading ? (
-              <div className='flex items-end gap-2.5 sm:gap-3'>
+              <div className="flex items-end gap-2.5 sm:gap-3">
                 <PetReplyAvatar petName={petName} petImageUrl={petImageUrl} />
-                <AssistantBubble petName={petName}>
-                  <div className='flex items-center gap-2 text-amber-200'>
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-amber-300' />
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]' />
-                    <span className='h-2 w-2 animate-pulse rounded-full bg-orange-500 [animation-delay:240ms]' />
+                <div className="min-w-0 max-w-[88%] sm:max-w-[82%]">
+                  <div className="mb-1 px-1 text-[10px] font-bold tracking-wide text-[rgba(255,244,230,0.56)] sm:text-[11px]">
+                    {petName}
                   </div>
-                </AssistantBubble>
+
+                  <div className="relative rounded-[18px] rounded-bl-md border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(255,255,255,0.03))] px-3.5 py-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.18)] sm:rounded-[20px] sm:px-4 sm:py-3">
+                    <span className="absolute -left-[5px] bottom-3 h-2.5 w-2.5 rotate-45 border-l border-b border-white/8 bg-[rgba(255,255,255,0.04)] sm:-left-[6px] sm:h-3 sm:w-3" />
+                    <div className="relative z-[1] flex items-center gap-2">
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-amber-300" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-300 [animation-delay:120ms]" />
+                      <span className="h-2 w-2 animate-pulse rounded-full bg-orange-400 [animation-delay:240ms]" />
+                    </div>
+                  </div>
+                </div>
               </div>
             ) : null}
           </div>
         </div>
 
         {error ? (
-          <div className='mt-3 shrink-0 rounded-2xl border border-rose-400/18 bg-rose-400/10 px-4 py-3 text-sm font-bold text-rose-100'>
+          <div className="mt-3 shrink-0 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-100">
             {error}
           </div>
         ) : null}
 
         {memoryHints.length ? (
-          <div className='mt-3 shrink-0 rounded-[22px] border border-amber-300/14 bg-amber-300/8 px-3 py-3 sm:rounded-[24px] sm:px-4'>
-            <div className='text-[11px] font-bold uppercase tracking-[0.18em] text-amber-200 sm:text-xs'>
+          <div className="mt-3 shrink-0 rounded-[20px] border border-amber-300/14 bg-[rgba(255,183,59,0.06)] px-3 py-3 sm:rounded-[24px] sm:px-4">
+            <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#f1c76c] sm:text-xs">
               New Memory Triggers
             </div>
 
-            <div className='mt-2.5 flex flex-wrap gap-2 sm:mt-3'>
+            <div className="mt-2.5 flex flex-wrap gap-2 sm:mt-3">
               {memoryHints.map((hint, index) => (
                 <span
                   key={`${hint}-${index}`}
-                  className='rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-[11px] font-semibold text-stone-100 shadow-[0_4px_10px_rgba(0,0,0,0.14)] sm:px-3 sm:py-2 sm:text-xs'
+                  className="rounded-full border border-white/8 bg-[rgba(255,255,255,0.05)] px-3 py-1.5 text-[11px] font-semibold text-[rgba(255,247,237,0.82)] shadow-[0_4px_10px_rgba(0,0,0,0.14)] sm:px-3 sm:py-2 sm:text-xs"
                 >
                   Remembered: {hint}
                 </span>
@@ -551,14 +524,14 @@ export function ChatPlayground({
           </div>
         ) : null}
 
-        <form className='mobile-chat-composer mt-3 shrink-0 sm:mt-4' onSubmit={handleSubmit}>
-          <div className='rounded-[22px] border border-white/10 bg-black/24 p-2.5 shadow-[0_10px_24px_rgba(0,0,0,0.24)] sm:rounded-[26px] sm:p-3'>
-            <div className='flex items-end gap-2 sm:gap-3'>
-              <div className='min-w-0 flex-1'>
+        <form className="mobile-chat-composer mt-3 shrink-0 sm:mt-4" onSubmit={handleSubmit}>
+          <div className="rounded-[22px] border border-white/8 bg-[rgba(255,255,255,0.04)] p-2.5 sm:rounded-[26px] sm:p-3">
+            <div className="flex items-end gap-2 sm:gap-3">
+              <div className="min-w-0 flex-1">
                 <input
-                  className='w-full rounded-full border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] text-white outline-none transition placeholder:text-stone-500 focus:border-amber-300/28 focus:bg-white/[0.06] focus:shadow-[0_0_0_4px_rgba(251,191,36,0.10)]'
-                  type='text'
-                  placeholder='Type a message...'
+                  className="w-full rounded-full border border-white/8 bg-[rgba(255,255,255,0.06)] px-4 py-3 text-[15px] text-[#fff7ed] outline-none transition placeholder:text-[rgba(255,244,230,0.34)] focus:border-white/14"
+                  type="text"
+                  placeholder="Type a message..."
                   value={input}
                   maxLength={800}
                   onChange={(event) => setInput(event.target.value)}
@@ -566,19 +539,19 @@ export function ChatPlayground({
               </div>
 
               <button
-                type='submit'
-                className='inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full bg-gradient-to-r from-amber-300 via-orange-400 to-orange-500 px-4 text-sm font-extrabold text-stone-950 shadow-[0_12px_28px_rgba(249,115,22,0.28)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3'
+                type="submit"
+                className="inline-flex h-[46px] min-w-[78px] items-center justify-center rounded-full bg-[linear-gradient(135deg,#f6b73c,#f28a2e)] px-4 text-sm font-extrabold text-[#2a1609] shadow-[0_10px_24px_rgba(249,115,22,0.28)] transition hover:-translate-y-0.5 hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60 sm:h-auto sm:px-5 sm:py-3"
                 disabled={!canSubmit}
               >
                 {loading ? '...' : 'Send'}
               </button>
             </div>
 
-            <div className='mt-2.5 flex items-center justify-between px-1 text-[11px] text-stone-400 sm:mt-3 sm:px-2 sm:text-xs'>
-              <span className='truncate pr-3'>
+            <div className="mt-2.5 flex items-center justify-between px-1 text-[11px] text-[rgba(255,244,230,0.48)] sm:mt-3 sm:px-2 sm:text-xs">
+              <span className="truncate pr-3">
                 {usageDetail || 'Free chats are shared across your account.'}
               </span>
-              <span className='shrink-0'>{input.length} / 800</span>
+              <span className="shrink-0">{input.length} / 800</span>
             </div>
           </div>
         </form>
@@ -586,3 +559,5 @@ export function ChatPlayground({
     </div>
   );
 }
+
+export default ChatPlayground;

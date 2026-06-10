@@ -37,6 +37,16 @@ function getPetDescription(pet: any) {
   );
 }
 
+function getUsageLabel(petOverview: any) {
+  return (
+    petOverview?.remainingLabel ??
+    petOverview?.usageLabel ??
+    petOverview?.chatAllowanceLabel ??
+    petOverview?.chatLabel ??
+    'Companion chat'
+  );
+}
+
 function PetAvatar({
   src,
   name,
@@ -118,18 +128,13 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
   const petDescription = getPetDescription(selectedPet);
   const isPrimaryPet =
     String(selectedPet.id) === String(petOverview?.defaultPetId ?? '');
+  const initialRemainingLabel = getUsageLabel(petOverview);
 
   const mobileChatPetsPayload = buildMobileChatPetsPayload(
     pets,
     selectedPet.id,
     petOverview?.defaultPetId,
   );
-
-  const initialRemainingLabel =
-    (petOverview as any)?.remainingLabel ||
-    (petOverview as any)?.usageLabel ||
-    (petOverview as any)?.chatAllowanceLabel ||
-    'Companion chat';
 
   return (
     <div className='app-brand-backdrop min-h-screen bg-[#0c0706] text-[#fff7ed]'>
@@ -144,7 +149,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           }}
         />
 
-        {/* Top banner */}
+        {/* Top hero banner */}
         <section className='glass-card relative overflow-hidden rounded-[28px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02))] p-6 md:p-7'>
           <div className='pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_left_center,rgba(249,115,22,0.14),transparent_28%),radial-gradient(circle_at_right_center,rgba(251,191,36,0.08),transparent_24%)]' />
 
@@ -188,6 +193,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                 >
                   Open Memories
                 </Link>
+
                 <Link
                   href='/pets'
                   className='inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/22 bg-white/[0.04] px-5 text-sm font-bold text-[#fff7ed] transition hover:bg-white/[0.08]'
@@ -199,7 +205,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
           </div>
         </section>
 
-        {/* Main content */}
+        {/* Main two-column content */}
         <section className='mt-5 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]'>
           {/* Left rail */}
           <aside className='grid gap-5'>
@@ -243,7 +249,7 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
                           <div className='truncate text-sm font-extrabold text-[#fff7ed]'>
                             {pet.name}
                           </div>
-                          <div className='text-xs text-[rgba(255,244,230,0.72)]'>
+                          <div className='text-xs text-[rgba(255,244,230,0.74)]'>
                             {primary ? 'Primary pet' : 'Companion'}
                           </div>
                         </div>
@@ -270,13 +276,14 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
               </h3>
 
               <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.82)]'>
-                Warm cream tones, gentler bubbles, and clearer message focus help the conversation
-                feel more personal, calm, and emotionally close.
+                Warm cream tones, gentler bubbles, and clearer message focus help the
+                conversation feel more personal, calm, and emotionally close.
               </p>
 
               <div className='mt-5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
                 {(selectedPet as any)?.breed ? `${(selectedPet as any).breed} · ` : ''}
-                {(selectedPet as any)?.personality || 'Best for reunion-style chats, memory prompts, and cozy daily check-ins.'}
+                {(selectedPet as any)?.personality ||
+                  'Best for reunion-style chats, memory prompts, and cozy daily check-ins.'}
               </div>
             </section>
           </aside>

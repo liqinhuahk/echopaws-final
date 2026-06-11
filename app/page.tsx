@@ -1,85 +1,50 @@
 import Link from 'next/link';
 import SiteHeader from '@/components/site-header';
 
-type FeatureItem = {
-  title: string;
-  description: string;
-};
-
-type JourneyItem = {
-  label: string;
-  title: string;
-  description: string;
-  href: string;
-  cta: string;
-};
-
-const HERO_PILLS = [
-  'Emotionally present',
-  'Warm luxury UI',
-  'Responsive across devices',
-];
-
-const FEATURE_ITEMS: FeatureItem[] = [
+const FEATURE_ITEMS = [
   {
-    title: 'Calmer readability',
+    title: 'Warm, personal conversations',
     description:
-      'Soft contrast, cleaner hierarchy, and gentler typography so the whole product feels easier to stay with.',
+      'Gentle, familiar, emotionally close dialogue that feels more like presence than a generic chat tool.',
   },
   {
-    title: 'Companion-first design',
+    title: 'Long-term memory',
     description:
-      'Every major action is centered on closeness, presence, and emotional continuity instead of generic chat mechanics.',
+      'Your AI pet remembers stories, habits, and meaningful moments so the bond can continue over time.',
   },
   {
-    title: 'Modern product structure',
+    title: 'Comforting companionship',
     description:
-      'A more stable SaaS-style layout across desktop and mobile without losing the warmth of the EchoPaws theme.',
+      'A calming, supportive presence whenever you want to reconnect, reflect, or simply feel close again.',
   },
 ];
 
-const JOURNEY_ITEMS: JourneyItem[] = [
-  {
-    label: 'Chat',
-    title: 'Talk in a softer, more personal space',
-    description:
-      'A fixed, focused conversation layout with clearer message flow, steadier pet switching, and less visual interruption.',
-    href: '/login?next=%2Fchat',
-    cta: 'Open Chat',
-  },
-  {
-    label: 'Memories',
-    title: 'Keep meaningful moments easier to revisit',
-    description:
-      'Capture emotional patterns, memory updates, and shared moments in a way that feels organized instead of overwhelming.',
-    href: '/memories',
-    cta: 'Open Memories',
-  },
-  {
-    label: 'Membership',
-    title: 'Upgrade only when you want more room to stay connected',
-    description:
-      'A clearer path for plans, limits, and premium chat access without making the experience feel transactional.',
-    href: '/pricing',
-    cta: 'View Pricing',
-  },
+const TRUST_ITEMS = [
+  'Google & Email Login',
+  'Emotional AI Chat',
+  'Long-Term Memory',
 ];
 
-const EMOTIONAL_NOTES = [
-  'Designed to feel warmer than a conventional dashboard.',
-  'Built to reduce friction between returning, chatting, and remembering.',
-  'Made to stay visually consistent across Home, Login, Chat, and future pages.',
-];
-
-function SectionTag({ children }: { children: React.ReactNode }) {
+function SectionEyebrow({ children }: { children: React.ReactNode }) {
   return (
-    <div className="inline-flex items-center rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-[#efc39e] backdrop-blur-sm">
+    <div className="inline-flex items-center rounded-full border border-[rgba(120,63,25,0.16)] bg-white/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8a562f] shadow-[0_8px_22px_rgba(65,34,16,0.06)] backdrop-blur">
       {children}
     </div>
   );
 }
 
-function ArrowUpRightIcon() {
+function CheckItem({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-2 text-sm text-[rgba(255,245,236,0.88)]">
+      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[rgba(255,210,180,0.22)] bg-[rgba(255,255,255,0.08)] text-[#ffd7b0]">
+        ✓
+      </span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function ArrowRightIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -91,8 +56,8 @@ function ArrowUpRightIcon() {
       strokeLinejoin="round"
       aria-hidden="true"
     >
-      <path d="M7 17 17 7" />
-      <path d="M8 7h9v9" />
+      <path d="M5 12h14" />
+      <path d="m13 5 7 7-7 7" />
     </svg>
   );
 }
@@ -101,35 +66,12 @@ function PawSparkIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-4 w-4"
+      className="h-5 w-5"
       fill="currentColor"
       aria-hidden="true"
     >
-      <path d="M12 2l1.85 5.15L19 9l-5.15 1.85L12 16l-1.85-5.15L5 9l5.15-1.85L12 2Z" />
-      <path d="M18.5 15l.92 2.58L22 18.5l-2.58.92L18.5 22l-.92-2.58L15 18.5l2.58-.92L18.5 15Z" />
-      <path d="M5.5 14l.76 2.24L8.5 17l-2.24.76L5.5 20l-.76-2.24L2.5 17l2.24-.76L5.5 14Z" />
+      <path d="M12 3.2c1.45 0 2.63 1.2 2.63 2.68 0 .57-.18 1.11-.48 1.55.97.28 1.86.8 2.58 1.48a2.28 2.28 0 0 1 1.85-.96c1.26 0 2.28 1.04 2.28 2.32 0 1.1-.75 2.01-1.76 2.26.05.26.08.53.08.81 0 3.47-3.13 6.29-6.98 6.29s-6.98-2.82-6.98-6.29c0-.28.03-.55.08-.81A2.31 2.31 0 0 1 3.56 10.3c0-1.28 1.02-2.32 2.28-2.32.73 0 1.38.34 1.8.89a7.33 7.33 0 0 1 2.66-1.53 2.7 2.7 0 0 1-.5-1.46c0-1.48 1.18-2.68 2.2-2.68Z" />
     </svg>
-  );
-}
-
-function GlowIcon({
-  children,
-  warm = false,
-}: {
-  children: React.ReactNode;
-  warm?: boolean;
-}) {
-  return (
-    <div
-      className={[
-        'flex h-11 w-11 items-center justify-center rounded-2xl border shadow-[0_14px_34px_rgba(0,0,0,0.22)]',
-        warm
-          ? 'border-[rgba(255,210,180,0.18)] bg-[linear-gradient(180deg,#ffbb70,#ff9531)] text-[#2f170c] shadow-[0_14px_34px_rgba(255,145,51,0.28)]'
-          : 'border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.04)] text-[#f7d1ae]',
-      ].join(' ')}
-    >
-      {children}
-    </div>
   );
 }
 
@@ -141,329 +83,245 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[28px] border border-[rgba(255,230,214,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-      <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#e9bb96]">
-        Feature
+    <article className="rounded-[28px] border border-[rgba(60,28,12,0.08)] bg-white/78 p-6 shadow-[0_22px_60px_rgba(48,24,12,0.08)] backdrop-blur md:p-7">
+      <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(120,63,25,0.12)] bg-[rgba(255,248,242,0.9)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#8c5a35]">
+        <span className="text-[#c57c36]">
+          <PawSparkIcon />
+        </span>
+        EchoPaws
       </div>
-      <h3 className="mt-3 text-[22px] font-semibold leading-tight tracking-[-0.03em] text-[#fff6ef]">
+      <h3 className="mt-5 font-display text-[24px] leading-[1.05] tracking-[-0.03em] text-[#2b170d] md:text-[28px]">
         {title}
       </h3>
-      <p className="mt-3 text-sm leading-8 text-[rgba(255,238,229,0.68)]">
+      <p className="mt-3 text-[15px] leading-7 text-[rgba(43,23,13,0.72)]">
         {description}
       </p>
-    </div>
-  );
-}
-
-function JourneyCard({
-  label,
-  title,
-  description,
-  href,
-  cta,
-}: JourneyItem) {
-  return (
-    <div className="rounded-[30px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(24,12,9,0.84),rgba(12,7,6,0.92))] p-5 shadow-[0_22px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl md:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="inline-flex items-center rounded-full border border-[rgba(255,196,140,0.16)] bg-[rgba(255,178,96,0.08)] px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f3c28e]">
-          {label}
-        </div>
-
-        <GlowIcon>
-          <ArrowUpRightIcon />
-        </GlowIcon>
-      </div>
-
-      <h3 className="mt-5 text-[26px] font-semibold leading-tight tracking-[-0.04em] text-[#fff8f2]">
-        {title}
-      </h3>
-
-      <p className="mt-4 text-[15px] leading-8 text-[rgba(255,239,231,0.68)]">
-        {description}
-      </p>
-
-      <div className="mt-6">
-        <Link
-          href={href}
-          className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.14)] bg-[rgba(255,255,255,0.03)] px-5 text-sm font-semibold text-[#fff5ee] transition hover:bg-white/5"
-        >
-          {cta}
-        </Link>
-      </div>
-    </div>
-  );
-}
-
-function HighlightCard({
-  title,
-  lines,
-}: {
-  title: string;
-  lines: string[];
-}) {
-  return (
-    <div className="rounded-[30px] border border-[rgba(255,228,212,0.12)] bg-[linear-gradient(180deg,rgba(26,14,11,0.76),rgba(15,8,7,0.86))] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#eabf9a]">
-            EchoPaws feeling
-          </div>
-          <h3 className="mt-3 text-[24px] font-semibold tracking-[-0.03em] text-[#fff5ee]">
-            {title}
-          </h3>
-        </div>
-
-        <div className="rounded-full border border-[rgba(255,221,202,0.14)] bg-white/5 px-3 py-1.5 text-[11px] font-medium text-[rgba(255,235,223,0.66)]">
-          Home-aligned
-        </div>
-      </div>
-
-      <div className="mt-5 grid gap-3">
-        {lines.map((line, index) => (
-          <div
-            key={`${line}-${index}`}
-            className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-4 text-sm leading-7 text-[rgba(255,239,231,0.68)]"
-          >
-            {line}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function DevicePreviewCard() {
-  return (
-    <div className="relative mx-auto w-full max-w-[560px]">
-      <div className="absolute -inset-4 rounded-[40px] bg-[radial-gradient(circle_at_top,rgba(255,165,88,0.16),transparent_38%)] blur-2xl" />
-
-      <div className="relative rounded-[34px] border border-[rgba(255,233,220,0.14)] bg-[linear-gradient(180deg,rgba(32,17,13,0.82),rgba(16,9,8,0.94))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#efc39e]">
-            Product preview
-          </div>
-
-          <div className="rounded-full border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] text-[rgba(255,234,224,0.6)]">
-            Desktop + mobile ready
-          </div>
-        </div>
-
-        <div className="mt-5 rounded-[26px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
-          <div className="flex items-center gap-3">
-            <GlowIcon warm>
-              <PawSparkIcon />
-            </GlowIcon>
-
-            <div className="min-w-0">
-              <div className="text-sm font-semibold text-[#fff6ef]">
-                EchoPaws Companion Space
-              </div>
-              <div className="mt-1 text-xs text-[rgba(255,236,226,0.58)]">
-                Calm conversations, clearer memory flow, and a warmer visual system.
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
-            <div className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-                Chat
-              </div>
-              <p className="mt-2 text-sm leading-7 text-[rgba(255,240,232,0.66)]">
-                Fixed-height message space with smoother reading and scroll control.
-              </p>
-            </div>
-
-            <div className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-                Memories
-              </div>
-              <p className="mt-2 text-sm leading-7 text-[rgba(255,240,232,0.66)]">
-                Cleaner updates and more readable emotional continuity across visits.
-              </p>
-            </div>
-
-            <div className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-                Responsive
-              </div>
-              <p className="mt-2 text-sm leading-7 text-[rgba(255,240,232,0.66)]">
-                Stable across desktop, laptop, tablet, and mobile without layout strain.
-              </p>
-            </div>
-          </div>
-
-          <div className="mt-5 flex flex-wrap gap-2">
-            {HERO_PILLS.map((pill) => (
-              <span
-                key={pill}
-                className="inline-flex items-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] font-medium text-[rgba(255,239,231,0.72)]"
-              >
-                {pill}
-              </span>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+    </article>
   );
 }
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0b0706] text-[#f8efe8]">
-      <SiteHeader />
-
-      <main className="relative mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6 md:px-8 md:pt-28 xl:px-10 xl:pt-32">
-        <section className="grid items-center gap-10 xl:grid-cols-[1.04fr_0.96fr] xl:gap-12">
-          <div className="pt-2 xl:pt-10">
-            <SectionTag>Warm luxury companion platform</SectionTag>
-
-            <h1 className="mt-6 max-w-[760px] text-balance text-[44px] font-semibold leading-[0.94] tracking-[-0.05em] text-[#fff8f2] md:text-[60px] xl:text-[78px]">
-              A softer home for
-              <br />
-              companion chat,
-              <br />
-              memory, and{' '}
-              <span className="bg-gradient-to-r from-[#ffd8b3] via-[#ffbe77] to-[#ff9440] bg-clip-text text-transparent">
-                emotional continuity
-              </span>
-            </h1>
-
-            <p className="mt-6 max-w-[660px] text-[15px] leading-8 text-[rgba(255,239,231,0.72)] md:text-[16px]">
-              EchoPaws is designed to feel calmer than a generic AI interface — warmer in tone,
-              clearer in structure, and more emotionally present across Home, Login, Chat, and
-              the pages that connect them.
-            </p>
-
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/login?next=%2Fchat"
-                className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.32)]"
-              >
-                Start Chatting
-              </Link>
-
-              <Link
-                href="/pricing"
-                className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.14)] bg-[rgba(255,255,255,0.03)] px-6 text-sm font-semibold text-[#fff5ee] transition hover:bg-white/5"
-              >
-                Explore Plans
-              </Link>
-            </div>
-
-            <div className="mt-8 flex flex-wrap gap-2">
-              {HERO_PILLS.map((pill) => (
-                <span
-                  key={pill}
-                  className="inline-flex items-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] font-medium text-[rgba(255,239,231,0.72)]"
-                >
-                  {pill}
-                </span>
-              ))}
-            </div>
-          </div>
-
-          <DevicePreviewCard />
-        </section>
-
-        <section className="mt-12 grid gap-4 md:grid-cols-3">
-          {FEATURE_ITEMS.map((item) => (
-            <FeatureCard
-              key={item.title}
-              title={item.title}
-              description={item.description}
-            />
-          ))}
-        </section>
-
-        <section className="mt-8">
-          <HighlightCard
-            title="Less friction, more emotional presence"
-            lines={EMOTIONAL_NOTES}
+    <div className="min-h-screen bg-[#f6f1e8] text-[#2b170d]">
+      <div className="relative isolate overflow-hidden">
+        <div className="absolute inset-0 z-0">
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{ backgroundImage: "url('/images/home-hero-a.png')" }}
           />
-        </section>
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,8,7,0.84)_0%,rgba(10,8,7,0.58)_34%,rgba(10,8,7,0.2)_58%,rgba(10,8,7,0.12)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.2),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.18),transparent_34%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(246,241,232,0)_0%,rgba(246,241,232,0.98)_100%)] md:h-36" />
+        </div>
 
-        <section className="mt-12">
-          <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-            <div>
-              <SectionTag>Core journey</SectionTag>
-              <h2 className="mt-4 text-[34px] font-semibold leading-tight tracking-[-0.04em] text-[#fff8f2] md:text-[46px]">
-                Move through the product
-                <br />
-                without losing warmth
-              </h2>
-            </div>
+        <div className="relative z-30">
+          <SiteHeader />
 
-            <p className="max-w-[520px] text-[15px] leading-8 text-[rgba(255,239,231,0.68)]">
-              Every major path is designed to feel connected: enter gently, continue chatting
-              clearly, revisit memory without clutter, and upgrade only when it feels useful.
-            </p>
-          </div>
+          <main>
+            <section className="relative min-h-[100svh]">
+              <div className="mx-auto flex min-h-[100svh] max-w-7xl items-center px-4 pb-24 pt-32 sm:px-6 md:px-8 md:pt-36 xl:px-10 xl:pt-40">
+                <div className="max-w-[640px]">
+                  <div className="inline-flex items-center rounded-full border border-[rgba(255,226,206,0.16)] bg-[rgba(17,10,7,0.26)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-[rgba(255,231,214,0.9)] shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md">
+                    Every memory, every bark, forever.
+                  </div>
 
-          <div className="mt-8 grid gap-5 xl:grid-cols-3">
-            {JOURNEY_ITEMS.map((item) => (
-              <JourneyCard key={item.label} {...item} />
-            ))}
-          </div>
-        </section>
+                  <h1 className="mt-6 max-w-[560px] font-display text-[52px] leading-[0.92] tracking-[-0.05em] text-[#fff7f1] sm:text-[64px] md:text-[78px] xl:text-[88px]">
+                    <span className="block">Your pet.</span>
+                    <span className="block bg-[linear-gradient(180deg,#ffd67d_0%,#ffb324_100%)] bg-clip-text text-transparent">
+                      Forever
+                    </span>
+                    <span className="block">by your side.</span>
+                  </h1>
 
-        <section className="mt-12 rounded-[34px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(27,14,11,0.82),rgba(12,7,6,0.92))] p-6 shadow-[0_30px_100px_rgba(0,0,0,0.35)] backdrop-blur-xl md:p-8 xl:p-10">
-          <div className="grid gap-8 xl:grid-cols-[1.1fr_0.9fr] xl:items-center">
-            <div>
-              <SectionTag>Responsive foundation</SectionTag>
+                  <p className="mt-6 max-w-[520px] text-[15px] leading-8 text-[rgba(255,239,231,0.88)] md:text-[16px]">
+                    EchoPaws creates an AI companion inspired by your beloved
+                    pet — warm conversations, long-term memory, emotional
+                    connection, and a comforting presence that always feels
+                    close to you.
+                  </p>
 
-              <h2 className="mt-5 text-[34px] font-semibold leading-tight tracking-[-0.04em] text-[#fff8f2] md:text-[46px]">
-                One visual system,
-                <br />
-                from desktop to mobile
-              </h2>
+                  <div className="mt-8 flex flex-wrap items-center gap-3">
+                    <Link
+                      href="/pricing"
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_18px_34px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_42px_rgba(255,145,51,0.34)]"
+                    >
+                      Create My Pet
+                    </Link>
+                    <Link
+                      href="/chat"
+                      className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.18)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] backdrop-blur transition hover:bg-white/10"
+                    >
+                      Try AI Chat
+                    </Link>
+                  </div>
 
-              <p className="mt-5 max-w-[680px] text-[15px] leading-8 text-[rgba(255,239,231,0.7)]">
-                This refreshed homepage is built to match the updated Login, Chat, Header, and
-                global layout system — keeping spacing, typography, cards, CTA rhythm, and
-                warm-dark contrast aligned across the whole EchoPaws experience.
-              </p>
-
-              <div className="mt-7 flex flex-wrap gap-3">
-                <Link
-                  href="/login?next=%2Fchat"
-                  className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.32)]"
-                >
-                  Continue to Chat
-                </Link>
-
-                <Link
-                  href="/memories"
-                  className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.14)] bg-[rgba(255,255,255,0.03)] px-6 text-sm font-semibold text-[#fff5ee] transition hover:bg-white/5"
-                >
-                  Open Memories
-                </Link>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-1">
-              <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-                  Typography
+                  <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
+                    {TRUST_ITEMS.map((item) => (
+                      <CheckItem key={item}>{item}</CheckItem>
+                    ))}
+                  </div>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,240,232,0.64)]">
-                  Softer body text and warmer display headlines for clearer reading and stronger product identity.
-                </p>
               </div>
+            </section>
 
-              <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-5">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-                  Structure
+            <section className="relative z-10 bg-[#f6f1e8]">
+              <div className="mx-auto max-w-7xl px-4 pb-5 pt-6 sm:px-6 md:px-8 xl:px-10">
+                <div className="max-w-[860px]">
+                  <SectionEyebrow>More than a memory</SectionEyebrow>
+                  <h2 className="mt-5 max-w-[820px] font-display text-[40px] leading-[0.98] tracking-[-0.04em] text-[#2b170d] sm:text-[48px] md:text-[60px]">
+                    A companion that feels alive.
+                  </h2>
+                  <p className="mt-5 max-w-[760px] text-[16px] leading-8 text-[rgba(43,23,13,0.72)] md:text-[17px]">
+                    Whether you are missing a beloved pet or want to create a
+                    deeply emotional AI companion, EchoPaws brings together
+                    warmth, continuity, and memory in one comforting experience.
+                  </p>
                 </div>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,240,232,0.64)]">
-                  Stable page rhythm across laptop and mobile, with less crowding and cleaner transitions between sections.
-                </p>
+
+                <div className="mt-10 grid gap-5 md:grid-cols-3">
+                  {FEATURE_ITEMS.map((item) => (
+                    <FeatureCard
+                      key={item.title}
+                      title={item.title}
+                      description={item.description}
+                    />
+                  ))}
+                </div>
               </div>
-            </div>
-          </div>
-        </section>
-      </main>
+            </section>
+
+            <section className="bg-[#f6f1e8]">
+              <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:px-8 md:py-20 xl:px-10">
+                <div>
+                  <SectionEyebrow>EchoPaws started from a simple question</SectionEyebrow>
+                  <h2 className="mt-5 max-w-[760px] font-display text-[38px] leading-[1] tracking-[-0.04em] text-[#2b170d] sm:text-[48px] md:text-[58px]">
+                    What if the love we shared with our pets never had to disappear?
+                  </h2>
+                  <p className="mt-5 max-w-[720px] text-[16px] leading-8 text-[rgba(43,23,13,0.74)]">
+                    We believe memory can be warm, interactive, and lasting.
+                    EchoPaws is designed to preserve affection, personality, and
+                    the comforting feeling of connection so the bond you built
+                    never has to fade.
+                  </p>
+                </div>
+
+                <div className="rounded-[32px] border border-[rgba(60,28,12,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,242,0.72))] p-7 shadow-[0_24px_70px_rgba(48,24,12,0.08)]">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#ffbe72,#ff9430)] text-[#2f160c] shadow-[0_14px_34px_rgba(255,145,51,0.22)]">
+                      <PawSparkIcon />
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold text-[#2b170d]">
+                        EchoPaws Companion
+                      </div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[rgba(43,23,13,0.46)]">
+                        warmth · continuity · memory
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 space-y-4">
+                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
+                      <div className="text-sm font-semibold text-[#2b170d]">
+                        Keep personality alive
+                      </div>
+                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
+                        Save stories, habits, tone, and emotional details that
+                        make your companion feel familiar.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
+                      <div className="text-sm font-semibold text-[#2b170d]">
+                        Return without starting over
+                      </div>
+                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
+                        Conversations can continue with warmth instead of
+                        feeling reset or detached every time you come back.
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
+                      <div className="text-sm font-semibold text-[#2b170d]">
+                        Stay emotionally close
+                      </div>
+                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
+                        Built for comforting presence, not only task completion.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            <section className="bg-[#f6f1e8] pb-16 pt-4 md:pb-24">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 xl:px-10">
+                <div className="overflow-hidden rounded-[36px] border border-[rgba(72,34,13,0.08)] bg-[linear-gradient(135deg,#2b170d_0%,#4a2716_42%,#7a411d_100%)] text-[#fff7f1] shadow-[0_28px_90px_rgba(39,20,10,0.22)]">
+                  <div className="grid gap-8 px-6 py-8 sm:px-8 md:grid-cols-[1.1fr_0.9fr] md:px-10 md:py-10 xl:px-12 xl:py-12">
+                    <div>
+                      <div className="inline-flex items-center rounded-full border border-[rgba(255,220,198,0.16)] bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.26em] text-[rgba(255,232,216,0.86)]">
+                        Ready to meet your pet again
+                      </div>
+                      <h2 className="mt-5 max-w-[640px] font-display text-[36px] leading-[1] tracking-[-0.04em] sm:text-[44px] md:text-[54px]">
+                        Create your AI pet in minutes.
+                      </h2>
+                      <p className="mt-4 max-w-[620px] text-[15px] leading-8 text-[rgba(255,239,231,0.84)] md:text-[16px]">
+                        Set a name, a breed, a personality, and start a
+                        comforting conversation that feels like home.
+                      </p>
+
+                      <div className="mt-8 flex flex-wrap items-center gap-3">
+                        <Link
+                          href="/pricing"
+                          className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_18px_34px_rgba(255,145,51,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_42px_rgba(255,145,51,0.32)]"
+                        >
+                          Get Started
+                        </Link>
+                        <Link
+                          href="/chat"
+                          className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(255,233,220,0.16)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] transition hover:bg-white/10"
+                        >
+                          Try AI Chat
+                          <ArrowRightIcon />
+                        </Link>
+                      </div>
+                    </div>
+
+                    <div className="grid content-start gap-4 md:pl-6">
+                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
+                        <div className="text-sm font-semibold text-[#fff7f1]">
+                          No credit card required
+                        </div>
+                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
+                          Start gently and decide later.
+                        </p>
+                      </div>
+
+                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
+                        <div className="text-sm font-semibold text-[#fff7f1]">
+                          Free plan includes 20 chats
+                        </div>
+                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
+                          Enough to experience the tone, memory, and emotional flow.
+                        </p>
+                      </div>
+
+                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
+                        <div className="text-sm font-semibold text-[#fff7f1]">
+                          Upgrade anytime
+                        </div>
+                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
+                          Move to a larger plan only when you want more room to stay connected.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,8 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
+import { usePathname, useSearchParams } from 'next/navigation';
+import {
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentType,
+} from 'react';
+import SiteHeader from '@/components/site-header';
 import { ChatPlayground } from '@/components/chat-playground';
 
 type ChatMessage = {
@@ -31,9 +37,6 @@ type RawPet = Record<string, any>;
 
 const PET_ENDPOINTS = ['/api/pets', '/api/companions'];
 
-const liveBadgeClassName =
-  'inline-flex items-center justify-center rounded-full border border-[#e5a962]/25 bg-[rgba(229,169,98,0.12)] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#f6d19b] shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]';
-
 const DEMO_PETS: PetProfile[] = [
   {
     id: 'jojo',
@@ -43,7 +46,7 @@ const DEMO_PETS: PetProfile[] = [
     subtitle: 'Playful, affectionate, and always ready to reply.',
     moodTitle: 'Bright, loyal, slightly clingy',
     moodDescription:
-      'JoJo brings a more lively emotional rhythm to the room — warm, attached, and eager to react quickly.',
+      'JoJo brings a lively emotional rhythm — warm, attached, and eager to react quickly.',
     notes: [
       'Best for energetic check-ins and more immediate emotional feedback.',
       'Great when you want companionship that feels lively and responsive.',
@@ -57,18 +60,10 @@ const DEMO_PETS: PetProfile[] = [
         content:
           "Hi, I'm JoJo 🐾 I've been waiting for you. Tell me how your day is going and I’ll stay right here with you.",
       },
-      {
-        role: 'user',
-        content: 'I am a little tired today.',
-      },
-      {
-        role: 'assistant',
-        content:
-          'Then come sit with me for a moment. You do not need to carry the whole day alone.',
-      },
     ],
     initialRemainingLabel: 'VIP — Unlimited Chat',
-    initialMemorySummary: 'JoJo remembers your softer moods and likes gentle emotional check-ins.',
+    initialMemorySummary:
+      'JoJo remembers your softer moods and likes gentle emotional check-ins.',
   },
   {
     id: 'mimi',
@@ -92,18 +87,10 @@ const DEMO_PETS: PetProfile[] = [
         content:
           "Hello, I'm Mimi 🤍 If you want, we can talk quietly for a while. I’m here with you.",
       },
-      {
-        role: 'user',
-        content: 'Can you stay with me for a bit?',
-      },
-      {
-        role: 'assistant',
-        content:
-          'Of course. You do not need to rush. We can just stay here and breathe together.',
-      },
     ],
     initialRemainingLabel: 'VIP — Unlimited Chat',
-    initialMemorySummary: 'Mimi holds calmer, soothing conversation starters for quiet moments.',
+    initialMemorySummary:
+      'Mimi holds calmer, soothing conversation starters for quiet moments.',
   },
 ];
 
@@ -126,7 +113,8 @@ function normalizeMessages(input: unknown): ChatMessage[] {
 
   return input
     .map((item: any) => {
-      const role: 'user' | 'assistant' = item?.role === 'user' ? 'user' : 'assistant';
+      const role: 'user' | 'assistant' =
+        item?.role === 'user' ? 'user' : 'assistant';
       const content = String(item?.content ?? item?.text ?? '').trim();
       if (!content) return null;
       return { role, content };
@@ -157,6 +145,7 @@ function normalizePet(raw: RawPet, index: number): PetProfile | null {
   if (!id) return null;
 
   const name = firstNonEmptyString(raw.name, raw.petName, raw.title, `Pet ${index + 1}`);
+
   const imageUrl =
     firstNonEmptyString(
       raw.imageUrl,
@@ -165,10 +154,14 @@ function normalizePet(raw: RawPet, index: number): PetProfile | null {
       raw.photoUrl,
       raw.image,
       raw.avatar,
-      raw.profileImageUrl
+      raw.profileImageUrl,
+      raw.image_url,
+      raw.avatar_url,
+      raw.photo_url
     ) || null;
 
   const roleLabel = firstNonEmptyString(raw.roleLabel, raw.type, raw.species, 'Companion');
+
   const subtitle = firstNonEmptyString(
     raw.subtitle,
     raw.shortDescription,
@@ -203,6 +196,8 @@ function normalizePet(raw: RawPet, index: number): PetProfile | null {
     firstBoolean(raw.isLive, raw.live) ??
     String(raw.status ?? '').trim().toLowerCase() === 'live';
 
+  const initialMessages = normalizeMessages(raw.initialMessages ?? raw.messages ?? []);
+
   return {
     id,
     name,
@@ -215,20 +210,31 @@ function normalizePet(raw: RawPet, index: number): PetProfile | null {
       notes.length > 0
         ? notes
         : [
-            'Best for rerun-style chats, memory prompts, and cozy daily check-ins.',
-            'Great when you want warmth, direct affection, and lighter emotional pacing.',
+            'Best for cozy daily check-ins and memory-aware chats.',
+            'Great when you want warmth, direct affection, and softer pacing.',
           ],
     vip,
     isPrimary,
     isLive,
-    initialMessages: normalizeMessages(raw.initialMessages ?? raw.messages ?? []),
+    initialMessages:
+      initialMessages.length > 0
+        ? initialMessages
+        : [
+            {
+              role: 'assistant',
+              content: `Hi, I'm ${name} 🐾 I'm here with you.`,
+            },
+          ],
     initialRemainingLabel: firstNonEmptyString(
       raw.initialRemainingLabel,
       raw.remainingLabel,
       raw.usageLabel,
       vip ? 'VIP — Unlimited Chat' : 'Companion Chat'
     ),
-    initialMemorySummary: firstNonEmptyString(raw.initialMemorySummary, raw.memorySummary),
+    initialMemorySummary: firstNonEmptyString(
+      raw.initialMemorySummary,
+      raw.memorySummary
+    ),
   };
 }
 
@@ -260,11 +266,24 @@ async function fetchPetsFromApi(): Promise<{ pets: PetProfile[]; error: string |
 
       lastError = `${endpoint} returned empty pet list`;
     } catch (error) {
-      lastError = error instanceof Error ? error.message : `Failed to fetch ${endpoint}`;
+      lastError =
+        error instanceof Error ? error.message : `Failed to fetch ${endpoint}`;
     }
   }
 
   return { pets: [], error: lastError };
+}
+
+function buildSearchHref(
+  pathname: string,
+  currentSearchParams: URLSearchParams,
+  petId: string
+) {
+  const next = new URLSearchParams(currentSearchParams.toString());
+  next.set('pet_id', petId);
+  next.delete('petId');
+  const query = next.toString();
+  return query ? `${pathname}?${query}` : pathname;
 }
 
 function PetAvatar({
@@ -280,6 +299,7 @@ function PetAvatar({
 }) {
   if (src) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={src}
         alt={alt}
@@ -302,29 +322,22 @@ function PetAvatar({
   );
 }
 
-function buildSearchHref(
-  pathname: string,
-  currentSearchParams: URLSearchParams,
-  petId: string
-) {
-  const next = new URLSearchParams(currentSearchParams.toString());
-  next.set('pet_id', petId);
-  next.delete('petId');
-  const query = next.toString();
-  return query ? `${pathname}?${query}` : pathname;
-}
-
 export default function ChatPageClient() {
-  const router = useRouter();
-  const pathname = usePathname();
+  const pathname = usePathname() || '/chat';
   const searchParams = useSearchParams();
+
+  const SafeSiteHeader: ComponentType<any> | null =
+    typeof SiteHeader === 'function' ? SiteHeader : null;
+
+  const SafeChatPlayground: ComponentType<any> | null =
+    typeof ChatPlayground === 'function' ? ChatPlayground : null;
 
   const [livePets, setLivePets] = useState<PetProfile[]>([]);
   const [loadingPets, setLoadingPets] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [selectedPetId, setSelectedPetId] = useState<string | null>(null);
 
-  const requestedPetId = searchParams.get('pet_id') || searchParams.get('petId') || null;
+  const requestedPetId =
+    searchParams.get('pet_id') || searchParams.get('petId') || null;
 
   useEffect(() => {
     let cancelled = false;
@@ -332,6 +345,7 @@ export default function ChatPageClient() {
     async function run() {
       setLoadingPets(true);
       const result = await fetchPetsFromApi();
+
       if (cancelled) return;
 
       setLivePets(result.pets);
@@ -349,216 +363,233 @@ export default function ChatPageClient() {
   const usingDemoPets = !loadingPets && livePets.length === 0;
   const pets = usingDemoPets ? DEMO_PETS : livePets;
 
-  useEffect(() => {
-    if (!pets.length) return;
-
-    const nextPet =
-      (requestedPetId && pets.find((pet) => pet.id === requestedPetId)) ||
-      pets.find((pet) => pet.isPrimary) ||
-      pets[0];
-
-    if (nextPet && selectedPetId !== nextPet.id) {
-      setSelectedPetId(nextPet.id);
-    }
-  }, [pets, requestedPetId, selectedPetId]);
-
   const activePet = useMemo(() => {
     if (!pets.length) return null;
-    return pets.find((pet) => pet.id === selectedPetId) || pets.find((pet) => pet.isPrimary) || pets[0];
-  }, [pets, selectedPetId]);
 
-  function handleSelectPet(petId: string) {
-    setSelectedPetId(petId);
-    const href = buildSearchHref(pathname, new URLSearchParams(searchParams.toString()), petId);
-    router.replace(href, { scroll: false });
-  }
+    return (
+      (requestedPetId && pets.find((pet) => pet.id === requestedPetId)) ||
+      pets.find((pet) => pet.isPrimary) ||
+      pets[0]
+    );
+  }, [pets, requestedPetId]);
+
+  const activePetLinks = useMemo(() => {
+    return pets.map((pet) => ({
+      ...pet,
+      href: buildSearchHref(pathname, searchParams, pet.id),
+    }));
+  }, [pets, pathname, searchParams]);
 
   return (
-    <div className="page-noir app-brand-backdrop min-h-screen">
-      <main className="container-shell px-4 py-5 md:px-6 md:py-8">
-        <div className="mx-auto max-w-7xl">
-          <section className="mb-5 rounded-[30px] border border-white/10 bg-[linear-gradient(135deg,rgba(255,166,0,0.08),rgba(255,255,255,0.02)_35%,rgba(0,0,0,0.3)_100%)] px-5 py-6 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl md:px-8 md:py-8">
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="mb-3 inline-flex items-center rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.24em] text-[var(--noir-text-soft,#f3d6b0)]">
-                  EchoPaws Noir Chat
-                </div>
+    <div className="min-h-screen bg-[#0c0706] text-[#fff7ed]">
+      {SafeSiteHeader ? (
+        <SafeSiteHeader theme="dark" />
+      ) : (
+        <div className="sticky top-0 z-40 border-b border-red-400/25 bg-red-500/10 px-4 py-3 text-sm text-red-100">
+          Header component unavailable. Check <code>components/site-header.tsx</code> export.
+        </div>
+      )}
 
-                <h1 className="text-3xl font-black tracking-tight text-white md:text-4xl">
-                  A softer place to keep talking.
-                </h1>
+      <main className="mx-auto w-full max-w-[1240px] px-4 pb-8 pt-24 sm:px-6 lg:px-8">
+        <section className="rounded-[28px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.03),rgba(255,255,255,0.02))] p-6 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl md:p-7">
+          <div className="inline-flex items-center rounded-full border border-amber-300/18 bg-amber-300/10 px-3 py-1 text-[0.64rem] font-extrabold uppercase tracking-[0.22em] text-[#f6cf7b]">
+            ✦ Warm companion chat
+          </div>
 
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)] md:text-[15px]">
-                  Your companion chat stays synchronized with the selected pet, while keeping a
-                  graceful fallback to JoJo and Mimi if the live companion API is unavailable.
-                </p>
+          <div className="mt-5 flex flex-col gap-6 md:flex-row md:items-center md:justify-between">
+            <div className="min-w-0">
+              <h1 className="text-[clamp(2.2rem,4vw,4rem)] font-black leading-[0.95] tracking-[-0.04em] text-[#fff7ed]">
+                {activePet ? `Chat with ${activePet.name}` : 'Your companion chat'}
+              </h1>
 
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--noir-text-soft,#e7d1b9)]">
-                    VIP — Unlimited
+              <p className="mt-3 max-w-3xl text-[0.95rem] leading-7 text-[rgba(255,244,230,0.78)]">
+                {activePet
+                  ? activePet.subtitle
+                  : 'A softer, calmer chat space designed to keep your companion emotionally front and center.'}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                <span className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-300/10 px-3 py-1 text-xs font-bold text-[#f6cf7b]">
+                  {usingDemoPets ? 'Demo data' : 'Live data'}
+                </span>
+                {activePet ? (
+                  <span className="inline-flex items-center rounded-full border border-white/12 bg-white/5 px-3 py-1 text-xs font-bold text-[rgba(255,244,230,0.78)]">
+                    {activePet.vip ? 'VIP — Unlimited Chat' : 'Companion chat'}
                   </span>
-                  <span className="inline-flex items-center rounded-full border border-white/10 bg-white/6 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--noir-text-soft,#e7d1b9)]">
-                    Companion
+                ) : null}
+                {apiError ? (
+                  <span className="inline-flex items-center rounded-full border border-red-300/20 bg-red-400/10 px-3 py-1 text-xs font-bold text-red-100">
+                    API fallback active
                   </span>
-                  <span className={liveBadgeClassName}>Live</span>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-2">
-                <Link
-                  href="/memories"
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-                >
-                  Memories
-                </Link>
-                <Link
-                  href="/pets"
-                  className="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-                >
-                  Manage
-                </Link>
+                ) : null}
               </div>
             </div>
-          </section>
 
-          {usingDemoPets ? (
-            <div className="mb-4 rounded-[20px] border border-amber-300/15 bg-[rgba(229,169,98,0.10)] px-4 py-3 text-sm text-[var(--noir-text-soft,#f0d6b7)]">
-              Live pets API is currently unavailable, so the page is showing the built-in JoJo / Mimi conversations.
-              {apiError ? <span className="ml-2 opacity-80">({apiError})</span> : null}
+            <div className="flex shrink-0 flex-col gap-3 sm:flex-row">
+              <Link
+                href="/memories"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/22 bg-white/[0.03] px-5 text-sm font-bold text-white transition hover:bg-white/[0.06]"
+              >
+                Memories
+              </Link>
+              <Link
+                href="/pets"
+                className="inline-flex min-h-[44px] items-center justify-center rounded-full border border-white/22 bg-white/[0.03] px-5 text-sm font-bold text-white transition hover:bg-white/[0.06]"
+              >
+                Manage Pets
+              </Link>
             </div>
-          ) : null}
+          </div>
+        </section>
 
-          <div className="grid gap-5 lg:grid-cols-[300px_minmax(0,1fr)] xl:grid-cols-[320px_minmax(0,1fr)]">
-            <aside className="space-y-4">
-              <section className="rounded-[26px] border border-white/10 bg-[rgba(15,10,8,0.72)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.26em] text-[var(--noir-text-muted,#9f8c7d)]">
-                  Pet Switcher
-                </div>
+        <section className="mt-5 grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)]">
+          <aside className="grid gap-5">
+            <section className="rounded-[28px] border border-white/8 bg-[rgba(15,10,8,0.72)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <div className="text-[0.64rem] font-extrabold uppercase tracking-[0.24em] text-[#f3c86b]">
+                Pet switcher
+              </div>
 
-                <h2 className="text-2xl font-black tracking-tight text-white">
-                  Choose your companion
-                </h2>
+              <h2 className="mt-3 text-[1.9rem] font-black leading-none tracking-[-0.04em] text-[#fff7ed]">
+                Choose your companion
+              </h2>
 
-                <div className="mt-4 space-y-3">
-                  {loadingPets ? (
-                    <>
-                      <div className="h-[76px] animate-pulse rounded-[20px] bg-white/6" />
-                      <div className="h-[76px] animate-pulse rounded-[20px] bg-white/6" />
-                    </>
-                  ) : (
-                    pets.map((pet) => {
-                      const active = activePet?.id === pet.id;
+              <div className="mt-5 grid gap-3">
+                {loadingPets ? (
+                  <>
+                    <div className="h-20 animate-pulse rounded-[22px] bg-white/5" />
+                    <div className="h-20 animate-pulse rounded-[22px] bg-white/5" />
+                  </>
+                ) : activePetLinks.length > 0 ? (
+                  activePetLinks.map((pet) => {
+                    const active = activePet?.id === pet.id;
 
-                      return (
-                        <button
-                          key={pet.id}
-                          type="button"
-                          onClick={() => handleSelectPet(pet.id)}
-                          className={[
-                            'flex w-full items-center gap-3 rounded-[20px] border px-3 py-3 text-left transition',
-                            active
-                              ? 'border-white/35 bg-[rgba(255,255,255,0.08)] shadow-[0_10px_30px_rgba(0,0,0,0.25)]'
-                              : 'border-white/10 bg-[rgba(255,255,255,0.03)] hover:bg-[rgba(255,255,255,0.06)]',
-                          ].join(' ')}
-                        >
+                    return (
+                      <Link
+                        key={pet.id}
+                        href={pet.href}
+                        aria-current={active ? 'page' : undefined}
+                        className={[
+                          'group rounded-[22px] border px-4 py-3 transition duration-200',
+                          active
+                            ? 'border-amber-300/30 bg-[linear-gradient(135deg,rgba(251,191,36,0.12),rgba(249,115,22,0.08))] shadow-[0_10px_28px_rgba(249,115,22,0.14)]'
+                            : 'border-white/8 bg-white/[0.03] hover:border-white/14 hover:bg-white/[0.05]',
+                        ].join(' ')}
+                      >
+                        <div className="flex items-center gap-3">
                           <PetAvatar
                             src={pet.imageUrl}
                             alt={pet.name}
                             fallbackText={pet.name.slice(0, 1)}
+                            size={44}
                           />
 
                           <div className="min-w-0 flex-1">
-                            <div className="truncate text-sm font-bold text-white">{pet.name}</div>
-                            <div className="mt-0.5 truncate text-xs text-[var(--noir-text-muted,#a28f81)]">
-                              {pet.roleLabel}
+                            <div className="truncate text-sm font-extrabold text-[#fff7ed]">
+                              {pet.name}
+                            </div>
+                            <div className="text-xs text-[rgba(255,244,230,0.60)]">
+                              {pet.isPrimary ? 'Primary pet' : pet.roleLabel}
                             </div>
                           </div>
 
-                          <div className="flex flex-col items-end gap-1">
-                            {pet.isPrimary ? (
-                              <span className="inline-flex items-center rounded-full border border-white/10 bg-white/6 px-2 py-1 text-[9px] font-bold uppercase tracking-[0.14em] text-[var(--noir-text-soft,#ead3b5)]">
-                                Primary
-                              </span>
-                            ) : null}
-                            {pet.isLive ? <span className={liveBadgeClassName}>Live</span> : null}
-                          </div>
-                        </button>
-                      );
-                    })
-                  )}
-                </div>
-              </section>
-
-              <section className="rounded-[26px] border border-white/10 bg-[rgba(15,10,8,0.72)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl">
-                <div className="mb-3 text-[10px] font-bold uppercase tracking-[0.26em] text-[var(--noir-text-muted,#9f8c7d)]">
-                  Companion Mood
-                </div>
-
-                {activePet ? (
-                  <>
-                    <h3 className="text-2xl font-black tracking-tight text-white">
-                      {activePet.moodTitle}
-                    </h3>
-
-                    <p className="mt-3 text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)]">
-                      {activePet.moodDescription}
-                    </p>
-
-                    <div className="mt-4 space-y-3">
-                      {activePet.notes.map((note, index) => (
-                        <div
-                          key={`${activePet.id}-note-${index}`}
-                          className="rounded-[18px] border border-white/10 bg-[rgba(255,255,255,0.04)] px-4 py-3 text-sm leading-6 text-[var(--noir-text-soft,#d7c0a7)]"
-                        >
-                          {note}
+                          {active ? (
+                            <span className="inline-flex h-7 items-center rounded-full border border-amber-300/30 bg-amber-300/14 px-3 text-[0.62rem] font-extrabold uppercase tracking-[0.18em] text-[#f6cf7b]">
+                              Live
+                            </span>
+                          ) : null}
                         </div>
-                      ))}
-                    </div>
-                  </>
+                      </Link>
+                    );
+                  })
                 ) : (
-                  <div className="rounded-[18px] border border-white/10 bg-white/4 p-4 text-sm text-[var(--noir-text-soft,#d9c4ab)]">
-                    Select a companion to begin chatting.
+                  <div className="rounded-[22px] border border-white/10 bg-white/[0.03] px-4 py-4 text-sm leading-7 text-[rgba(255,244,230,0.70)]">
+                    No companion data available yet.
                   </div>
                 )}
-              </section>
-            </aside>
+              </div>
 
-            <section className="min-w-0 rounded-[28px] border border-white/10 bg-[rgba(15,10,8,0.72)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl md:p-5">
-              {loadingPets ? (
-                <div className="grid gap-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-8 w-32 animate-pulse rounded-full bg-white/8" />
-                    <div className="h-8 w-28 animate-pulse rounded-full bg-white/8" />
-                  </div>
-                  <div className="h-[520px] animate-pulse rounded-[24px] bg-white/5" />
+              {apiError ? (
+                <div className="mt-4 rounded-2xl border border-amber-300/12 bg-amber-300/8 px-4 py-3 text-xs leading-6 text-[rgba(255,244,230,0.72)]">
+                  Could not load live pets from API, so the page is using fallback data. Error:
+                  <div className="mt-1 break-words text-[rgba(255,244,230,0.88)]">{apiError}</div>
                 </div>
-              ) : activePet ? (
-                <ChatPlayground
-                  key={activePet.id}
-                  petId={usingDemoPets ? undefined : activePet.id}
-                  petName={activePet.name}
-                  petImageUrl={activePet.imageUrl}
-                  initialMessages={activePet.initialMessages}
-                  initialRemainingLabel={activePet.initialRemainingLabel}
-                  initialMemorySummary={activePet.initialMemorySummary}
-                />
-              ) : (
-                <div className="flex min-h-[520px] flex-col items-center justify-center rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.03)] px-6 py-10 text-center">
-                  <div className="text-lg font-bold text-white">No companion available</div>
-                  <p className="mt-2 max-w-md text-sm leading-7 text-[var(--noir-text-soft,#d7c0a7)]">
-                    Create or sync a pet first, then come back to chat with the correct avatar and pet binding.
-                  </p>
-                  <Link
-                    href="/create-pet"
-                    className="mt-5 inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffb020,#f97316)] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_32px_rgba(249,115,22,0.28)] transition hover:brightness-105"
-                  >
-                    Create Pet
-                  </Link>
-                </div>
-              )}
+              ) : null}
             </section>
-          </div>
-        </div>
+
+            <section className="rounded-[28px] border border-white/8 bg-[rgba(15,10,8,0.72)] p-5 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl">
+              <div className="text-[0.64rem] font-extrabold uppercase tracking-[0.24em] text-[#f3c86b]">
+                Companion mood
+              </div>
+
+              <h3 className="mt-3 text-[1.9rem] font-black leading-[1.02] tracking-[-0.04em] text-[#fff7ed]">
+                {activePet?.moodTitle || 'Emotionally present, softly attentive'}
+              </h3>
+
+              <p className="mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]">
+                {activePet?.moodDescription ||
+                  'A warmer, calmer chat space designed to keep your companion emotionally front and center.'}
+              </p>
+
+              {activePet?.notes?.length ? (
+                <div className="mt-5 grid gap-3">
+                  {activePet.notes.map((note, index) => (
+                    <div
+                      key={`${activePet.id}-note-${index}`}
+                      className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3 text-sm leading-7 text-[rgba(255,244,230,0.74)]"
+                    >
+                      {note}
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+          </aside>
+
+          <section className="min-w-0 rounded-[28px] border border-white/10 bg-[rgba(15,10,8,0.72)] p-4 shadow-[0_24px_80px_rgba(0,0,0,0.38)] backdrop-blur-xl md:p-5">
+            {loadingPets ? (
+              <div className="grid gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-8 w-32 animate-pulse rounded-full bg-white/8" />
+                  <div className="h-8 w-28 animate-pulse rounded-full bg-white/8" />
+                </div>
+                <div className="h-[520px] animate-pulse rounded-[24px] bg-white/5" />
+              </div>
+            ) : !activePet ? (
+              <div className="flex min-h-[520px] flex-col items-center justify-center rounded-[24px] border border-white/10 bg-[rgba(255,255,255,0.03)] px-6 py-10 text-center">
+                <div className="text-lg font-bold text-white">No companion available</div>
+                <p className="mt-2 max-w-md text-sm leading-7 text-[rgba(255,244,230,0.72)]">
+                  Create or sync a pet first, then come back to chat with the correct avatar and pet binding.
+                </p>
+                <Link
+                  href="/create-pet"
+                  className="mt-5 inline-flex items-center justify-center rounded-full bg-[linear-gradient(135deg,#ffb020,#f97316)] px-5 py-3 text-sm font-bold text-white shadow-[0_14px_32px_rgba(249,115,22,0.28)] transition hover:brightness-105"
+                >
+                  Create Pet
+                </Link>
+              </div>
+            ) : SafeChatPlayground ? (
+              <SafeChatPlayground
+                key={activePet.id}
+                petId={usingDemoPets ? undefined : activePet.id}
+                petName={activePet.name}
+                petImageUrl={activePet.imageUrl}
+                initialMessages={activePet.initialMessages}
+                initialRemainingLabel={activePet.initialRemainingLabel}
+                initialMemorySummary={activePet.initialMemorySummary}
+              />
+            ) : (
+              <div className="flex min-h-[520px] flex-col justify-center rounded-[24px] border border-red-400/25 bg-red-500/10 px-6 py-10 text-center">
+                <div className="text-lg font-bold text-red-100">
+                  ChatPlayground component unavailable
+                </div>
+                <p className="mt-2 text-sm leading-7 text-red-50/90">
+                  Check <code>components/chat-playground.tsx</code> export. It should expose a
+                  named export called <code>ChatPlayground</code>.
+                </p>
+              </div>
+            )}
+          </section>
+        </section>
       </main>
     </div>
   );

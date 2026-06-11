@@ -1,18 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useMemo, useState } from 'react';
+import { Suspense, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site-header';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-/**
- * 如果你的项目不是这个回调路径，只改这里即可
- * 常见仍然是 /auth/callback
- */
 const AUTH_CALLBACK_PATH = '/auth/callback';
 
 function cn(...values: Array<string | false | null | undefined>) {
@@ -34,7 +29,53 @@ function AuthFeature({
   );
 }
 
-export default function LoginPage() {
+function LoginSkeleton() {
+  return (
+    <div className="min-h-screen bg-[#0b0706] text-[#f7efe8]">
+      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_16%,rgba(255,122,26,0.11),transparent_23%),radial-gradient(circle_at_86%_12%,rgba(255,185,94,0.08),transparent_18%),linear-gradient(180deg,#0b0706_0%,#130907_52%,#0b0706_100%)]" />
+      <SiteHeader theme="dark" />
+      <main className="relative z-[1] mx-auto w-full max-w-[1240px] px-4 pb-12 pt-24 sm:px-6 lg:px-8">
+        <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
+          <div className="max-w-[640px]">
+            <div className="inline-flex items-center rounded-full border border-amber-300/16 bg-amber-300/8 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#f3c86b]">
+              Softer sign-in experience
+            </div>
+
+            <h1
+              className="mt-5 text-[clamp(3rem,7vw,5.7rem)] leading-[0.92] tracking-[-0.055em] text-white"
+              style={{ fontFamily: 'var(--font-display)' }}
+            >
+              Return to your{' '}
+              <span className="bg-[linear-gradient(90deg,#ffcf85_0%,#ffaf57_45%,#ff8c2b_100%)] bg-clip-text text-transparent">
+                companion
+              </span>{' '}
+              world
+            </h1>
+
+            <p className="mt-5 max-w-[560px] text-[16px] leading-8 text-[rgba(255,244,230,0.74)]">
+              A calmer sign-in experience is loading...
+            </p>
+
+            <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="h-[110px] animate-pulse rounded-[24px] bg-white/[0.04]" />
+              <div className="h-[110px] animate-pulse rounded-[24px] bg-white/[0.04]" />
+            </div>
+          </div>
+
+          <div className="rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,rgba(34,20,16,0.92),rgba(16,10,8,0.94))] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.36)] backdrop-blur-xl sm:p-7">
+            <div className="h-10 animate-pulse rounded-full bg-white/[0.05]" />
+            <div className="mt-5 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+            <div className="mt-4 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+            <div className="mt-4 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
+            <div className="mt-5 h-14 animate-pulse rounded-full bg-white/[0.05]" />
+          </div>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -284,7 +325,9 @@ export default function LoginPage() {
                 className="text-[2rem] leading-[1.02] tracking-[-0.045em] text-white"
                 style={{ fontFamily: 'var(--font-display)' }}
               >
-                {mode === 'signin' ? 'Continue gently from where you left off' : 'Create a softer place for your pet life'}
+                {mode === 'signin'
+                  ? 'Continue gently from where you left off'
+                  : 'Create a softer place for your pet life'}
               </h2>
 
               <p className="mt-3 text-[15px] leading-7 text-[rgba(255,244,230,0.70)]">
@@ -298,12 +341,9 @@ export default function LoginPage() {
               <div
                 className={cn(
                   'mt-5 rounded-[20px] border px-4 py-3 text-sm leading-7',
-                  bannerTone === 'error' &&
-                    'border-red-300/18 bg-red-500/10 text-red-100',
-                  bannerTone === 'success' &&
-                    'border-emerald-300/18 bg-emerald-500/10 text-emerald-100',
-                  bannerTone === 'neutral' &&
-                    'border-amber-300/14 bg-amber-300/8 text-[rgba(255,244,230,0.84)]'
+                  bannerTone === 'error' && 'border-red-300/18 bg-red-500/10 text-red-100',
+                  bannerTone === 'success' && 'border-emerald-300/18 bg-emerald-500/10 text-emerald-100',
+                  bannerTone === 'neutral' && 'border-amber-300/14 bg-amber-300/8 text-[rgba(255,244,230,0.84)]'
                 )}
               >
                 {bannerText}
@@ -317,22 +357,10 @@ export default function LoginPage() {
               className="mt-5 inline-flex h-[54px] w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 text-sm font-bold text-white transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-55"
             >
               <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden="true">
-                <path
-                  d="M21.805 10.023h-9.72v3.955h5.568c-.24 1.27-.96 2.347-2.04 3.066v2.543h3.3c1.932-1.78 3.048-4.4 3.048-7.52 0-.69-.06-1.36-.156-2.044Z"
-                  fill="#4285F4"
-                />
-                <path
-                  d="M12.085 22c2.754 0 5.064-.912 6.756-2.473l-3.3-2.543c-.912.612-2.076.972-3.456.972-2.658 0-4.914-1.794-5.718-4.206H3.001v2.622A10.196 10.196 0 0 0 12.085 22Z"
-                  fill="#34A853"
-                />
-                <path
-                  d="M6.367 13.75a6.11 6.11 0 0 1-.318-1.95c0-.678.114-1.338.318-1.95V7.228H3.001A10.196 10.196 0 0 0 1.885 11.8c0 1.644.396 3.198 1.116 4.572l3.366-2.622Z"
-                  fill="#FBBC05"
-                />
-                <path
-                  d="M12.085 5.644c1.5 0 2.85.516 3.912 1.53l2.928-2.928C17.143 2.592 14.833 1.6 12.085 1.6A10.196 10.196 0 0 0 3.001 7.228L6.367 9.85c.804-2.412 3.06-4.206 5.718-4.206Z"
-                  fill="#EA4335"
-                />
+                <path d="M21.805 10.023h-9.72v3.955h5.568c-.24 1.27-.96 2.347-2.04 3.066v2.543h3.3c1.932-1.78 3.048-4.4 3.048-7.52 0-.69-.06-1.36-.156-2.044Z" fill="#4285F4" />
+                <path d="M12.085 22c2.754 0 5.064-.912 6.756-2.473l-3.3-2.543c-.912.612-2.076.972-3.456.972-2.658 0-4.914-1.794-5.718-4.206H3.001v2.622A10.196 10.196 0 0 0 12.085 22Z" fill="#34A853" />
+                <path d="M6.367 13.75a6.11 6.11 0 0 1-.318-1.95c0-.678.114-1.338.318-1.95V7.228H3.001A10.196 10.196 0 0 0 1.885 11.8c0 1.644.396 3.198 1.116 4.572l3.366-2.622Z" fill="#FBBC05" />
+                <path d="M12.085 5.644c1.5 0 2.85.516 3.912 1.53l2.928-2.928C17.143 2.592 14.833 1.6 12.085 1.6A10.196 10.196 0 0 0 3.001 7.228L6.367 9.85c.804-2.412 3.06-4.206 5.718-4.206Z" fill="#EA4335" />
               </svg>
               Continue with Google
             </button>
@@ -454,5 +482,13 @@ export default function LoginPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginSkeleton />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

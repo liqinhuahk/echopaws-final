@@ -1,209 +1,275 @@
 import { redirect } from 'next/navigation';
-import ChatPageClient, { type ChatPagePet } from './chat-page-client';
+import ChatPageClient from './chat-page-client';
+import { createServerSupabaseClient } from '@/lib/supabase/server';
 import { getPetsForUser } from '@/lib/pets';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
 
-export const dynamic = 'force-dynamic';
+type SearchParamsInput =
+  | Promise<{ petId?: string | string[] | undefined }>
+  | { petId?: string | string[] | undefined }
+  | undefined;
 
-type SearchParamsValue = string | string[] | undefined;
-type SearchParamsRecord = Record<string, SearchParamsValue>;
-
-type ChatPageProps = {
-  searchParams?: Promise<SearchParamsRecord> | SearchParamsRecord;
+type ChatMessage = {
+  role: 'user' | 'assistant';
+  content: string;
 };
 
-function pickFirst(value: SearchParamsValue) {
-  return Array.isArray(value) ? value[0] : value;
-}
+type NormalizedPet = {
+  id: string;
+  name: string;
+  imageUrl: string | null;
+  subtitle: string;
+  description: string;
+  badges: string[];
+  isPrimary: boolean;
+  isLive: boolean;
+  moodTitle: string;
+  moodDescription: string;
+  notes: string[];
+  initialMessages: ChatMessage[];
+  initialRemainingLabel: string;
+  initialMemorySummary: string;
+};
 
-function firstNonEmptyString(...values: unknown[]): string {
+function firstNonEmptyString(...values: unknown[]) {
   for (const value of values) {
-    if (typeof value === 'string' && value.trim()) return value.trim();
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
   }
   return '';
 }
 
-function firstBoolean(...values: unknown[]): boolean | undefined {
+function firstBoolean(...values: unknown[]) {
   for (const value of values) {
     if (typeof value === 'boolean') return value;
   }
-  return undefined;
+  return false;
 }
 
-function getPetImage(pet: Record<string, any>) {
-  return (
-    pet?.image_url ??
-    pet?.imageUrl ??
-    pet?.photo_url ??
-    pet?.photoUrl ??
-    pet?.avatar_url ??
-    pet?.avatarUrl ??
-    pet?.profileImageUrl ??
-    pet?.petImageUrl ??
-    null
-  );
+function normalizeStringArray(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
 }
 
-function normalizeMessages(input: unknown, petName: string) {
-  if (!Array.isArray(input)) {
-    return [
-      {
-        role: 'assistant' as const,
-        content: `Hi, I'm ${petName} 🐾 I'm here with you.`,
-      },
-    ];
-  }
+function normalizeInitialMessages(input: unknown): ChatMessage[] {
+  if (!Array.isArray(input)) return [];
 
-  const parsed = input
-    .map((item: any) => {
-      const role: 'user' | 'assistant' = item?.role === 'user' ? 'user' : 'assistant';
-      const content = String(item?.content ?? item?.text ?? '').trim();
-      if (!content) return null;
-      return { role, content };
+  return input
+    .map((item) => {
+      if (
+        item &&
+        typeof item === 'object' &&
+        ((item as { role?: unknown }).role === 'user' ||
+          (item as { role?: unknown }).role === 'assistant') &&
+        typeof (item as { content?: unknown }).content === 'string'
+      ) {
+        return {
+          role: (item as { role: 'user' | 'assistant' }).role,
+          content: (item as { content: string }).content.trim(),
+        };
+      }
+      return null;
     })
-    .filter(Boolean) as Array<{ role: 'user' | 'assistant'; content: string }>;
-
-  if (parsed.length > 0) return parsed;
-
-  return [
-    {
-      role: 'assistant' as const,
-      content: `Hi, I'm ${petName} 🐾 I'm here with you.`,
-    },
-  ];
+    .filter((item): item is ChatMessage => Boolean(item && item.content));
 }
 
-function normalizeNotes(input: unknown) {
-  if (Array.isArray(input)) {
-    const notes = input.map((item) => String(item).trim()).filter(Boolean);
-    if (notes.length > 0) return notes;
+function extractPetArray(input: unknown): unknown[] {
+  if (Array.isArray(input)) return input;
+
+  if (input && typeof input === 'object') {
+    const obj = input as Record<string, unknown>;
+
+    if (Array.isArray(obj.pets)) return obj.pets;
+    if (Array.isArray(obj.data)) return obj.data;
+    if (obj.data && typeof obj.data === 'object' && Array.isArray((obj.data as Record<string, unknown>).pets)) {
+      return (obj.data as Record<string, unknown>).pets as unknown[];
+    }
   }
 
-  if (typeof input === 'string' && input.trim()) {
-    const notes = input
-      .split('\n')
-      .map((item) => item.trim())
-      .filter(Boolean);
-    if (notes.length > 0) return notes;
-  }
-
-  return [
-    'Warm, emotionally present, and designed for softer daily companionship.',
-    'Built to feel calmer, clearer, and more personal than a generic chat UI.',
-  ];
+  return [];
 }
 
-function normalizePet(
-  raw: Record<string, any>,
-  index: number,
-  defaultPetId?: string | number | null
-): ChatPagePet | null {
-  const id = firstNonEmptyString(raw.id, raw.petId, raw._id, raw.uuid, raw.slug, raw.companionId);
-  if (!id) return null;
+function normalizePet(raw: unknown, index: number): NormalizedPet | null {
+  if (!raw || typeof raw !== 'object') return null;
 
-  const name = firstNonEmptyString(raw.name, raw.petName, raw.title, `Pet ${index + 1}`);
-  const imageUrl = getPetImage(raw);
+  const pet = raw as Record<string, unknown>;
 
-  const vip = firstBoolean(raw.vip, raw.isVip, raw.pro) ?? true;
-  const isPrimary =
-    String(id) === String(defaultPetId ?? '') ||
-    firstBoolean(raw.isPrimary, raw.primary) ||
-    index === 0;
+  const id = firstNonEmptyString(
+    pet.id,
+    pet.pet_id,
+    pet.petId,
+    pet.uuid,
+    pet.companion_id,
+    pet.companionId
+  );
 
-  const isLive =
-    firstBoolean(raw.isLive, raw.live) ??
-    String(raw.status ?? '').trim().toLowerCase() === 'live';
+  const name = firstNonEmptyString(
+    pet.name,
+    pet.pet_name,
+    pet.petName,
+    pet.title
+  );
+
+  if (!id || !name) return null;
+
+  const imageUrl =
+    firstNonEmptyString(
+      pet.image_url,
+      pet.imageUrl,
+      pet.photo_url,
+      pet.photoUrl,
+      pet.avatar_url,
+      pet.avatarUrl,
+      pet.profile_image_url,
+      pet.profileImageUrl,
+      pet.pet_image_url,
+      pet.petImageUrl
+    ) || null;
+
+  const isPrimary = firstBoolean(
+    pet.is_primary,
+    pet.isPrimary,
+    pet.primary,
+    index === 0
+  );
+
+  const isLive = firstBoolean(
+    pet.is_live,
+    pet.isLive,
+    pet.live,
+    true
+  );
 
   const subtitle = firstNonEmptyString(
-    raw.subtitle,
-    raw.shortDescription,
-    raw.personality,
-    raw.description,
-    raw.breed,
-    'Always here to keep you company with warmth and emotional continuity.'
+    pet.role_label,
+    pet.roleLabel,
+    pet.subtitle,
+    isPrimary ? 'Primary pet' : 'Companion'
+  );
+
+  const description = firstNonEmptyString(
+    pet.description,
+    pet.summary,
+    pet.bio,
+    pet.personality,
+    `${name} is here to stay close, warm, and emotionally present.`
   );
 
   const moodTitle = firstNonEmptyString(
-    raw.moodTitle,
-    raw.chatMoodTitle,
+    pet.mood_title,
+    pet.moodTitle,
     'Soft, present, emotionally warm'
   );
 
   const moodDescription = firstNonEmptyString(
-    raw.moodDescription,
-    raw.chatMoodDescription,
+    pet.mood_description,
+    pet.moodDescription,
     'A calmer, warmer chat space designed to keep your companion emotionally front and center.'
   );
 
+  const rawBadges = normalizeStringArray(pet.badges);
+  const badges = rawBadges.length
+    ? rawBadges
+    : [
+        isLive ? 'Real pet data' : 'Companion profile',
+        firstNonEmptyString(pet.plan_label, pet.planLabel, isPrimary ? 'VIP — Unlimited Chat' : 'Companion chat'),
+        isPrimary ? 'Primary pet' : 'Companion',
+      ].filter(Boolean);
+
+  const rawNotes = normalizeStringArray(
+    Array.isArray(pet.notes)
+      ? pet.notes
+      : Array.isArray(pet.highlights)
+        ? pet.highlights
+        : Array.isArray(pet.personality_notes)
+          ? pet.personality_notes
+          : []
+  );
+
+  const notes = rawNotes.length
+    ? rawNotes
+    : [
+        'Warm, emotionally present, and designed for softer daily companionship.',
+        'Built to feel calmer, clearer, and more personal than a generic chat UI.',
+      ];
+
+  const initialMessages = normalizeInitialMessages(
+    pet.initial_messages ?? pet.initialMessages ?? []
+  );
+
+  const initialRemainingLabel = firstNonEmptyString(
+    pet.initial_remaining_label,
+    pet.initialRemainingLabel,
+    pet.remaining_label,
+    pet.remainingLabel,
+    isPrimary ? 'VIP — Unlimited Chat' : 'Companion chat'
+  );
+
+  const initialMemorySummary = firstNonEmptyString(
+    pet.initial_memory_summary,
+    pet.initialMemorySummary,
+    pet.memory_summary,
+    pet.memorySummary,
+    ''
+  );
+
   return {
-    id: String(id),
+    id,
     name,
-    roleLabel: firstNonEmptyString(raw.roleLabel, raw.type, raw.species, isPrimary ? 'Primary pet' : 'Companion'),
-    imageUrl: typeof imageUrl === 'string' && imageUrl.trim() ? imageUrl : null,
+    imageUrl,
     subtitle,
+    description,
+    badges,
+    isPrimary,
+    isLive,
     moodTitle,
     moodDescription,
-    notes: normalizeNotes(raw.notes ?? raw.highlights ?? raw.moodNotes ?? raw.chatNotes),
-    vip,
-    isPrimary: Boolean(isPrimary),
-    isLive: Boolean(isLive),
-    initialMessages: normalizeMessages(raw.initialMessages ?? raw.messages, name),
-    initialRemainingLabel: firstNonEmptyString(
-      raw.initialRemainingLabel,
-      raw.remainingLabel,
-      raw.usageLabel,
-      vip ? 'VIP — Unlimited Chat' : 'Companion Chat'
-    ),
-    initialMemorySummary: firstNonEmptyString(raw.initialMemorySummary, raw.memorySummary),
+    notes,
+    initialMessages,
+    initialRemainingLabel,
+    initialMemorySummary,
   };
 }
 
-export default async function ChatPage({ searchParams }: ChatPageProps) {
-  if (!hasSupabaseEnv()) {
-    redirect('/login?error=Please%20configure%20Supabase%20environment%20variables%20first.');
-  }
+export default async function ChatPage({
+  searchParams,
+}: {
+  searchParams?: SearchParamsInput;
+}) {
+  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
+  const requestedPetId = Array.isArray(resolvedSearchParams.petId)
+    ? resolvedSearchParams.petId[0]
+    : resolvedSearchParams.petId;
 
-  const resolvedSearchParams = searchParams ? await searchParams : {};
-  const requestedPetId =
-    pickFirst(resolvedSearchParams.pet_id) ?? pickFirst(resolvedSearchParams.petId);
+  const nextHref = requestedPetId
+    ? `/chat?petId=${encodeURIComponent(requestedPetId)}`
+    : '/chat';
 
-  const supabase = createServerSupabaseClient();
+  const supabase = await createServerSupabaseClient();
   const {
     data: { user },
-    error,
   } = await supabase.auth.getUser();
 
-  if (error || !user) {
-    redirect('/login?message=Please%20log%20in%20to%20continue.&next=%2Fchat');
+  if (!user) {
+    redirect(`/login?next=${encodeURIComponent(nextHref)}`);
   }
 
-  const petOverview = await getPetsForUser(user.id);
-  const rawPets = Array.isArray(petOverview?.pets) ? petOverview.pets : [];
-
-  if (!rawPets.length) {
-    redirect('/create-pet?message=Create%20your%20first%20pet%20to%20start%20chatting.');
-  }
-
-  const normalizedPets = rawPets
-    .map((pet: Record<string, any>, index: number) =>
-      normalizePet(pet, index, petOverview?.defaultPetId)
-    )
-    .filter(Boolean) as ChatPagePet[];
-
-  if (!normalizedPets.length) {
-    redirect('/create-pet?message=Create%20your%20first%20pet%20to%20start%20chatting.');
-  }
+  const rawPets = await getPetsForUser(user.id);
+  const pets = extractPetArray(rawPets)
+    .map((item, index) => normalizePet(item, index))
+    .filter((item): item is NormalizedPet => Boolean(item));
 
   const selectedPet =
-    (requestedPetId &&
-      normalizedPets.find((pet) => String(pet.id) === String(requestedPetId))) ||
-    normalizedPets.find((pet) => pet.isPrimary) ||
-    normalizedPets[0];
+    pets.find((pet) => pet.id === requestedPetId) ??
+    pets.find((pet) => pet.isPrimary) ??
+    pets[0];
 
   return (
     <ChatPageClient
-      initialPets={normalizedPets}
-      initialSelectedPetId={selectedPet?.id ?? normalizedPets[0].id}
+      pets={pets}
+      initialPetId={selectedPet?.id}
     />
   );
 }

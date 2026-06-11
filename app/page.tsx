@@ -3,46 +3,24 @@ import SiteHeader from '@/components/site-header';
 
 const FEATURE_ITEMS = [
   {
-    title: 'Warm, personal conversations',
+    icon: '💬',
+    title: 'Emotional AI Chat',
     description:
-      'Gentle, familiar, emotionally close dialogue that feels more like presence than a generic chat tool.',
+      'Warm, personal conversations that feel gentle, familiar, and emotionally close.',
   },
   {
-    title: 'Long-term memory',
+    icon: '🧠',
+    title: 'Long-Term Memory',
     description:
-      'Your AI pet remembers stories, habits, and meaningful moments so the bond can continue over time.',
+      'Your AI pet remembers stories, habits, and meaningful moments over time.',
   },
   {
-    title: 'Comforting companionship',
+    icon: '❤️',
+    title: 'Always by Your Side',
     description:
-      'A calming, supportive presence whenever you want to reconnect, reflect, or simply feel close again.',
+      'A comforting presence whenever you need support, companionship, or warmth.',
   },
 ];
-
-const TRUST_ITEMS = [
-  'Google & Email Login',
-  'Emotional AI Chat',
-  'Long-Term Memory',
-];
-
-function SectionEyebrow({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="inline-flex items-center rounded-full border border-[rgba(120,63,25,0.16)] bg-white/70 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#8a562f] shadow-[0_8px_22px_rgba(65,34,16,0.06)] backdrop-blur">
-      {children}
-    </div>
-  );
-}
-
-function CheckItem({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="inline-flex items-center gap-2 text-sm text-[rgba(255,245,236,0.88)]">
-      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full border border-[rgba(255,210,180,0.22)] bg-[rgba(255,255,255,0.08)] text-[#ffd7b0]">
-        ✓
-      </span>
-      <span>{children}</span>
-    </div>
-  );
-}
 
 function ArrowRightIcon() {
   return (
@@ -62,11 +40,11 @@ function ArrowRightIcon() {
   );
 }
 
-function PawSparkIcon() {
+function PawIcon() {
   return (
     <svg
       viewBox="0 0 24 24"
-      className="h-5 w-5"
+      className="h-4 w-4"
       fill="currentColor"
       aria-hidden="true"
     >
@@ -75,25 +53,43 @@ function PawSparkIcon() {
   );
 }
 
+function HeroTrustItem({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex items-center gap-2 text-[12px] text-[rgba(255,239,231,0.9)]">
+      <span className="inline-flex h-4 w-4 items-center justify-center rounded-full border border-[rgba(255,227,206,0.18)] bg-[rgba(255,255,255,0.08)] text-[10px] text-[#ffd6ae]">
+        ✓
+      </span>
+      <span>{children}</span>
+    </div>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#b86a2c]">
+      {children}
+    </div>
+  );
+}
+
 function FeatureCard({
+  icon,
   title,
   description,
 }: {
+  icon: string;
   title: string;
   description: string;
 }) {
   return (
-    <article className="rounded-[28px] border border-[rgba(60,28,12,0.08)] bg-white/78 p-6 shadow-[0_22px_60px_rgba(48,24,12,0.08)] backdrop-blur md:p-7">
-      <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(120,63,25,0.12)] bg-[rgba(255,248,242,0.9)] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#8c5a35]">
-        <span className="text-[#c57c36]">
-          <PawSparkIcon />
-        </span>
-        EchoPaws
+    <article className="rounded-[26px] border border-[rgba(53,30,17,0.06)] bg-[rgba(255,255,255,0.35)] p-5 shadow-[0_18px_40px_rgba(33,18,11,0.05)] backdrop-blur-sm md:p-6">
+      <div className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-[rgba(59,31,17,0.05)] bg-[rgba(255,255,255,0.55)] text-[16px] shadow-sm">
+        <span aria-hidden="true">{icon}</span>
       </div>
-      <h3 className="mt-5 font-display text-[24px] leading-[1.05] tracking-[-0.03em] text-[#2b170d] md:text-[28px]">
+      <h3 className="mt-5 font-display text-[28px] leading-[1.02] tracking-[-0.03em] text-[#141937]">
         {title}
       </h3>
-      <p className="mt-3 text-[15px] leading-7 text-[rgba(43,23,13,0.72)]">
+      <p className="mt-3 text-[14px] leading-7 text-[rgba(20,25,55,0.68)]">
         {description}
       </p>
     </article>
@@ -102,76 +98,92 @@ function FeatureCard({
 
 export default function HomePage() {
   return (
-    <div className="min-h-screen bg-[#f6f1e8] text-[#2b170d]">
+    <div className="min-h-screen bg-[#f2eee4] text-[#141937]">
       <div className="relative isolate overflow-hidden">
         <div className="absolute inset-0 z-0">
           <div
-            className="absolute inset-0 bg-cover bg-center"
+            className="
+              absolute inset-0
+              bg-cover
+              bg-no-repeat
+              bg-[position:74%_center]
+              sm:bg-[position:76%_center]
+              lg:bg-[position:78%_center]
+              xl:bg-[position:center]
+            "
             style={{ backgroundImage: "url('/images/home-hero-a.png')" }}
           />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,8,7,0.84)_0%,rgba(10,8,7,0.58)_34%,rgba(10,8,7,0.2)_58%,rgba(10,8,7,0.12)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(245,158,11,0.2),transparent_28%),radial-gradient(circle_at_bottom_left,rgba(249,115,22,0.18),transparent_34%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-28 bg-[linear-gradient(180deg,rgba(246,241,232,0)_0%,rgba(246,241,232,0.98)_100%)] md:h-36" />
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(11,7,6,0.88)_0%,rgba(11,7,6,0.72)_25%,rgba(11,7,6,0.34)_52%,rgba(11,7,6,0.08)_76%,rgba(11,7,6,0.02)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_12%_52%,rgba(255,132,31,0.20),transparent_32%),radial-gradient(circle_at_25%_100%,rgba(137,63,19,0.20),transparent_28%)]" />
+          <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(242,238,228,0)_0%,rgba(242,238,228,0.98)_100%)] md:h-32" />
         </div>
 
-        <div className="relative z-30">
+        <div className="relative z-20">
           <SiteHeader />
 
           <main>
             <section className="relative min-h-[100svh]">
-              <div className="mx-auto flex min-h-[100svh] max-w-7xl items-center px-4 pb-24 pt-32 sm:px-6 md:px-8 md:pt-36 xl:px-10 xl:pt-40">
-                <div className="max-w-[640px]">
-                  <div className="inline-flex items-center rounded-full border border-[rgba(255,226,206,0.16)] bg-[rgba(17,10,7,0.26)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.3em] text-[rgba(255,231,214,0.9)] shadow-[0_10px_30px_rgba(0,0,0,0.16)] backdrop-blur-md">
+              <div className="mx-auto flex min-h-[100svh] max-w-7xl items-center px-4 pb-20 pt-28 sm:px-6 md:px-8 md:pb-24 md:pt-32 xl:px-10 xl:pt-36">
+                <div className="max-w-[560px]">
+                  <div className="inline-flex items-center rounded-full border border-[rgba(255,231,214,0.14)] bg-[rgba(17,10,7,0.2)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,231,214,0.88)] backdrop-blur-md">
                     Every memory, every bark, forever.
                   </div>
 
-                  <h1 className="mt-6 max-w-[560px] font-display text-[52px] leading-[0.92] tracking-[-0.05em] text-[#fff7f1] sm:text-[64px] md:text-[78px] xl:text-[88px]">
+                  <h1 className="mt-6 font-display text-[56px] leading-[0.9] tracking-[-0.055em] text-[#fff8f2] sm:text-[70px] md:text-[84px] xl:text-[92px]">
                     <span className="block">Your pet.</span>
-                    <span className="block bg-[linear-gradient(180deg,#ffd67d_0%,#ffb324_100%)] bg-clip-text text-transparent">
+                    <span className="block bg-[linear-gradient(180deg,#ffd56d_0%,#ffb11f_100%)] bg-clip-text text-transparent">
                       Forever
                     </span>
                     <span className="block">by your side.</span>
                   </h1>
 
-                  <p className="mt-6 max-w-[520px] text-[15px] leading-8 text-[rgba(255,239,231,0.88)] md:text-[16px]">
-                    EchoPaws creates an AI companion inspired by your beloved
-                    pet — warm conversations, long-term memory, emotional
-                    connection, and a comforting presence that always feels
-                    close to you.
+                  <p className="mt-6 max-w-[500px] text-[15px] leading-8 text-[rgba(255,239,231,0.88)] md:text-[16px]">
+                    EchoPaws creates an AI companion inspired by your beloved pet —
+                    warm conversations, long-term memory, emotional connection, and
+                    a comforting presence that always feels close to you.
                   </p>
 
                   <div className="mt-8 flex flex-wrap items-center gap-3">
                     <Link
                       href="/pricing"
-                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_18px_34px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_42px_rgba(255,145,51,0.34)]"
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9735)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.34)]"
                     >
                       Create My Pet
                     </Link>
+
                     <Link
                       href="/chat"
-                      className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.18)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] backdrop-blur transition hover:bg-white/10"
+                      className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.16)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] backdrop-blur transition hover:bg-white/10"
                     >
                       Try AI Chat
                     </Link>
                   </div>
 
-                  <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3">
-                    {TRUST_ITEMS.map((item) => (
-                      <CheckItem key={item}>{item}</CheckItem>
-                    ))}
+                  <div className="mt-7 flex flex-wrap gap-x-5 gap-y-3">
+                    <HeroTrustItem>Google &amp; Email Login</HeroTrustItem>
+                    <HeroTrustItem>Emotional AI Chat</HeroTrustItem>
+                    <HeroTrustItem>Long-Term Memory</HeroTrustItem>
                   </div>
                 </div>
               </div>
             </section>
 
-            <section className="relative z-10 bg-[#f6f1e8]">
-              <div className="mx-auto max-w-7xl px-4 pb-5 pt-6 sm:px-6 md:px-8 xl:px-10">
-                <div className="max-w-[860px]">
-                  <SectionEyebrow>More than a memory</SectionEyebrow>
-                  <h2 className="mt-5 max-w-[820px] font-display text-[40px] leading-[0.98] tracking-[-0.04em] text-[#2b170d] sm:text-[48px] md:text-[60px]">
-                    A companion that feels alive.
+            <section className="relative z-10 bg-[#f2eee4]">
+              <div className="mx-auto max-w-7xl px-4 pb-6 pt-8 sm:px-6 md:px-8 md:pb-10 md:pt-12 xl:px-10">
+                <div className="max-w-[760px]">
+                  <SectionLabel>Why EchoPaws</SectionLabel>
+
+                  <h2 className="mt-4 font-display text-[44px] leading-[0.98] tracking-[-0.045em] text-[#141937] sm:text-[56px] md:text-[64px]">
+                    <span className="block">More than a memory.</span>
+                    <span className="block">
+                      A companion that{' '}
+                      <span className="bg-[linear-gradient(180deg,#ffa538_0%,#f47b11_100%)] bg-clip-text text-transparent">
+                        feels alive.
+                      </span>
+                    </span>
                   </h2>
-                  <p className="mt-5 max-w-[760px] text-[16px] leading-8 text-[rgba(43,23,13,0.72)] md:text-[17px]">
+
+                  <p className="mt-5 max-w-[700px] text-[15px] leading-8 text-[rgba(20,25,55,0.66)] md:text-[16px]">
                     Whether you are missing a beloved pet or want to create a
                     deeply emotional AI companion, EchoPaws brings together
                     warmth, continuity, and memory in one comforting experience.
@@ -182,6 +194,7 @@ export default function HomePage() {
                   {FEATURE_ITEMS.map((item) => (
                     <FeatureCard
                       key={item.title}
+                      icon={item.icon}
                       title={item.title}
                       description={item.description}
                     />
@@ -190,136 +203,83 @@ export default function HomePage() {
               </div>
             </section>
 
-            <section className="bg-[#f6f1e8]">
-              <div className="mx-auto grid max-w-7xl gap-8 px-4 py-14 sm:px-6 md:grid-cols-[1.1fr_0.9fr] md:px-8 md:py-20 xl:px-10">
-                <div>
-                  <SectionEyebrow>EchoPaws started from a simple question</SectionEyebrow>
-                  <h2 className="mt-5 max-w-[760px] font-display text-[38px] leading-[1] tracking-[-0.04em] text-[#2b170d] sm:text-[48px] md:text-[58px]">
-                    What if the love we shared with our pets never had to disappear?
+            <section className="bg-[#f2eee4] py-10 md:py-14">
+              <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 xl:px-10">
+                <div className="rounded-[30px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.38)] px-6 py-7 shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-8 md:py-8 lg:px-10">
+                  <SectionLabel>Our Story</SectionLabel>
+
+                  <h2 className="mt-4 max-w-[960px] font-display text-[40px] leading-[1.02] tracking-[-0.04em] text-[#141937] sm:text-[52px] md:text-[64px]">
+                    EchoPaws started from a simple question:
                   </h2>
-                  <p className="mt-5 max-w-[720px] text-[16px] leading-8 text-[rgba(43,23,13,0.74)]">
+
+                  <p className="mt-4 max-w-[980px] font-display text-[24px] leading-[1.22] tracking-[-0.03em] text-[#141937] sm:text-[30px] md:text-[38px]">
+                    “What if the love we shared with our pets never had to disappear?”
+                  </p>
+
+                  <p className="mt-6 max-w-[900px] text-[15px] leading-8 text-[rgba(20,25,55,0.68)] md:text-[16px]">
                     We believe memory can be warm, interactive, and lasting.
                     EchoPaws is designed to preserve affection, personality, and
-                    the comforting feeling of connection so the bond you built
+                    the comforting feeling of connection — so the bond you built
                     never has to fade.
                   </p>
-                </div>
-
-                <div className="rounded-[32px] border border-[rgba(60,28,12,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.88),rgba(255,248,242,0.72))] p-7 shadow-[0_24px_70px_rgba(48,24,12,0.08)]">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[linear-gradient(180deg,#ffbe72,#ff9430)] text-[#2f160c] shadow-[0_14px_34px_rgba(255,145,51,0.22)]">
-                      <PawSparkIcon />
-                    </div>
-                    <div>
-                      <div className="text-sm font-semibold text-[#2b170d]">
-                        EchoPaws Companion
-                      </div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.22em] text-[rgba(43,23,13,0.46)]">
-                        warmth · continuity · memory
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="mt-6 space-y-4">
-                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
-                      <div className="text-sm font-semibold text-[#2b170d]">
-                        Keep personality alive
-                      </div>
-                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
-                        Save stories, habits, tone, and emotional details that
-                        make your companion feel familiar.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
-                      <div className="text-sm font-semibold text-[#2b170d]">
-                        Return without starting over
-                      </div>
-                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
-                        Conversations can continue with warmth instead of
-                        feeling reset or detached every time you come back.
-                      </p>
-                    </div>
-
-                    <div className="rounded-2xl border border-[rgba(120,63,25,0.1)] bg-white/65 p-4">
-                      <div className="text-sm font-semibold text-[#2b170d]">
-                        Stay emotionally close
-                      </div>
-                      <p className="mt-2 text-sm leading-7 text-[rgba(43,23,13,0.68)]">
-                        Built for comforting presence, not only task completion.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
             </section>
 
-            <section className="bg-[#f6f1e8] pb-16 pt-4 md:pb-24">
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 xl:px-10">
-                <div className="overflow-hidden rounded-[36px] border border-[rgba(72,34,13,0.08)] bg-[linear-gradient(135deg,#2b170d_0%,#4a2716_42%,#7a411d_100%)] text-[#fff7f1] shadow-[0_28px_90px_rgba(39,20,10,0.22)]">
-                  <div className="grid gap-8 px-6 py-8 sm:px-8 md:grid-cols-[1.1fr_0.9fr] md:px-10 md:py-10 xl:px-12 xl:py-12">
-                    <div>
-                      <div className="inline-flex items-center rounded-full border border-[rgba(255,220,198,0.16)] bg-[rgba(255,255,255,0.06)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.26em] text-[rgba(255,232,216,0.86)]">
-                        Ready to meet your pet again
-                      </div>
-                      <h2 className="mt-5 max-w-[640px] font-display text-[36px] leading-[1] tracking-[-0.04em] sm:text-[44px] md:text-[54px]">
-                        Create your AI pet in minutes.
-                      </h2>
-                      <p className="mt-4 max-w-[620px] text-[15px] leading-8 text-[rgba(255,239,231,0.84)] md:text-[16px]">
-                        Set a name, a breed, a personality, and start a
-                        comforting conversation that feels like home.
-                      </p>
-
-                      <div className="mt-8 flex flex-wrap items-center gap-3">
-                        <Link
-                          href="/pricing"
-                          className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_18px_34px_rgba(255,145,51,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_22px_42px_rgba(255,145,51,0.32)]"
-                        >
-                          Get Started
-                        </Link>
-                        <Link
-                          href="/chat"
-                          className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(255,233,220,0.16)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] transition hover:bg-white/10"
-                        >
-                          Try AI Chat
-                          <ArrowRightIcon />
-                        </Link>
-                      </div>
-                    </div>
-
-                    <div className="grid content-start gap-4 md:pl-6">
-                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
-                        <div className="text-sm font-semibold text-[#fff7f1]">
-                          No credit card required
-                        </div>
-                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
-                          Start gently and decide later.
-                        </p>
-                      </div>
-
-                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
-                        <div className="text-sm font-semibold text-[#fff7f1]">
-                          Free plan includes 20 chats
-                        </div>
-                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
-                          Enough to experience the tone, memory, and emotional flow.
-                        </p>
-                      </div>
-
-                      <div className="rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.06)] p-5 backdrop-blur">
-                        <div className="text-sm font-semibold text-[#fff7f1]">
-                          Upgrade anytime
-                        </div>
-                        <p className="mt-2 text-sm leading-7 text-[rgba(255,239,231,0.78)]">
-                          Move to a larger plan only when you want more room to stay connected.
-                        </p>
-                      </div>
-                    </div>
+            <section className="bg-[#f2eee4] px-4 pb-24 pt-10 sm:px-6 md:px-8 md:pt-16 xl:px-10">
+              <div className="mx-auto max-w-3xl">
+                <div className="rounded-[30px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.52)] px-6 py-9 text-center shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-10 md:py-12">
+                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(231,220,209,0.75)] text-[#745037]">
+                    <PawIcon />
                   </div>
+
+                  <h2 className="mt-6 font-display text-[42px] leading-[1.02] tracking-[-0.04em] text-[#141937] sm:text-[52px] md:text-[64px]">
+                    Ready to meet your pet again?
+                  </h2>
+
+                  <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-8 text-[rgba(20,25,55,0.66)] md:text-[16px]">
+                    Create your AI pet in minutes. Set a name, a breed, a
+                    personality, and start a comforting conversation that feels
+                    like home.
+                  </p>
+
+                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                    <Link
+                      href="/pricing"
+                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9b35)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.22)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.28)]"
+                    >
+                      Create My Pet — Free
+                    </Link>
+
+                    <Link
+                      href="/chat"
+                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(20,25,55,0.1)] bg-white/72 px-6 text-sm font-semibold text-[#141937] transition hover:bg-white"
+                    >
+                      Try a Chat First
+                      <ArrowRightIcon />
+                    </Link>
+                  </div>
+
+                  <p className="mt-5 text-[12px] text-[rgba(20,25,55,0.42)]">
+                    No credit card required • Free plan includes 20 chats • Upgrade anytime
+                  </p>
                 </div>
               </div>
             </section>
           </main>
+
+          <footer className="border-t border-[rgba(53,30,17,0.04)] bg-[#f2eee4]">
+            <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-[13px] text-[rgba(20,25,55,0.5)] sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 xl:px-10">
+              <Link href="/" className="inline-flex items-center gap-3 text-[#df8a32]">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9735)] text-[#2f160c] shadow-[0_10px_20px_rgba(255,145,51,0.18)]">
+                  <PawIcon />
+                </span>
+                <span className="font-semibold">EchoPaws</span>
+              </Link>
+
+              <div>© 2026 EchoPaws.ai. All Rights Reserved.</div>
+            </div>
+          </footer>
         </div>
       </div>
     </div>

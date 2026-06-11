@@ -1,27 +1,39 @@
-import type { Metadata } from 'next';
-import { SupabaseProvider } from '@/components/supabase-provider';
-import { ContactModalProvider } from '@/components/contact-modal-provider';
-import { MobileAppChrome } from '@/components/mobile-app-chrome';
 import './globals.css';
+import type { Metadata } from 'next';
+import { Fraunces, Manrope } from 'next/font/google';
+
+const manrope = Manrope({
+  subsets: ['latin'],
+  variable: '--font-sans',
+  display: 'swap',
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-display',
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
-  title: 'EchoPaws — Your Pet, Always By Your Side',
-  description:
-    'Create an AI companion from your pet. It remembers you, understands you, and grows closer with every conversation.',
+  title: 'EchoPaws',
+  description: 'Your pet. Forever by your side.',
 };
 
 export default function RootLayout({
   children,
-}: Readonly<{ children: React.ReactNode }>) {
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html lang='en'>
-      <body className='overflow-x-hidden'>
-        <SupabaseProvider>
-          <ContactModalProvider>
-            <div className='mobile-app-content'>{children}</div>
-            <MobileAppChrome />
-          </ContactModalProvider>
-        </SupabaseProvider>
+    <html
+      lang="en"
+      className={`${manrope.variable} ${fraunces.variable}`}
+      suppressHydrationWarning
+    >
+      <body
+        className={`${manrope.className} bg-[#0b0706] text-[#f7efe8] antialiased selection:bg-[#ff9f43]/35 selection:text-white`}
+      >
+        {children}
       </body>
     </html>
   );

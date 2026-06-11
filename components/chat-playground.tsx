@@ -37,7 +37,7 @@ type PetChatCacheItem = {
 type PetChatCacheMap = Record<string, PetChatCacheItem>;
 
 const MAX_INPUT_LENGTH = 800;
-const CACHE_KEY = 'echopaws_chat_cache_v5';
+const CACHE_KEY = 'echopaws_chat_cache_responsive_v1';
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -272,6 +272,7 @@ function extractMemoryHints(data: unknown): string[] {
       memory.remembered,
       memory.items,
     ];
+
     for (const candidate of nestedArrays) {
       const normalized = normalizeStringArray(candidate);
       if (normalized.length > 0) return normalized;
@@ -307,6 +308,7 @@ function extractErrorMessage(status: number, data: unknown): string {
         nested.details,
         nested.reason,
       ];
+
       for (const candidate of nestedCandidates) {
         if (typeof candidate === 'string' && candidate.trim()) {
           return candidate.trim();
@@ -414,7 +416,7 @@ function MessageBubble({
     <div className={cn('flex w-full', isAssistant ? 'justify-start' : 'justify-end')}>
       <div
         className={cn(
-          'flex max-w-[88%] items-end gap-3',
+          'flex max-w-[94%] items-end gap-3 sm:max-w-[88%]',
           isAssistant ? 'flex-row' : 'flex-row-reverse'
         )}
       >
@@ -426,11 +428,13 @@ function MessageBubble({
           </div>
         )}
 
-        <div className={cn('min-w-0', isAssistant ? 'items-start' : 'items-end')}>
+        <div className="min-w-0">
           <div
             className={cn(
               'mb-1 text-[11px] font-medium',
-              isAssistant ? 'text-[rgba(255,235,223,0.5)]' : 'text-[rgba(255,211,173,0.7)] text-right'
+              isAssistant
+                ? 'text-[rgba(255,235,223,0.5)]'
+                : 'text-right text-[rgba(255,211,173,0.7)]'
             )}
           >
             {isAssistant ? petName : 'You'}
@@ -486,7 +490,6 @@ export function ChatPlayground({
 
     const threshold = 28;
     const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-
     const nearTop = el.scrollTop <= threshold;
     const nearBottom = distanceFromBottom <= threshold;
 
@@ -520,6 +523,7 @@ export function ChatPlayground({
       setMemoryHints([]);
       setShowMemoryPanel(false);
       setError(null);
+
       requestAnimationFrame(() => {
         scrollToBottom('auto');
         updateScrollFlags();
@@ -574,10 +578,9 @@ export function ChatPlayground({
     if (!el) return;
 
     const onScroll = () => updateScrollFlags();
-
     updateScrollFlags();
-    el.addEventListener('scroll', onScroll, { passive: true });
 
+    el.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       el.removeEventListener('scroll', onScroll);
     };
@@ -732,7 +735,7 @@ export function ChatPlayground({
   const inputLength = input.length;
 
   return (
-    <div className="flex h-[680px] min-h-[620px] max-h-[calc(100vh-190px)] flex-col rounded-[30px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(26,13,10,0.82),rgba(12,7,6,0.92))] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-[720px] md:p-5 xl:h-[760px]">
+    <div className="flex h-[72vh] min-h-[520px] max-h-[780px] flex-col rounded-[30px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(26,13,10,0.82),rgba(12,7,6,0.92))] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl sm:h-[640px] md:p-5 lg:h-[680px] xl:h-[760px]">
       <div className="shrink-0">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -762,7 +765,7 @@ export function ChatPlayground({
             ) : null}
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {canScrollUp ? (
               <button
                 type="button"
@@ -900,13 +903,13 @@ export function ChatPlayground({
           <button
             type="submit"
             disabled={!canSubmit}
-            className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.32)] disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex h-12 shrink-0 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-5 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.32)] disabled:cursor-not-allowed disabled:opacity-50 sm:px-6"
           >
             Send
           </button>
         </div>
 
-        <div className="mt-2 flex items-center justify-between gap-3 text-[11px] text-[rgba(255,236,226,0.46)]">
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[11px] text-[rgba(255,236,226,0.46)]">
           <div>
             {remainingLabel ? remainingLabel : 'Your chat availability will update automatically.'}
           </div>

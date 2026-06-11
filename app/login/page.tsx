@@ -7,6 +7,7 @@ import {
   useMemo,
   useState,
   type FormEvent,
+  type KeyboardEvent,
   type ReactNode,
 } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -152,20 +153,20 @@ function AuthSkeleton() {
   return (
     <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
       <SiteHeader />
-      <main className="mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 xl:px-10">
-        <div className="grid gap-8 xl:grid-cols-[1.04fr_0.96fr] xl:gap-10">
+      <main className="mx-auto max-w-7xl px-6 pb-16 pt-24 md:px-8 md:pt-28 xl:px-10 xl:pt-32">
+        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] xl:gap-10">
           <div className="space-y-5">
             <div className="h-8 w-44 animate-pulse rounded-full bg-white/10" />
             <div className="h-20 max-w-[540px] animate-pulse rounded-[32px] bg-white/10" />
             <div className="h-24 max-w-[600px] animate-pulse rounded-[28px] bg-white/5" />
           </div>
 
-          <div className="rounded-[34px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
+          <div className="mx-auto mt-2 w-full max-w-[520px] rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl md:mt-4 xl:mt-0">
             <div className="h-11 w-full animate-pulse rounded-full bg-white/10" />
             <div className="mt-6 h-14 w-full animate-pulse rounded-2xl bg-white/10" />
             <div className="mt-6 space-y-4">
-              <div className="h-16 w-full animate-pulse rounded-[22px] bg-white/10" />
-              <div className="h-16 w-full animate-pulse rounded-[22px] bg-white/10" />
+              <div className="h-14 w-full animate-pulse rounded-[20px] bg-white/10" />
+              <div className="h-14 w-full animate-pulse rounded-[20px] bg-white/10" />
               <div className="h-12 w-full animate-pulse rounded-full bg-white/10" />
             </div>
           </div>
@@ -195,8 +196,8 @@ function InputField({
   placeholder: string;
   icon: ReactNode;
   rightSlot?: ReactNode;
-  onKeyUp?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
-  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyUp?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <label className="block">
@@ -332,7 +333,7 @@ function LoginPageContent() {
       return 'Your password is too short. Please use at least 6 characters.';
     }
     if (msg.includes('network')) {
-      return 'Network issue detected. Please try again in a moment.';
+      return 'A network issue was detected. Please try again in a moment.';
     }
 
     return raw || 'Something went wrong. Please try again.';
@@ -493,8 +494,8 @@ function LoginPageContent() {
 
       <SiteHeader />
 
-      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 xl:px-10 xl:pt-10">
-        <div className="grid items-start gap-8 xl:grid-cols-[1.04fr_minmax(420px,520px)] xl:gap-10">
+      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-24 md:px-8 md:pt-28 xl:px-10 xl:pt-32">
+        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] xl:gap-10">
           <section className="pt-2 xl:pt-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-[#efc39e] backdrop-blur-sm">
               <SparkIcon />
@@ -567,11 +568,11 @@ function LoginPageContent() {
             </div>
           </section>
 
-          <section className="xl:sticky xl:top-8">
-            <div className="relative mx-auto w-full max-w-[520px]">
+          <section className="self-start">
+            <div className="relative mx-auto mt-2 w-full max-w-[520px] md:mt-4 xl:mt-0">
               <div className="absolute -inset-3 rounded-[40px] bg-[radial-gradient(circle_at_top,rgba(255,165,88,0.16),transparent_38%)] blur-2xl" />
               <div className="relative rounded-[32px] border border-[rgba(255,233,220,0.14)] bg-[linear-gradient(180deg,rgba(32,17,13,0.82),rgba(16,9,8,0.94))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3 pt-1">
                   <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#efc39e]">
                     Auth
                   </div>
@@ -709,7 +710,9 @@ function LoginPageContent() {
                           <button
                             type="button"
                             onClick={() => setShowConfirmPassword((v) => !v)}
-                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                            aria-label={
+                              showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
+                            }
                             aria-pressed={showConfirmPassword}
                             className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
                           >

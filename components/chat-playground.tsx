@@ -6,7 +6,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type FormEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from 'react';
 
@@ -38,7 +37,7 @@ type PetChatCacheItem = {
 type PetChatCacheMap = Record<string, PetChatCacheItem>;
 
 const MAX_INPUT_LENGTH = 800;
-const CACHE_KEY = 'echopaws_chat_cache_v4';
+const CACHE_KEY = 'echopaws_chat_cache_v5';
 
 function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
@@ -381,6 +380,23 @@ function PetReplyAvatar({
   );
 }
 
+function ScrollIcon({ direction }: { direction: 'up' | 'down' }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={cn('h-4 w-4', direction === 'up' ? '' : 'rotate-180')}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M6 15l6-6 6 6" />
+    </svg>
+  );
+}
+
 function MessageBubble({
   role,
   content,
@@ -451,6 +467,7 @@ export function ChatPlayground({
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const currentPetIdRef = useRef<string | undefined>(petId);
+  const stickToBottomRef = useRef(true);
 
   const [messages, setMessages] = useState<ChatMessage[]>(starterMessages);
   const [input, setInput] = useState('');
@@ -460,6 +477,35 @@ export function ChatPlayground({
   const [memorySummary, setMemorySummary] = useState(initialMemorySummary);
   const [memoryHints, setMemoryHints] = useState<string[]>([]);
   const [showMemoryPanel, setShowMemoryPanel] = useState(false);
+  const [canScrollUp, setCanScrollUp] = useState(false);
+  const [canScrollDown, setCanScrollDown] = useState(false);
+
+  function updateScrollFlags() {
+    const el = viewportRef.current;
+    if (!el) return;
+
+    const threshold = 28;
+    const distanceFromBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+
+    const nearTop = el.scrollTop <= threshold;
+    const nearBottom = distanceFromBottom <= threshold;
+
+    setCanScrollUp(!nearTop);
+    setCanScrollDown(!nearBottom);
+    stickToBottomRef.current = nearBottom;
+  }
+
+  function scrollToBottom(behavior: ScrollBehavior = 'smooth') {
+    const el = viewportRef.current;
+    if (!el) return;
+    el.scrollTo({ top: el.scrollHeight, behavior });
+  }
+
+  function scrollToTop(behavior: ScrollBehavior = 'smooth') {
+    const el = viewportRef.current;
+    if (!el) return;
+    el.scrollTo({ top: 0, behavior });
+  }
 
   useEffect(() => {
     currentPetIdRef.current = petId;
@@ -474,6 +520,10 @@ export function ChatPlayground({
       setMemoryHints([]);
       setShowMemoryPanel(false);
       setError(null);
+      requestAnimationFrame(() => {
+        scrollToBottom('auto');
+        updateScrollFlags();
+      });
       return;
     }
 
@@ -496,6 +546,11 @@ export function ChatPlayground({
 
     setShowMemoryPanel(false);
     setError(null);
+
+    requestAnimationFrame(() => {
+      scrollToBottom('auto');
+      updateScrollFlags();
+    });
   }, [petId, starterMessages, initialRemainingLabel, initialMemorySummary]);
 
   useEffect(() => {
@@ -517,15 +572,33 @@ export function ChatPlayground({
   useEffect(() => {
     const el = viewportRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
-  }, [messages, loading, showMemoryPanel]);
+
+    const onScroll = () => updateScrollFlags();
+
+    updateScrollFlags();
+    el.addEventListener('scroll', onScroll, { passive: true });
+
+    return () => {
+      el.removeEventListener('scroll', onScroll);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (stickToBottomRef.current) {
+      requestAnimationFrame(() => scrollToBottom('smooth'));
+    } else {
+      requestAnimationFrame(() => updateScrollFlags());
+    }
+  }, [messages, loading]);
+
+  useEffect(() => {
+    requestAnimationFrame(() => updateScrollFlags());
+  }, [showMemoryPanel]);
 
   const trimmedInput = input.trim();
   const canSubmit = Boolean(trimmedInput && trimmedInput.length <= MAX_INPUT_LENGTH && !loading);
 
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-
+  async function submitCurrentMessage() {
     const message = input.trim();
 
     if (!petId) {
@@ -533,9 +606,7 @@ export function ChatPlayground({
       return;
     }
 
-    if (!message || loading) {
-      return;
-    }
+    if (!message || loading) return;
 
     setError(null);
     setShowMemoryPanel(false);
@@ -543,6 +614,7 @@ export function ChatPlayground({
     const requestPetId = petId;
     const userMessage: ChatMessage = { role: 'user', content: message };
 
+    stickToBottomRef.current = true;
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -643,11 +715,16 @@ export function ChatPlayground({
     }
   }
 
+  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    await submitCurrentMessage();
+  }
+
   function handleTextareaKeyDown(event: ReactKeyboardEvent<HTMLTextAreaElement>) {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       if (canSubmit) {
-        void handleSubmit(event as unknown as FormEvent<HTMLFormElement>);
+        void submitCurrentMessage();
       }
     }
   }
@@ -655,108 +732,151 @@ export function ChatPlayground({
   const inputLength = input.length;
 
   return (
-    <div className="rounded-[30px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(26,13,10,0.82),rgba(12,7,6,0.92))] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:p-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {remainingLabel ? (
-            <div className="rounded-full border border-[rgba(255,213,170,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-[11px] font-semibold text-[#f4cda6]">
-              {remainingLabel}
-            </div>
-          ) : null}
+    <div className="flex h-[680px] min-h-[620px] max-h-[calc(100vh-190px)] flex-col rounded-[30px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(26,13,10,0.82),rgba(12,7,6,0.92))] p-4 shadow-[0_30px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl md:h-[720px] md:p-5 xl:h-[760px]">
+      <div className="shrink-0">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2">
+            {remainingLabel ? (
+              <div className="rounded-full border border-[rgba(255,213,170,0.16)] bg-[rgba(255,255,255,0.04)] px-3 py-1.5 text-[11px] font-semibold text-[#f4cda6]">
+                {remainingLabel}
+              </div>
+            ) : null}
 
-          <Link
-            href="/memories"
-            className="rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] font-medium text-[rgba(255,239,231,0.74)] transition hover:bg-white/5 hover:text-white"
-          >
-            Open Memories
-          </Link>
-
-          {memoryHints.length > 0 ? (
-            <button
-              type="button"
-              onClick={() => setShowMemoryPanel((prev) => !prev)}
-              className="rounded-full border border-[rgba(255,212,164,0.16)] bg-[rgba(255,178,96,0.08)] px-3 py-1.5 text-[11px] font-medium text-[#f3c28e] transition hover:bg-[rgba(255,178,96,0.12)]"
+            <Link
+              href="/memories"
+              className="rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] font-medium text-[rgba(255,239,231,0.74)] transition hover:bg-white/5 hover:text-white"
             >
-              {showMemoryPanel ? 'Hide memory updates' : `${memoryHints.length} memory update${memoryHints.length > 1 ? 's' : ''}`}
-            </button>
-          ) : null}
-        </div>
+              Open Memories
+            </Link>
 
-        <div className="text-[11px] font-medium text-[rgba(255,236,226,0.5)]">
-          Talking with {petName}
-        </div>
-      </div>
-
-      {memorySummary ? (
-        <div className="mt-4 rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
-          <div className="flex items-start gap-3">
-            <div className="rounded-full border border-[rgba(255,205,154,0.16)] bg-[rgba(255,179,97,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
-              Memory
-            </div>
-            <div className="min-w-0 text-sm leading-7 text-[rgba(255,242,236,0.72)]">
-              {memorySummary}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {showMemoryPanel && memoryHints.length > 0 ? (
-        <div className="mt-4 rounded-[22px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
-          <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0c38f]">
-            Memory updates
-          </div>
-
-          <div className="space-y-2">
-            {memoryHints.map((item, index) => (
-              <div
-                key={`${item}-${index}`}
-                className="rounded-full border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs leading-6 text-[rgba(255,240,232,0.62)]"
+            {memoryHints.length > 0 ? (
+              <button
+                type="button"
+                onClick={() => setShowMemoryPanel((prev) => !prev)}
+                className="rounded-full border border-[rgba(255,212,164,0.16)] bg-[rgba(255,178,96,0.08)] px-3 py-1.5 text-[11px] font-medium text-[#f3c28e] transition hover:bg-[rgba(255,178,96,0.12)]"
               >
-                {item}
-              </div>
-            ))}
+                {showMemoryPanel
+                  ? 'Hide memory updates'
+                  : `${memoryHints.length} memory update${memoryHints.length > 1 ? 's' : ''}`}
+              </button>
+            ) : null}
+          </div>
+
+          <div className="flex items-center gap-2">
+            {canScrollUp ? (
+              <button
+                type="button"
+                onClick={() => scrollToTop('smooth')}
+                className="inline-flex items-center gap-1 rounded-full border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] font-medium text-[rgba(255,239,231,0.74)] transition hover:bg-white/5 hover:text-white"
+              >
+                <ScrollIcon direction="up" />
+                Earlier
+              </button>
+            ) : null}
+
+            {canScrollDown ? (
+              <button
+                type="button"
+                onClick={() => scrollToBottom('smooth')}
+                className="inline-flex items-center gap-1 rounded-full border border-[rgba(255,196,140,0.16)] bg-[rgba(255,178,96,0.08)] px-3 py-1.5 text-[11px] font-medium text-[#f3c28e] transition hover:bg-[rgba(255,178,96,0.12)]"
+              >
+                Latest
+                <ScrollIcon direction="down" />
+              </button>
+            ) : null}
+
+            <div className="text-[11px] font-medium text-[rgba(255,236,226,0.5)]">
+              Talking with {petName}
+            </div>
           </div>
         </div>
-      ) : null}
 
-      <div
-        ref={viewportRef}
-        className="mt-4 max-h-[520px] min-h-[340px] space-y-5 overflow-y-auto rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] p-4 md:p-5"
-      >
-        {messages.map((message, index) => (
-          <MessageBubble
-            key={`${message.role}-${index}-${message.content.slice(0, 24)}`}
-            role={message.role}
-            content={message.content}
-            petName={petName}
-            petImageUrl={petImageUrl}
-          />
-        ))}
-
-        {loading ? (
-          <div className="flex justify-start">
-            <div className="flex items-end gap-3">
-              <PetReplyAvatar name={petName} imageUrl={petImageUrl} />
-              <div>
-                <div className="mb-1 text-[11px] font-medium text-[rgba(255,235,223,0.5)]">
-                  {petName}
-                </div>
-                <div className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[rgba(255,245,239,0.78)]">
-                  Thinking…
-                </div>
+        {memorySummary ? (
+          <div className="mt-4 rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+            <div className="flex items-start gap-3">
+              <div className="rounded-full border border-[rgba(255,205,154,0.16)] bg-[rgba(255,179,97,0.08)] px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f0c38f]">
+                Memory
               </div>
+              <div className="min-w-0 text-sm leading-7 text-[rgba(255,242,236,0.72)]">
+                {memorySummary}
+              </div>
+            </div>
+          </div>
+        ) : null}
+
+        {showMemoryPanel && memoryHints.length > 0 ? (
+          <div className="mt-4 rounded-[22px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-4">
+            <div className="mb-3 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f0c38f]">
+              Memory updates
+            </div>
+
+            <div className="space-y-2">
+              {memoryHints.map((item, index) => (
+                <div
+                  key={`${item}-${index}`}
+                  className="rounded-full border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-2 text-xs leading-6 text-[rgba(255,240,232,0.62)]"
+                >
+                  {item}
+                </div>
+              ))}
             </div>
           </div>
         ) : null}
       </div>
 
+      <div className="relative mt-4 min-h-0 flex-1">
+        <div
+          ref={viewportRef}
+          className="h-full overflow-y-auto overscroll-contain rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.02),rgba(255,255,255,0.01))] p-4 pr-3 scroll-smooth md:p-5 md:pr-4"
+        >
+          <div className="space-y-5">
+            {messages.map((message, index) => (
+              <MessageBubble
+                key={`${message.role}-${index}-${message.content.slice(0, 24)}`}
+                role={message.role}
+                content={message.content}
+                petName={petName}
+                petImageUrl={petImageUrl}
+              />
+            ))}
+
+            {loading ? (
+              <div className="flex justify-start">
+                <div className="flex items-end gap-3">
+                  <PetReplyAvatar name={petName} imageUrl={petImageUrl} />
+                  <div>
+                    <div className="mb-1 text-[11px] font-medium text-[rgba(255,235,223,0.5)]">
+                      {petName}
+                    </div>
+                    <div className="rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.03))] px-4 py-3 text-sm text-[rgba(255,245,239,0.78)]">
+                      Thinking…
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
+        </div>
+
+        {canScrollDown ? (
+          <button
+            type="button"
+            onClick={() => scrollToBottom('smooth')}
+            className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full border border-[rgba(255,196,140,0.18)] bg-[linear-gradient(180deg,rgba(255,186,118,0.92),rgba(255,147,49,0.92))] px-4 py-2 text-xs font-semibold text-[#2f160c] shadow-[0_16px_32px_rgba(255,145,51,0.26)] transition hover:-translate-y-0.5"
+          >
+            Newer messages
+            <ScrollIcon direction="down" />
+          </button>
+        ) : null}
+      </div>
+
       {error ? (
-        <div className="mt-4 rounded-[20px] border border-[rgba(255,117,117,0.18)] bg-[rgba(121,24,24,0.16)] px-4 py-3 text-sm leading-7 text-[#ffd8d8]">
+        <div className="mt-4 shrink-0 rounded-[20px] border border-[rgba(255,117,117,0.18)] bg-[rgba(121,24,24,0.16)] px-4 py-3 text-sm leading-7 text-[#ffd8d8]">
           {error}
         </div>
       ) : null}
 
-      <form onSubmit={handleSubmit} className="mt-4 border-t border-white/10 pt-4">
+      <form onSubmit={handleSubmit} className="mt-4 shrink-0 border-t border-white/10 pt-4">
         <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,224,206,0.54)]">
           Message
         </div>

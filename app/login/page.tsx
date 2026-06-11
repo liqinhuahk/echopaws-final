@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+  type ReactNode,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site-header';
@@ -12,7 +19,7 @@ const AUTH_CALLBACK_PATH = '/auth/callback';
 
 type AuthMode = 'signin' | 'signup';
 
-function cx(...classes: Array<string | false | null | undefined>) {
+function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(' ');
 }
 
@@ -110,12 +117,7 @@ function UserIcon() {
 
 function SparkIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
       <path d="M12 2l1.85 5.15L19 9l-5.15 1.85L12 16l-1.85-5.15L5 9l5.15-1.85L12 2Z" />
       <path d="M18.5 15l.92 2.58L22 18.5l-2.58.92L18.5 22l-.92-2.58L15 18.5l2.58-.92L18.5 15Z" />
       <path d="M5.5 14l.76 2.24L8.5 17l-2.24.76L5.5 20l-.76-2.24L2.5 17l2.24-.76L5.5 14Z" />
@@ -146,21 +148,16 @@ function GoogleIcon() {
   );
 }
 
-function AuthShellSkeleton() {
+function AuthSkeleton() {
   return (
     <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
       <SiteHeader />
-      <main className="mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 lg:px-10">
-        <div className="grid gap-8 lg:grid-cols-[1.04fr_0.96fr] lg:gap-10">
+      <main className="mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 xl:px-10">
+        <div className="grid gap-8 xl:grid-cols-[1.04fr_0.96fr] xl:gap-10">
           <div className="space-y-5">
             <div className="h-8 w-44 animate-pulse rounded-full bg-white/10" />
             <div className="h-20 max-w-[540px] animate-pulse rounded-[32px] bg-white/10" />
             <div className="h-24 max-w-[600px] animate-pulse rounded-[28px] bg-white/5" />
-            <div className="grid gap-4 md:grid-cols-3">
-              <div className="h-28 animate-pulse rounded-[28px] bg-white/5" />
-              <div className="h-28 animate-pulse rounded-[28px] bg-white/5" />
-              <div className="h-28 animate-pulse rounded-[28px] bg-white/5" />
-            </div>
           </div>
 
           <div className="rounded-[34px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl">
@@ -169,7 +166,7 @@ function AuthShellSkeleton() {
             <div className="mt-6 space-y-4">
               <div className="h-16 w-full animate-pulse rounded-[22px] bg-white/10" />
               <div className="h-16 w-full animate-pulse rounded-[22px] bg-white/10" />
-              <div className="h-12 w-40 animate-pulse rounded-full bg-white/10" />
+              <div className="h-12 w-full animate-pulse rounded-full bg-white/10" />
             </div>
           </div>
         </div>
@@ -187,6 +184,8 @@ function InputField({
   placeholder,
   icon,
   rightSlot,
+  onKeyUp,
+  onKeyDown,
 }: {
   label: string;
   type: string;
@@ -194,8 +193,10 @@ function InputField({
   value: string;
   onChange: (value: string) => void;
   placeholder: string;
-  icon: React.ReactNode;
-  rightSlot?: React.ReactNode;
+  icon: ReactNode;
+  rightSlot?: ReactNode;
+  onKeyUp?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
+  onKeyDown?: (event: React.KeyboardEvent<HTMLInputElement>) => void;
 }) {
   return (
     <label className="block">
@@ -213,16 +214,18 @@ function InputField({
           autoComplete={autoComplete}
           value={value}
           onChange={(e) => onChange(e.target.value)}
+          onKeyUp={onKeyUp}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
-          className={cx(
-            'h-15 w-full rounded-[22px] border border-[rgba(255,222,204,0.12)]',
+          className={cn(
+            'h-14 w-full rounded-[20px] border border-[rgba(255,222,204,0.12)]',
             'bg-[linear-gradient(180deg,rgba(255,252,250,0.96),rgba(249,244,239,0.96))]',
             'pl-12 pr-4 text-[15px] text-[#1d1511] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
             'outline-none transition duration-200',
             'placeholder:text-[rgba(70,49,38,0.42)]',
             'focus:border-[#ffae69] focus:bg-white focus:ring-4 focus:ring-[rgba(255,164,84,0.14)]',
-            rightSlot ? 'pr-14' : '',
-            'group-hover:border-[rgba(255,190,142,0.18)]'
+            'group-hover:border-[rgba(255,190,142,0.18)]',
+            rightSlot ? 'pr-14' : ''
           )}
         />
 
@@ -269,7 +272,7 @@ function LoginPageContent() {
 
   const passwordStrength = useMemo(() => {
     const value = password.trim();
-    if (!value) return { score: 0, label: '未填写', color: 'bg-white/10' };
+    if (!value) return { score: 0, label: 'Not entered', color: 'bg-white/10' };
 
     let score = 0;
     if (value.length >= 8) score += 1;
@@ -277,16 +280,24 @@ function LoginPageContent() {
     if (/[0-9]/.test(value)) score += 1;
     if (/[^A-Za-z0-9]/.test(value)) score += 1;
 
-    if (score <= 1) return { score, label: '较弱', color: 'bg-[#ff8f7a]' };
-    if (score === 2) return { score, label: '中等', color: 'bg-[#ffbf73]' };
-    if (score === 3) return { score, label: '良好', color: 'bg-[#ffc96d]' };
-    return { score, label: '很强', color: 'bg-[#71d49b]' };
+    if (score <= 1) return { score, label: 'Weak', color: 'bg-[#ff8f7a]' };
+    if (score === 2) return { score, label: 'Fair', color: 'bg-[#ffbf73]' };
+    if (score === 3) return { score, label: 'Good', color: 'bg-[#ffc96d]' };
+    return { score, label: 'Strong', color: 'bg-[#71d49b]' };
   }, [password]);
 
   useEffect(() => {
     setError(null);
     setMessage(null);
   }, [mode]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const savedEmail = window.localStorage.getItem('echopaws_last_email');
+    if (savedEmail && !email) {
+      setEmail(savedEmail);
+    }
+  }, [email]);
 
   function getCallbackUrl() {
     if (typeof window === 'undefined') return '';
@@ -299,23 +310,39 @@ function LoginPageContent() {
   }
 
   function normalizeError(input: unknown) {
-    const raw = typeof input === 'string' ? input : input instanceof Error ? input.message : '操作失败，请稍后再试。';
+    const raw =
+      typeof input === 'string'
+        ? input
+        : input instanceof Error
+          ? input.message
+          : 'Something went wrong. Please try again.';
+
     const msg = raw.toLowerCase();
 
-    if (msg.includes('invalid login credentials')) return '邮箱或密码不正确，请重新检查。';
-    if (msg.includes('email not confirmed')) return '此邮箱尚未验证，请先前往邮箱完成验证。';
-    if (msg.includes('user already registered')) return '该邮箱已注册，请直接登录。';
-    if (msg.includes('password should be at least')) return '密码长度不足，请至少设置 6 位。';
-    if (msg.includes('network')) return '网络连接异常，请稍后再试。';
+    if (msg.includes('invalid login credentials')) {
+      return 'Incorrect email or password. Please try again.';
+    }
+    if (msg.includes('email not confirmed')) {
+      return 'Your email address has not been verified yet. Please check your inbox.';
+    }
+    if (msg.includes('user already registered')) {
+      return 'This email is already registered. Please sign in instead.';
+    }
+    if (msg.includes('password should be at least')) {
+      return 'Your password is too short. Please use at least 6 characters.';
+    }
+    if (msg.includes('network')) {
+      return 'Network issue detected. Please try again in a moment.';
+    }
 
-    return raw || '操作失败，请稍后再试。';
+    return raw || 'Something went wrong. Please try again.';
   }
 
   async function handleGoogleLogin() {
     clearFeedback();
 
     if (!supabase) {
-      setError('Supabase 环境变量未配置，暂时无法使用 Google 登录。');
+      setError('Supabase environment variables are not configured.');
       return;
     }
 
@@ -347,12 +374,12 @@ function LoginPageContent() {
     clearFeedback();
 
     if (!supabase) {
-      setError('Supabase 环境变量未配置，暂时无法重设密码。');
+      setError('Supabase environment variables are not configured.');
       return;
     }
 
     if (!email.trim()) {
-      setError('请先输入邮箱地址，再点击忘记密码。');
+      setError('Please enter your email address first.');
       return;
     }
 
@@ -368,7 +395,7 @@ function LoginPageContent() {
         return;
       }
 
-      setMessage('重设密码邮件已发送，请前往邮箱查收。');
+      setMessage('A password reset email has been sent to your inbox.');
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -376,38 +403,38 @@ function LoginPageContent() {
     }
   }
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     clearFeedback();
 
     if (!supabase) {
-      setError('Supabase 环境变量未配置，暂时无法继续。');
+      setError('Supabase environment variables are not configured.');
       return;
     }
 
     if (!email.trim()) {
-      setError('请输入邮箱地址。');
+      setError('Please enter your email address.');
       return;
     }
 
     if (!password.trim()) {
-      setError('请输入密码。');
+      setError('Please enter your password.');
       return;
     }
 
     if (mode === 'signup') {
       if (!fullName.trim()) {
-        setError('请输入你的称呼。');
+        setError('Please enter your name.');
         return;
       }
 
       if (password.length < 6) {
-        setError('密码长度至少 6 位。');
+        setError('Password must be at least 6 characters long.');
         return;
       }
 
       if (password !== confirmPassword) {
-        setError('两次输入的密码不一致。');
+        setError('The two passwords do not match.');
         return;
       }
     }
@@ -451,7 +478,7 @@ function LoginPageContent() {
         return;
       }
 
-      setMessage('账户已创建，请前往邮箱完成验证，然后回来登录。');
+      setMessage('Your account has been created. Please verify your email before signing in.');
     } catch (err) {
       setError(normalizeError(err));
     } finally {
@@ -460,21 +487,21 @@ function LoginPageContent() {
   }
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#0b0706] text-[#f8efe8]">
+    <div className="min-h-screen overflow-x-hidden bg-[#0b0706] text-[#f8efe8]">
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(255,148,67,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(255,175,96,0.10),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(255,120,64,0.08),transparent_32%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.06] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:44px_44px]" />
+      <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:44px_44px]" />
 
       <SiteHeader />
 
-      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 lg:px-10 lg:pt-10">
-        <div className="grid items-start gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10">
-          <section className="pt-2 lg:pt-10">
+      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 xl:px-10 xl:pt-10">
+        <div className="grid items-start gap-8 xl:grid-cols-[1.04fr_minmax(420px,520px)] xl:gap-10">
+          <section className="pt-2 xl:pt-10">
             <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-[#efc39e] backdrop-blur-sm">
               <SparkIcon />
-              Warm luxury login v2
+              Warm Luxury Login
             </div>
 
-            <h1 className="mt-6 max-w-[700px] text-balance text-[48px] font-semibold leading-[0.94] tracking-[-0.05em] text-[#fff8f2] md:text-[68px] xl:text-[78px]">
+            <h1 className="mt-6 max-w-[720px] text-balance text-[44px] font-semibold leading-[0.94] tracking-[-0.05em] text-[#fff8f2] md:text-[58px] xl:text-[74px]">
               Sign in with calm,
               <br />
               continue with{' '}
@@ -484,8 +511,8 @@ function LoginPageContent() {
             </h1>
 
             <p className="mt-6 max-w-[620px] text-[15px] leading-8 text-[rgba(255,239,231,0.72)] md:text-[16px]">
-              这版把登录页继续收紧到更成熟的产品体验：字体层级更清晰，表单更柔和易读，
-              输入动作更安心，也更自然地衔接 Home 的暖黑主视觉与陪伴感。
+              A refined sign-in experience that stays aligned with the EchoPaws home theme:
+              warm, elegant, readable, and reassuring for everyday use.
             </p>
 
             <div className="mt-8 grid gap-4 md:grid-cols-3">
@@ -494,7 +521,7 @@ function LoginPageContent() {
                   Better readability
                 </div>
                 <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  标题、说明、标签与输入区对比更明确，长时间看也不累。
+                  Clearer hierarchy, softer contrast, and easier reading across the whole page.
                 </p>
               </div>
 
@@ -503,7 +530,7 @@ function LoginPageContent() {
                   Gentler form feel
                 </div>
                 <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  更柔和的输入底色、圆角与光感，强化舒适和精致感。
+                  Softer surfaces, calmer spacing, and more comfortable inputs for daily use.
                 </p>
               </div>
 
@@ -512,7 +539,7 @@ function LoginPageContent() {
                   Safer interaction
                 </div>
                 <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  新增密码显示切换、Caps Lock 提示与更明确的反馈状态。
+                  Password visibility toggle, Caps Lock notice, and clearer feedback states.
                 </p>
               </div>
             </div>
@@ -527,267 +554,272 @@ function LoginPageContent() {
                     Less noise, more trust
                   </h2>
                 </div>
+
                 <div className="rounded-full border border-[rgba(255,221,202,0.14)] bg-white/5 px-3 py-1.5 text-[11px] font-medium text-[rgba(255,235,223,0.66)]">
                   Home-aligned
                 </div>
               </div>
 
               <p className="mt-4 text-sm leading-8 text-[rgba(255,239,231,0.68)]">
-                不是单纯把登录表单做漂亮，而是让它像产品的一部分：进入时安心，填写时清楚，
-                出错时明确，完成后自然回到 Chat、Memories 与 Account 的主流程。
+                This page is designed to feel like part of the product, not just a utility screen —
+                calm to enter, clear to use, and consistent with the rest of the EchoPaws experience.
               </p>
             </div>
           </section>
 
-          <section className="relative">
-            <div className="absolute -inset-3 rounded-[40px] bg-[radial-gradient(circle_at_top,rgba(255,165,88,0.16),transparent_38%)] blur-2xl" />
-            <div className="relative rounded-[34px] border border-[rgba(255,233,220,0.14)] bg-[linear-gradient(180deg,rgba(32,17,13,0.82),rgba(16,9,8,0.94))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#efc39e]">
-                  Auth
+          <section className="xl:sticky xl:top-8">
+            <div className="relative mx-auto w-full max-w-[520px]">
+              <div className="absolute -inset-3 rounded-[40px] bg-[radial-gradient(circle_at_top,rgba(255,165,88,0.16),transparent_38%)] blur-2xl" />
+              <div className="relative rounded-[32px] border border-[rgba(255,233,220,0.14)] bg-[linear-gradient(180deg,rgba(32,17,13,0.82),rgba(16,9,8,0.94))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
+                <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                  <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#efc39e]">
+                    Auth
+                  </div>
+
+                  <div className="rounded-full border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] text-[rgba(255,234,224,0.6)]">
+                    Redirect → <span className="text-[#ffd4a8]">{next}</span>
+                  </div>
                 </div>
 
-                <div className="rounded-full border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] text-[rgba(255,234,224,0.6)]">
-                  Redirect → <span className="text-[#ffd4a8]">{next}</span>
-                </div>
-              </div>
-
-              <div className="mt-5 rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] p-1">
-                <div className="grid grid-cols-2 gap-1">
-                  <button
-                    type="button"
-                    onClick={() => setMode('signin')}
-                    className={cx(
-                      'rounded-full px-4 py-3 text-sm font-semibold transition',
-                      mode === 'signin'
-                        ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
-                        : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
-                    )}
-                  >
-                    Sign In
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setMode('signup')}
-                    className={cx(
-                      'rounded-full px-4 py-3 text-sm font-semibold transition',
-                      mode === 'signup'
-                        ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
-                        : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
-                    )}
-                  >
-                    Create Account
-                  </button>
-                </div>
-              </div>
-
-              <div className="mt-6">
-                <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-[#fff6f0]">
-                  {mode === 'signin'
-                    ? 'Welcome back to your companion space'
-                    : 'Create your EchoPaws account'}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.66)]">
-                  {mode === 'signin'
-                    ? '用 Google 或邮箱继续登录。若你最初是通过 Google 创建账号，建议优先继续使用 Google 登录。'
-                    : '建立一个更温暖、统一的账户入口，之后即可继续使用 Chat、Memories 与其他页面。'}
-                </p>
-              </div>
-
-              <button
-                type="button"
-                onClick={handleGoogleLogin}
-                disabled={loading || googleLoading}
-                className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-[20px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.035))] px-4 text-sm font-semibold text-[#fff4ed] transition hover:border-[rgba(255,214,182,0.18)] hover:bg-[rgba(255,255,255,0.07)] disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                <GoogleIcon />
-                {googleLoading ? 'Connecting to Google…' : 'Continue with Google'}
-              </button>
-
-              <div className="my-6 flex items-center gap-4">
-                <div className="h-px flex-1 bg-white/10" />
-                <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,224,206,0.38)]">
-                  Or use email
-                </span>
-                <div className="h-px flex-1 bg-white/10" />
-              </div>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {mode === 'signup' ? (
-                  <InputField
-                    label="Your name"
-                    type="text"
-                    autoComplete="name"
-                    value={fullName}
-                    onChange={setFullName}
-                    placeholder="How should your pet call you"
-                    icon={<UserIcon />}
-                  />
-                ) : null}
-
-                <InputField
-                  label="Email address"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={setEmail}
-                  placeholder="you@example.com"
-                  icon={<MailIcon />}
-                />
-
-                <InputField
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                  value={password}
-                  onChange={setPassword}
-                  placeholder={mode === 'signin' ? 'Enter your password' : 'Create a secure password'}
-                  icon={<LockIcon />}
-                  rightSlot={
+                <div className="rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] p-1">
+                  <div className="grid grid-cols-2 gap-1">
                     <button
                       type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      aria-label={showPassword ? '隐藏密码' : '显示密码'}
-                      aria-pressed={showPassword}
-                      onKeyUp={(e) => setCapsLockOn(e.getModifierState?.('CapsLock') ?? false)}
-                      onKeyDown={(e) => setCapsLockOn(e.getModifierState?.('CapsLock') ?? false)}
-                      className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
+                      onClick={() => setMode('signin')}
+                      className={cn(
+                        'rounded-full px-4 py-3 text-sm font-semibold transition',
+                        mode === 'signin'
+                          ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
+                          : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
+                      )}
                     >
-                      <EyeIcon visible={showPassword} />
+                      Sign In
                     </button>
-                  }
-                />
 
-                {capsLockOn ? (
-                  <div className="rounded-2xl border border-[rgba(255,191,115,0.18)] bg-[rgba(255,173,92,0.10)] px-4 py-3 text-sm text-[#ffd9b3]">
-                    Caps Lock 已开启，请确认密码大小写是否正确。
-                  </div>
-                ) : null}
-
-                {mode === 'signup' ? (
-                  <>
-                    <InputField
-                      label="Confirm password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      autoComplete="new-password"
-                      value={confirmPassword}
-                      onChange={setConfirmPassword}
-                      placeholder="Re-enter your password"
-                      icon={<LockIcon />}
-                      rightSlot={
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword((v) => !v)}
-                          aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
-                          aria-pressed={showConfirmPassword}
-                          className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
-                        >
-                          <EyeIcon visible={showConfirmPassword} />
-                        </button>
-                      }
-                    />
-
-                    <div className="rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
-                      <div className="flex items-center justify-between gap-4">
-                        <span className="text-sm font-medium text-[rgba(255,240,232,0.78)]">
-                          密码强度
-                        </span>
-                        <span className="text-sm font-semibold text-[#ffe0bf]">
-                          {passwordStrength.label}
-                        </span>
-                      </div>
-
-                      <div className="mt-3 grid grid-cols-4 gap-2">
-                        {[1, 2, 3, 4].map((n) => (
-                          <div
-                            key={n}
-                            className={cx(
-                              'h-2 rounded-full',
-                              passwordStrength.score >= n ? passwordStrength.color : 'bg-white/10'
-                            )}
-                          />
-                        ))}
-                      </div>
-
-                      <p className="mt-3 text-xs leading-6 text-[rgba(255,235,223,0.54)]">
-                        建议至少 8 位，并包含大写字母、数字或符号。
-                      </p>
-                    </div>
-                  </>
-                ) : null}
-
-                <div className="flex items-center justify-between gap-4 rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
-                  <label className="flex cursor-pointer items-center gap-3 text-sm text-[rgba(255,241,233,0.72)]">
-                    <input
-                      type="checkbox"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="h-4 w-4 rounded border-white/20 bg-transparent text-[#ff9c46] focus:ring-[#ff9c46]"
-                    />
-                    Remember my email
-                  </label>
-
-                  {mode === 'signin' ? (
                     <button
                       type="button"
-                      onClick={handleForgotPassword}
-                      disabled={loading || googleLoading}
-                      className="text-sm font-medium text-[#ffd2a7] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={() => setMode('signup')}
+                      className={cn(
+                        'rounded-full px-4 py-3 text-sm font-semibold transition',
+                        mode === 'signup'
+                          ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
+                          : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
+                      )}
                     >
-                      Forgot password
+                      Create Account
                     </button>
-                  ) : (
-                    <span className="text-xs text-[rgba(255,235,223,0.46)]">
-                      Verify email after sign up
-                    </span>
-                  )}
+                  </div>
                 </div>
 
-                {error ? (
-                  <div className="rounded-[22px] border border-[rgba(255,117,117,0.2)] bg-[rgba(121,24,24,0.18)] px-4 py-3 text-sm leading-7 text-[#ffd9d9]">
-                    {error}
-                  </div>
-                ) : null}
+                <div className="mt-6">
+                  <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-[#fff6f0]">
+                    {mode === 'signin'
+                      ? 'Welcome back to your companion space'
+                      : 'Create your EchoPaws account'}
+                  </h2>
 
-                {message ? (
-                  <div className="rounded-[22px] border border-[rgba(255,192,122,0.2)] bg-[rgba(255,164,84,0.12)] px-4 py-3 text-sm leading-7 text-[#ffe2bf]">
-                    {message}
-                  </div>
-                ) : null}
+                  <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.66)]">
+                    {mode === 'signin'
+                      ? 'Continue with Google or sign in with email and password.'
+                      : 'Create an account to continue with Chat, Memories, and the rest of your EchoPaws experience.'}
+                  </p>
+                </div>
 
                 <button
-                  type="submit"
+                  type="button"
+                  onClick={handleGoogleLogin}
                   disabled={loading || googleLoading}
-                  className="inline-flex h-13 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ffc887] via-[#ffab55] to-[#ff9430] px-6 text-sm font-semibold text-[#31180d] shadow-[0_16px_38px_rgba(255,145,51,0.34)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(255,145,51,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
+                  className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-[20px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.035))] px-4 text-sm font-semibold text-[#fff4ed] transition hover:border-[rgba(255,214,182,0.18)] hover:bg-[rgba(255,255,255,0.07)] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  {loading
-                    ? mode === 'signin'
-                      ? 'Signing in…'
-                      : 'Creating account…'
-                    : mode === 'signin'
-                      ? 'Sign In'
-                      : 'Create Account'}
+                  <GoogleIcon />
+                  {googleLoading ? 'Connecting to Google…' : 'Continue with Google'}
                 </button>
-              </form>
 
-              <div className="mt-6 rounded-[24px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-7 text-[rgba(255,238,229,0.64)]">
-                如果你的账户最初是用 Google 建立，建议继续使用 Google 登录。若之后想改用邮箱密码，
-                可以登录后再设置或重设密码。
-              </div>
+                <div className="my-6 flex items-center gap-4">
+                  <div className="h-px flex-1 bg-white/10" />
+                  <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,224,206,0.38)]">
+                    Or use email
+                  </span>
+                  <div className="h-px flex-1 bg-white/10" />
+                </div>
 
-              <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-[rgba(255,236,226,0.56)]">
-                <span>
-                  Need a softer landing first?{' '}
-                  <Link href="/" className="font-semibold text-[#ffd1a3] transition hover:text-white">
-                    Return Home
-                  </Link>
-                </span>
+                <form onSubmit={handleSubmit} className="space-y-4">
+                  {mode === 'signup' ? (
+                    <InputField
+                      label="Your name"
+                      type="text"
+                      autoComplete="name"
+                      value={fullName}
+                      onChange={setFullName}
+                      placeholder="How should your pet call you?"
+                      icon={<UserIcon />}
+                    />
+                  ) : null}
 
-                <span>
-                  After sign-in you will continue to{' '}
-                  <span className="font-medium text-[#ffe1c0]">{next}</span>
-                </span>
+                  <InputField
+                    label="Email address"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={setEmail}
+                    placeholder="you@example.com"
+                    icon={<MailIcon />}
+                  />
+
+                  <InputField
+                    label="Password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={setPassword}
+                    placeholder={mode === 'signin' ? 'Enter your password' : 'Create a secure password'}
+                    icon={<LockIcon />}
+                    onKeyUp={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
+                    onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
+                    rightSlot={
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword((v) => !v)}
+                        aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        aria-pressed={showPassword}
+                        className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
+                      >
+                        <EyeIcon visible={showPassword} />
+                      </button>
+                    }
+                  />
+
+                  {capsLockOn ? (
+                    <div className="rounded-2xl border border-[rgba(255,191,115,0.18)] bg-[rgba(255,173,92,0.10)] px-4 py-3 text-sm text-[#ffd9b3]">
+                      Caps Lock is on. Please check your password carefully.
+                    </div>
+                  ) : null}
+
+                  {mode === 'signup' ? (
+                    <>
+                      <InputField
+                        label="Confirm password"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={setConfirmPassword}
+                        placeholder="Re-enter your password"
+                        icon={<LockIcon />}
+                        rightSlot={
+                          <button
+                            type="button"
+                            onClick={() => setShowConfirmPassword((v) => !v)}
+                            aria-label={showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'}
+                            aria-pressed={showConfirmPassword}
+                            className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
+                          >
+                            <EyeIcon visible={showConfirmPassword} />
+                          </button>
+                        }
+                      />
+
+                      <div className="rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
+                        <div className="flex items-center justify-between gap-4">
+                          <span className="text-sm font-medium text-[rgba(255,240,232,0.78)]">
+                            Password strength
+                          </span>
+                          <span className="text-sm font-semibold text-[#ffe0bf]">
+                            {passwordStrength.label}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-4 gap-2">
+                          {[1, 2, 3, 4].map((n) => (
+                            <div
+                              key={n}
+                              className={cn(
+                                'h-2 rounded-full',
+                                passwordStrength.score >= n ? passwordStrength.color : 'bg-white/10'
+                              )}
+                            />
+                          ))}
+                        </div>
+
+                        <p className="mt-3 text-xs leading-6 text-[rgba(255,235,223,0.54)]">
+                          For better security, use 8+ characters with uppercase letters, numbers,
+                          or symbols.
+                        </p>
+                      </div>
+                    </>
+                  ) : null}
+
+                  <div className="flex items-center justify-between gap-4 rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
+                    <label className="flex cursor-pointer items-center gap-3 text-sm text-[rgba(255,241,233,0.72)]">
+                      <input
+                        type="checkbox"
+                        checked={rememberMe}
+                        onChange={(e) => setRememberMe(e.target.checked)}
+                        className="h-4 w-4 rounded border-white/20 bg-transparent text-[#ff9c46] focus:ring-[#ff9c46]"
+                      />
+                      Remember my email
+                    </label>
+
+                    {mode === 'signin' ? (
+                      <button
+                        type="button"
+                        onClick={handleForgotPassword}
+                        disabled={loading || googleLoading}
+                        className="text-sm font-medium text-[#ffd2a7] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                      >
+                        Forgot password
+                      </button>
+                    ) : (
+                      <span className="text-xs text-[rgba(255,235,223,0.46)]">
+                        Email verification required
+                      </span>
+                    )}
+                  </div>
+
+                  {error ? (
+                    <div className="rounded-[22px] border border-[rgba(255,117,117,0.2)] bg-[rgba(121,24,24,0.18)] px-4 py-3 text-sm leading-7 text-[#ffd9d9]">
+                      {error}
+                    </div>
+                  ) : null}
+
+                  {message ? (
+                    <div className="rounded-[22px] border border-[rgba(255,192,122,0.2)] bg-[rgba(255,164,84,0.12)] px-4 py-3 text-sm leading-7 text-[#ffe2bf]">
+                      {message}
+                    </div>
+                  ) : null}
+
+                  <button
+                    type="submit"
+                    disabled={loading || googleLoading}
+                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ffc887] via-[#ffab55] to-[#ff9430] px-6 text-sm font-semibold text-[#31180d] shadow-[0_16px_38px_rgba(255,145,51,0.34)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(255,145,51,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading
+                      ? mode === 'signin'
+                        ? 'Signing in…'
+                        : 'Creating account…'
+                      : mode === 'signin'
+                        ? 'Sign In'
+                        : 'Create Account'}
+                  </button>
+                </form>
+
+                <div className="mt-6 rounded-[24px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-7 text-[rgba(255,238,229,0.64)]">
+                  If your account was originally created with Google, it is best to continue with
+                  Google first. You can set or reset an email password later if needed.
+                </div>
+
+                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-[rgba(255,236,226,0.56)]">
+                  <span>
+                    Need a softer landing first?{' '}
+                    <Link href="/" className="font-semibold text-[#ffd1a3] transition hover:text-white">
+                      Return Home
+                    </Link>
+                  </span>
+
+                  <span>
+                    After sign-in you will continue to{' '}
+                    <span className="font-medium text-[#ffe1c0]">{next}</span>
+                  </span>
+                </div>
               </div>
             </div>
           </section>
@@ -799,7 +831,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<AuthShellSkeleton />}>
+    <Suspense fallback={<AuthSkeleton />}>
       <LoginPageContent />
     </Suspense>
   );

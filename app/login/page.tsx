@@ -10,66 +10,71 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 const AUTH_CALLBACK_PATH = '/auth/callback';
 
-function cn(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(' ');
-}
+type Mode = 'signin' | 'signup';
 
-function AuthFeature({
-  title,
-  body,
-}: {
-  title: string;
-  body: string;
-}) {
+function EyeIcon({ open }: { open: boolean }) {
+  if (open) {
+    return (
+      <svg
+        aria-hidden="true"
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z" />
+        <circle cx="12" cy="12" r="3.2" />
+      </svg>
+    );
+  }
+
   return (
-    <div className="rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.028),rgba(255,255,255,0.016))] px-5 py-4 shadow-[0_12px_36px_rgba(0,0,0,0.18)]">
-      <div className="text-[13px] font-extrabold text-white">{title}</div>
-      <div className="mt-1.5 text-sm leading-7 text-[rgba(255,244,230,0.70)]">{body}</div>
-    </div>
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 3l18 18" />
+      <path d="M10.6 10.7a3 3 0 0 0 4 4" />
+      <path d="M9.9 5.2A11 11 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-3.1 4.2" />
+      <path d="M6.6 6.7C4.1 8.4 2.5 12 2.5 12S6.1 19 12 19c1.7 0 3.3-.4 4.7-1.1" />
+    </svg>
   );
 }
 
-function LoginSkeleton() {
+function LoginPageSkeleton() {
   return (
     <div className="min-h-screen bg-[#0b0706] text-[#f7efe8]">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_16%,rgba(255,122,26,0.11),transparent_23%),radial-gradient(circle_at_86%_12%,rgba(255,185,94,0.08),transparent_18%),linear-gradient(180deg,#0b0706_0%,#130907_52%,#0b0706_100%)]" />
-      <SiteHeader theme="dark" />
-      <main className="relative z-[1] mx-auto w-full max-w-[1240px] px-4 pb-12 pt-24 sm:px-6 lg:px-8">
-        <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-          <div className="max-w-[640px]">
-            <div className="inline-flex items-center rounded-full border border-amber-300/16 bg-amber-300/8 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#f3c86b]">
-              Softer sign-in experience
+      <SiteHeader />
+      <main className="mx-auto max-w-7xl px-6 py-10 md:px-8 lg:px-10">
+        <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="space-y-6">
+            <div className="h-8 w-40 animate-pulse rounded-full bg-white/10" />
+            <div className="space-y-3">
+              <div className="h-14 w-full max-w-[520px] animate-pulse rounded-2xl bg-white/10" />
+              <div className="h-14 w-full max-w-[420px] animate-pulse rounded-2xl bg-white/10" />
             </div>
-
-            <h1
-              className="mt-5 text-[clamp(3rem,7vw,5.7rem)] leading-[0.92] tracking-[-0.055em] text-white"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
-              Return to your{' '}
-              <span className="bg-[linear-gradient(90deg,#ffcf85_0%,#ffaf57_45%,#ff8c2b_100%)] bg-clip-text text-transparent">
-                companion
-              </span>{' '}
-              world
-            </h1>
-
-            <p className="mt-5 max-w-[560px] text-[16px] leading-8 text-[rgba(255,244,230,0.74)]">
-              A calmer sign-in experience is loading...
-            </p>
-
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <div className="h-[110px] animate-pulse rounded-[24px] bg-white/[0.04]" />
-              <div className="h-[110px] animate-pulse rounded-[24px] bg-white/[0.04]" />
-            </div>
+            <div className="h-24 w-full max-w-[560px] animate-pulse rounded-3xl bg-white/5" />
           </div>
 
-          <div className="rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,rgba(34,20,16,0.92),rgba(16,10,8,0.94))] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.36)] backdrop-blur-xl sm:p-7">
-            <div className="h-10 animate-pulse rounded-full bg-white/[0.05]" />
-            <div className="mt-5 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-            <div className="mt-4 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-            <div className="mt-4 h-14 animate-pulse rounded-[18px] bg-white/[0.05]" />
-            <div className="mt-5 h-14 animate-pulse rounded-full bg-white/[0.05]" />
+          <div className="rounded-[30px] border border-white/15 bg-[rgba(20,10,8,0.78)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+            <div className="h-11 w-full animate-pulse rounded-full bg-white/10" />
+            <div className="mt-6 h-12 w-full animate-pulse rounded-2xl bg-white/10" />
+            <div className="mt-6 space-y-4">
+              <div className="h-14 w-full animate-pulse rounded-2xl bg-white/10" />
+              <div className="h-14 w-full animate-pulse rounded-2xl bg-white/10" />
+              <div className="h-12 w-full animate-pulse rounded-full bg-white/10" />
+            </div>
           </div>
-        </section>
+        </div>
       </main>
     </div>
   );
@@ -79,92 +84,111 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const next = useMemo(() => {
+    const raw = searchParams.get('next');
+    if (!raw || !raw.startsWith('/')) return '/chat';
+    return raw;
+  }, [searchParams]);
+
+  const [mode, setMode] = useState<Mode>('signin');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nickname, setNickname] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [localError, setLocalError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [resetting, setResetting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [fullName, setFullName] = useState('');
 
-  const queryMessage = searchParams.get('message');
-  const queryError = searchParams.get('error');
-  const nextHref = searchParams.get('next') || '/chat';
+  const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const supabase = useMemo(() => {
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
     return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   }, []);
 
-  const bannerText = localError || queryError || successMessage || queryMessage || null;
-  const bannerTone =
-    localError || queryError
-      ? 'error'
-      : successMessage
-      ? 'success'
-      : queryMessage
-      ? 'neutral'
-      : null;
+  const callbackUrl = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    return `${window.location.origin}${AUTH_CALLBACK_PATH}?next=${encodeURIComponent(next)}`;
+  }, [next]);
 
-  const callbackUrl =
-    typeof window !== 'undefined'
-      ? `${window.location.origin}${AUTH_CALLBACK_PATH}?next=${encodeURIComponent(nextHref)}`
-      : undefined;
+  const resetFeedback = () => {
+    setError(null);
+    setMessage(null);
+  };
 
-  async function handleGoogleSignIn() {
+  const handleGoogleAuth = async () => {
+    resetFeedback();
+
     if (!supabase) {
-      setLocalError('Supabase client is not configured. Please check your NEXT_PUBLIC environment variables.');
+      setError('Supabase 环境变量未配置，暂时无法使用 Google 登录。');
       return;
     }
 
-    setLoading(true);
-    setLocalError(null);
-    setSuccessMessage(null);
-
     try {
+      setGoogleLoading(true);
+
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: callbackUrl
-          ? {
-              redirectTo: callbackUrl,
-            }
-          : undefined,
+        options: {
+          redirectTo: callbackUrl,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'select_account',
+          },
+        },
       });
 
       if (error) {
-        setLocalError(error.message);
+        setError(error.message || 'Google 登录启动失败，请稍后再试。');
       }
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Google sign-in failed.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Google 登录失败，请稍后再试。');
     } finally {
-      setLoading(false);
+      setGoogleLoading(false);
     }
-  }
+  };
 
-  async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
+  const handleEmailAuth = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    resetFeedback();
 
     if (!supabase) {
-      setLocalError('Supabase client is not configured. Please check your NEXT_PUBLIC environment variables.');
+      setError('Supabase 环境变量未配置，暂时无法使用邮箱登录。');
       return;
     }
 
     if (!email.trim()) {
-      setLocalError('Please enter your email address.');
+      setError('请输入邮箱地址。');
       return;
     }
 
     if (!password.trim()) {
-      setLocalError('Please enter your password.');
+      setError('请输入密码。');
       return;
     }
 
-    setLoading(true);
-    setLocalError(null);
-    setSuccessMessage(null);
+    if (mode === 'signup') {
+      if (!fullName.trim()) {
+        setError('请输入你的称呼。');
+        return;
+      }
+
+      if (password.length < 6) {
+        setError('密码长度至少 6 位。');
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError('两次输入的密码不一致。');
+        return;
+      }
+    }
 
     try {
+      setLoading(true);
+
       if (mode === 'signin') {
         const { error } = await supabase.auth.signInWithPassword({
           email: email.trim(),
@@ -172,314 +196,359 @@ function LoginPageContent() {
         });
 
         if (error) {
-          setLocalError(error.message);
+          setError(error.message || '登录失败，请检查邮箱和密码。');
           return;
         }
 
-        router.push(nextHref);
+        router.push(next);
         router.refresh();
         return;
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { error } = await supabase.auth.signUp({
         email: email.trim(),
         password,
         options: {
-          data: {
-            nickname: nickname.trim() || null,
-          },
           emailRedirectTo: callbackUrl,
+          data: {
+            full_name: fullName.trim(),
+          },
         },
       });
 
       if (error) {
-        setLocalError(error.message);
+        setError(error.message || '创建账户失败，请稍后再试。');
         return;
       }
 
-      if (data.session) {
-        router.push(nextHref);
-        router.refresh();
-        return;
-      }
-
-      setSuccessMessage('Account created. Please check your email to confirm your sign-up before continuing.');
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Authentication failed.');
+      setMessage('账户已创建。请检查邮箱中的验证邮件，验证后再继续登录。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '操作失败，请稍后再试。');
     } finally {
       setLoading(false);
     }
-  }
+  };
 
-  async function handlePasswordReset() {
+  const handleForgotPassword = async () => {
+    resetFeedback();
+
     if (!supabase) {
-      setLocalError('Supabase client is not configured. Please check your NEXT_PUBLIC environment variables.');
+      setError('Supabase 环境变量未配置，暂时无法重设密码。');
       return;
     }
 
     if (!email.trim()) {
-      setLocalError('Enter your email first, then we can send a reset link.');
+      setError('请先输入邮箱地址，再点击忘记密码。');
       return;
     }
 
-    setResetting(true);
-    setLocalError(null);
-    setSuccessMessage(null);
-
     try {
+      setLoading(true);
+
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
         redirectTo: callbackUrl,
       });
 
       if (error) {
-        setLocalError(error.message);
+        setError(error.message || '重设密码邮件发送失败。');
         return;
       }
 
-      setSuccessMessage('Password reset link sent. Please check your inbox.');
-    } catch (error) {
-      setLocalError(error instanceof Error ? error.message : 'Could not send password reset email.');
+      setMessage('重设密码邮件已发送，请前往邮箱查收。');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : '重设密码失败，请稍后再试。');
     } finally {
-      setResetting(false);
+      setLoading(false);
     }
-  }
+  };
 
   return (
-    <div className="min-h-screen bg-[#0b0706] text-[#f7efe8]">
-      <div className="pointer-events-none fixed inset-0 bg-[radial-gradient(circle_at_12%_16%,rgba(255,122,26,0.11),transparent_23%),radial-gradient(circle_at_86%_12%,rgba(255,185,94,0.08),transparent_18%),linear-gradient(180deg,#0b0706_0%,#130907_52%,#0b0706_100%)]" />
+    <div className="min-h-screen overflow-hidden bg-[#0b0706] text-[#f7efe8]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_18%_22%,rgba(255,140,64,0.18),transparent_28%),radial-gradient(circle_at_84%_18%,rgba(255,120,40,0.12),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(255,120,40,0.1),transparent_35%)]" />
+      <SiteHeader />
 
-      <SiteHeader theme="dark" />
-
-      <main className="relative z-[1] mx-auto w-full max-w-[1240px] px-4 pb-12 pt-24 sm:px-6 lg:px-8">
-        <section className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:items-center">
-          <div className="max-w-[640px]">
-            <div className="inline-flex items-center rounded-full border border-amber-300/16 bg-amber-300/8 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.22em] text-[#f3c86b]">
+      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-8 md:px-8 lg:px-10 lg:pt-10">
+        <div className="grid items-start gap-10 lg:grid-cols-[1.06fr_0.94fr] lg:gap-12">
+          <section className="pt-6 lg:pt-16">
+            <div className="inline-flex items-center rounded-full border border-[rgba(255,210,180,0.24)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f0c7a6]">
               Softer sign-in experience
             </div>
 
-            <h1
-              className="mt-5 text-[clamp(3rem,7vw,5.7rem)] leading-[0.92] tracking-[-0.055em] text-white"
-              style={{ fontFamily: 'var(--font-display)' }}
-            >
+            <h1 className="mt-6 max-w-[620px] text-balance text-[54px] font-semibold leading-[0.92] tracking-[-0.04em] text-[#fff7f2] md:text-[72px]">
               Return to your{' '}
-              <span className="bg-[linear-gradient(90deg,#ffcf85_0%,#ffaf57_45%,#ff8c2b_100%)] bg-clip-text text-transparent">
+              <span className="bg-gradient-to-r from-[#ffd4aa] via-[#ffb067] to-[#ff9340] bg-clip-text text-transparent">
                 companion
               </span>{' '}
               world
             </h1>
 
-            <p className="mt-5 max-w-[560px] text-[16px] leading-8 text-[rgba(255,244,230,0.74)]">
-              A warmer, calmer entry point that feels like a natural continuation of Home — less like a campaign page, more like a comfortable place to sign in and continue your relationship with your pet.
+            <p className="mt-6 max-w-[600px] text-[15px] leading-8 text-[rgba(255,240,232,0.72)] md:text-[16px]">
+              A warmer, calmer entry point that feels like a natural continuation of Home —
+              less like a campaign page, more like a comfortable place to sign in and continue
+              your relationship with your pet.
             </p>
 
-            <div className="mt-8 grid gap-4 sm:grid-cols-2">
-              <AuthFeature
-                title="Calmer visual rhythm"
-                body="Reduced headline pressure, softer contrast, and more breathing room so the page feels reassuring rather than loud."
-              />
-              <AuthFeature
-                title="Better form readability"
-                body="Dark glass inputs, clearer labels, and more consistent spacing for easier typing and lower visual fatigue."
-              />
-            </div>
-
-            <div className="mt-5 rounded-[24px] border border-white/8 bg-[linear-gradient(180deg,rgba(255,255,255,0.026),rgba(255,255,255,0.014))] px-5 py-4 text-sm leading-7 text-[rgba(255,244,230,0.72)] shadow-[0_12px_36px_rgba(0,0,0,0.16)]">
-              Sign in first, then continue with Chat, Memories, Account, and your pet setup in one unified visual flow.
-            </div>
-          </div>
-
-          <div className="rounded-[32px] border border-white/8 bg-[linear-gradient(180deg,rgba(34,20,16,0.92),rgba(16,10,8,0.94))] p-6 shadow-[0_24px_90px_rgba(0,0,0,0.36)] backdrop-blur-xl sm:p-7">
-            <div className="inline-flex items-center rounded-full border border-white/8 bg-white/[0.04] px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-[rgba(255,244,230,0.56)]">
-              Welcome back
-            </div>
-
-            <div className="mt-4 flex items-center gap-2 rounded-full border border-white/8 bg-white/[0.035] p-1">
-              <button
-                type="button"
-                onClick={() => setMode('signin')}
-                className={cn(
-                  'flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition',
-                  mode === 'signin'
-                    ? 'bg-[linear-gradient(90deg,#ffb45e_0%,#ff9330_50%,#ff7a1a_100%)] text-white shadow-[0_10px_20px_rgba(249,115,22,0.22)]'
-                    : 'text-[rgba(255,244,230,0.64)] hover:text-white'
-                )}
-              >
-                Sign In
-              </button>
-              <button
-                type="button"
-                onClick={() => setMode('signup')}
-                className={cn(
-                  'flex-1 rounded-full px-4 py-2.5 text-sm font-bold transition',
-                  mode === 'signup'
-                    ? 'bg-[linear-gradient(90deg,#ffb45e_0%,#ff9330_50%,#ff7a1a_100%)] text-white shadow-[0_10px_20px_rgba(249,115,22,0.22)]'
-                    : 'text-[rgba(255,244,230,0.64)] hover:text-white'
-                )}
-              >
-                Create Account
-              </button>
-            </div>
-
-            <div className="mt-6">
-              <h2
-                className="text-[2rem] leading-[1.02] tracking-[-0.045em] text-white"
-                style={{ fontFamily: 'var(--font-display)' }}
-              >
-                {mode === 'signin'
-                  ? 'Continue gently from where you left off'
-                  : 'Create a softer place for your pet life'}
-              </h2>
-
-              <p className="mt-3 text-[15px] leading-7 text-[rgba(255,244,230,0.70)]">
-                {mode === 'signin'
-                  ? 'Use Google or email to continue. If your account was first created with Google, continue with Google or set a password first.'
-                  : 'Create your account with email first, then move naturally into pet setup, memories, and chat.'}
-              </p>
-            </div>
-
-            {bannerText ? (
-              <div
-                className={cn(
-                  'mt-5 rounded-[20px] border px-4 py-3 text-sm leading-7',
-                  bannerTone === 'error' && 'border-red-300/18 bg-red-500/10 text-red-100',
-                  bannerTone === 'success' && 'border-emerald-300/18 bg-emerald-500/10 text-emerald-100',
-                  bannerTone === 'neutral' && 'border-amber-300/14 bg-amber-300/8 text-[rgba(255,244,230,0.84)]'
-                )}
-              >
-                {bannerText}
-              </div>
-            ) : null}
-
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={loading || !supabase}
-              className="mt-5 inline-flex h-[54px] w-full items-center justify-center gap-3 rounded-full border border-white/10 bg-white/[0.04] px-5 text-sm font-bold text-white transition hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-55"
-            >
-              <svg viewBox="0 0 24 24" className="h-[18px] w-[18px]" aria-hidden="true">
-                <path d="M21.805 10.023h-9.72v3.955h5.568c-.24 1.27-.96 2.347-2.04 3.066v2.543h3.3c1.932-1.78 3.048-4.4 3.048-7.52 0-.69-.06-1.36-.156-2.044Z" fill="#4285F4" />
-                <path d="M12.085 22c2.754 0 5.064-.912 6.756-2.473l-3.3-2.543c-.912.612-2.076.972-3.456.972-2.658 0-4.914-1.794-5.718-4.206H3.001v2.622A10.196 10.196 0 0 0 12.085 22Z" fill="#34A853" />
-                <path d="M6.367 13.75a6.11 6.11 0 0 1-.318-1.95c0-.678.114-1.338.318-1.95V7.228H3.001A10.196 10.196 0 0 0 1.885 11.8c0 1.644.396 3.198 1.116 4.572l3.366-2.622Z" fill="#FBBC05" />
-                <path d="M12.085 5.644c1.5 0 2.85.516 3.912 1.53l2.928-2.928C17.143 2.592 14.833 1.6 12.085 1.6A10.196 10.196 0 0 0 3.001 7.228L6.367 9.85c.804-2.412 3.06-4.206 5.718-4.206Z" fill="#EA4335" />
-              </svg>
-              Continue with Google
-            </button>
-
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-[11px] font-bold uppercase tracking-[0.2em] text-[rgba(255,244,230,0.42)]">
-                or continue with email
-              </span>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
-
-            <form onSubmit={handleSubmit} className="grid gap-4">
-              <div>
-                <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.58)]">
-                  Email address
-                </label>
-                <input
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="name@example.com"
-                  className="h-[54px] w-full rounded-[18px] border border-white/10 bg-white/[0.05] px-4 text-[15px] text-[#fff7ed] outline-none transition placeholder:text-[rgba(255,244,230,0.34)] focus:border-amber-300/28 focus:bg-white/[0.065]"
-                />
+            <div className="mt-10 grid gap-4 md:grid-cols-2">
+              <div className="rounded-[26px] border border-white/14 bg-[rgba(255,255,255,0.03)] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+                <p className="text-sm font-semibold text-[#fff4ec]">Calmer visual rhythm</p>
+                <p className="mt-2 text-sm leading-7 text-[rgba(255,239,230,0.68)]">
+                  Reduced headline pressure, softer contrast, and more breathing room so the
+                  page feels reassuring rather than loud.
+                </p>
               </div>
 
-              <div>
-                <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.58)]">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  placeholder={mode === 'signin' ? 'Enter your password' : 'Create a secure password'}
-                  className="h-[54px] w-full rounded-[18px] border border-white/10 bg-white/[0.05] px-4 text-[15px] text-[#fff7ed] outline-none transition placeholder:text-[rgba(255,244,230,0.34)] focus:border-amber-300/28 focus:bg-white/[0.065]"
-                />
+              <div className="rounded-[26px] border border-white/14 bg-[rgba(255,255,255,0.03)] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm">
+                <p className="text-sm font-semibold text-[#fff4ec]">Better form readability</p>
+                <p className="mt-2 text-sm leading-7 text-[rgba(255,239,230,0.68)]">
+                  Dark glass inputs, clearer labels, and more consistent spacing for easier
+                  typing and lower visual fatigue.
+                </p>
               </div>
 
-              {mode === 'signup' ? (
-                <div>
-                  <label className="mb-2 block text-[12px] font-bold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.58)]">
-                    Nickname
-                  </label>
-                  <input
-                    type="text"
-                    autoComplete="nickname"
-                    value={nickname}
-                    onChange={(event) => setNickname(event.target.value)}
-                    placeholder="What should your pet call you"
-                    className="h-[54px] w-full rounded-[18px] border border-white/10 bg-white/[0.05] px-4 text-[15px] text-[#fff7ed] outline-none transition placeholder:text-[rgba(255,244,230,0.34)] focus:border-amber-300/28 focus:bg-white/[0.065]"
-                  />
-                </div>
-              ) : null}
+              <div className="rounded-[26px] border border-white/14 bg-[rgba(255,255,255,0.03)] p-5 shadow-[0_10px_30px_rgba(0,0,0,0.18)] backdrop-blur-sm md:col-span-2">
+                <p className="text-sm leading-7 text-[rgba(255,239,230,0.68)]">
+                  Sign in first, then continue with Chat, Memories, Account, and your pet setup
+                  in one unified visual flow.
+                </p>
+              </div>
+            </div>
+          </section>
 
-              <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  type="submit"
-                  disabled={loading || !supabase}
-                  className="inline-flex h-[54px] min-w-[180px] items-center justify-center rounded-full bg-[linear-gradient(90deg,#ffb45e_0%,#ff9330_50%,#ff7a1a_100%)] px-6 text-sm font-extrabold text-white shadow-[0_14px_28px_rgba(249,115,22,0.25)] transition hover:-translate-y-[1px] hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-55"
-                >
-                  {loading
-                    ? mode === 'signin'
-                      ? 'Signing in...'
-                      : 'Creating...'
-                    : mode === 'signin'
-                    ? 'Sign In'
-                    : 'Create Account'}
-                </button>
+          <section className="relative">
+            <div className="rounded-[30px] border border-[rgba(255,233,220,0.16)] bg-[linear-gradient(180deg,rgba(29,14,11,0.82),rgba(17,8,7,0.9))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl md:p-6">
+              <div className="inline-flex items-center rounded-full border border-[rgba(255,210,180,0.22)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#f0c7a6]">
+                Welcome back
+              </div>
 
-                {mode === 'signin' ? (
+              <div className="mt-5 rounded-full border border-[rgba(255,233,220,0.14)] bg-[rgba(255,255,255,0.03)] p-1">
+                <div className="grid grid-cols-2 gap-1">
                   <button
                     type="button"
-                    onClick={handlePasswordReset}
-                    disabled={resetting || loading || !supabase}
-                    className="text-sm font-semibold text-[rgba(255,244,230,0.62)] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-55"
+                    onClick={() => {
+                      resetFeedback();
+                      setMode('signin');
+                    }}
+                    className={[
+                      'rounded-full px-4 py-3 text-sm font-semibold transition',
+                      mode === 'signin'
+                        ? 'bg-gradient-to-r from-[#ffbf7a] to-[#ff8f2b] text-[#2c140b] shadow-[0_10px_25px_rgba(255,145,51,0.35)]'
+                        : 'text-[rgba(255,240,232,0.7)] hover:bg-white/5',
+                    ].join(' ')}
                   >
-                    {resetting ? 'Sending reset link...' : 'Forgot password?'}
+                    Sign In
                   </button>
-                ) : (
-                  <div className="text-sm text-[rgba(255,244,230,0.54)]">
-                    Already have an account?{' '}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      resetFeedback();
+                      setMode('signup');
+                    }}
+                    className={[
+                      'rounded-full px-4 py-3 text-sm font-semibold transition',
+                      mode === 'signup'
+                        ? 'bg-gradient-to-r from-[#ffbf7a] to-[#ff8f2b] text-[#2c140b] shadow-[0_10px_25px_rgba(255,145,51,0.35)]'
+                        : 'text-[rgba(255,240,232,0.7)] hover:bg-white/5',
+                    ].join(' ')}
+                  >
+                    Create Account
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h2 className="text-[24px] font-semibold leading-tight tracking-[-0.03em] text-[#fff6f0] md:text-[26px]">
+                  {mode === 'signin'
+                    ? 'Continue gently from where you left off'
+                    : 'Create your EchoPaws companion account'}
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-[rgba(255,237,228,0.68)]">
+                  {mode === 'signin'
+                    ? 'Use Google or email to continue. If your account was first created with Google, continue with Google or set a password first.'
+                    : 'Use Google for the quickest start, or create an account with email and password.'}
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={handleGoogleAuth}
+                disabled={googleLoading || loading}
+                className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm font-semibold text-[#fff2ea] transition hover:bg-[rgba(255,255,255,0.06)] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+                  <path
+                    d="M21.8 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.49a4.7 4.7 0 0 1-2.04 3.08v2.56h3.3c1.93-1.78 3.05-4.4 3.05-7.63Z"
+                    fill="#4285F4"
+                  />
+                  <path
+                    d="M12 22c2.76 0 5.07-.91 6.76-2.47l-3.3-2.56c-.91.61-2.08.98-3.46.98-2.66 0-4.91-1.8-5.72-4.22H2.87v2.65A10 10 0 0 0 12 22Z"
+                    fill="#34A853"
+                  />
+                  <path
+                    d="M6.28 13.73A5.98 5.98 0 0 1 6 12c0-.6.1-1.18.28-1.73V7.62H2.87A10 10 0 0 0 2 12c0 1.61.38 3.13 1.05 4.38l3.23-2.65Z"
+                    fill="#FBBC05"
+                  />
+                  <path
+                    d="M12 6.05c1.5 0 2.86.52 3.93 1.54l2.95-2.95C17.06 2.91 14.75 2 12 2A10 10 0 0 0 2.87 7.62l3.41 2.65c.81-2.42 3.06-4.22 5.72-4.22Z"
+                    fill="#EA4335"
+                  />
+                </svg>
+                {googleLoading ? 'Connecting to Google…' : 'Continue with Google'}
+              </button>
+
+              <div className="my-6 flex items-center gap-4">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,225,208,0.38)]">
+                  Or continue with email
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                {mode === 'signup' && (
+                  <label className="block">
+                    <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,220,198,0.56)]">
+                      Your name
+                    </span>
+                    <input
+                      type="text"
+                      autoComplete="name"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="How should your pet call you?"
+                      className="h-14 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-[rgba(240,240,255,0.92)] px-4 text-[15px] text-[#1e1612] outline-none transition placeholder:text-[rgba(62,44,34,0.45)] focus:border-[#ffb067] focus:bg-white focus:ring-4 focus:ring-[rgba(255,161,79,0.16)]"
+                    />
+                  </label>
+                )}
+
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,220,198,0.56)]">
+                    Email address
+                  </span>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-14 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-[rgba(240,240,255,0.92)] px-4 text-[15px] text-[#1e1612] outline-none transition placeholder:text-[rgba(62,44,34,0.45)] focus:border-[#ffb067] focus:bg-white focus:ring-4 focus:ring-[rgba(255,161,79,0.16)]"
+                  />
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,220,198,0.56)]">
+                    Password
+                  </span>
+
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
+                      className="h-14 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-[rgba(240,240,255,0.92)] pl-4 pr-14 text-[15px] text-[#1e1612] outline-none transition placeholder:text-[rgba(62,44,34,0.45)] focus:border-[#ffb067] focus:bg-white focus:ring-4 focus:ring-[rgba(255,161,79,0.16)]"
+                    />
+
                     <button
                       type="button"
-                      onClick={() => setMode('signin')}
-                      className="font-semibold text-white transition hover:text-[#ffd39b]"
+                      onClick={() => setShowPassword((v) => !v)}
+                      aria-label={showPassword ? '隐藏密码' : '显示密码'}
+                      aria-pressed={showPassword}
+                      className="absolute inset-y-0 right-0 flex w-14 items-center justify-center rounded-r-2xl text-[#6f5548] transition hover:text-[#2b1911] focus:outline-none"
                     >
-                      Sign in
+                      <EyeIcon open={showPassword} />
                     </button>
                   </div>
+                </label>
+
+                {mode === 'signup' && (
+                  <label className="block">
+                    <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,220,198,0.56)]">
+                      Confirm password
+                    </span>
+
+                    <div className="relative">
+                      <input
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Confirm your password"
+                        className="h-14 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-[rgba(240,240,255,0.92)] pl-4 pr-14 text-[15px] text-[#1e1612] outline-none transition placeholder:text-[rgba(62,44,34,0.45)] focus:border-[#ffb067] focus:bg-white focus:ring-4 focus:ring-[rgba(255,161,79,0.16)]"
+                      />
+
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        aria-label={showConfirmPassword ? '隐藏确认密码' : '显示确认密码'}
+                        aria-pressed={showConfirmPassword}
+                        className="absolute inset-y-0 right-0 flex w-14 items-center justify-center rounded-r-2xl text-[#6f5548] transition hover:text-[#2b1911] focus:outline-none"
+                      >
+                        <EyeIcon open={showConfirmPassword} />
+                      </button>
+                    </div>
+                  </label>
                 )}
+
+                {error ? (
+                  <div className="rounded-2xl border border-[rgba(255,120,120,0.22)] bg-[rgba(120,20,20,0.18)] px-4 py-3 text-sm leading-7 text-[#ffd7d7]">
+                    {error}
+                  </div>
+                ) : null}
+
+                {message ? (
+                  <div className="rounded-2xl border border-[rgba(255,180,105,0.22)] bg-[rgba(255,149,61,0.12)] px-4 py-3 text-sm leading-7 text-[#ffe2c5]">
+                    {message}
+                  </div>
+                ) : null}
+
+                <div className="flex items-center gap-3 pt-2">
+                  <button
+                    type="submit"
+                    disabled={loading || googleLoading}
+                    className="inline-flex h-12 min-w-[140px] items-center justify-center rounded-full bg-gradient-to-r from-[#ffc280] to-[#ff922d] px-6 text-sm font-semibold text-[#2c140b] shadow-[0_14px_35px_rgba(255,145,51,0.34)] transition hover:translate-y-[-1px] hover:shadow-[0_18px_42px_rgba(255,145,51,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {loading
+                      ? mode === 'signin'
+                        ? 'Signing in…'
+                        : 'Creating…'
+                      : mode === 'signin'
+                        ? 'Sign In'
+                        : 'Create Account'}
+                  </button>
+
+                  {mode === 'signin' ? (
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      disabled={loading || googleLoading}
+                      className="text-sm font-medium text-[rgba(255,231,217,0.74)] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      Forgot password?
+                    </button>
+                  ) : null}
+                </div>
+              </form>
+
+              <div className="mt-6 rounded-[24px] border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-7 text-[rgba(255,237,228,0.62)]">
+                If your first login was through Google, continue with Google first. If you later
+                want to sign in with email, set or reset a password after entering your account.
               </div>
-            </form>
 
-            <div className="mt-6 rounded-[22px] border border-white/8 bg-white/[0.03] px-4 py-4 text-sm leading-7 text-[rgba(255,244,230,0.68)]">
-              If your first login was through Google, continue with Google first. If you later want to sign in with email, set or reset a password after entering your account.
-            </div>
-
-            {!supabase ? (
-              <div className="mt-4 rounded-[20px] border border-red-300/18 bg-red-500/10 px-4 py-3 text-sm leading-7 text-red-100">
-                Supabase client environment is missing. Please verify <code>NEXT_PUBLIC_SUPABASE_URL</code> and <code>NEXT_PUBLIC_SUPABASE_ANON_KEY</code>.
+              <div className="mt-6 text-xs leading-7 text-[rgba(255,225,208,0.42)]">
+                After successful sign-in, you will return to <span className="text-[#ffd7b0]">{next}</span>.
               </div>
-            ) : null}
 
-            <div className="mt-5 text-xs leading-6 text-[rgba(255,244,230,0.42)]">
-              After successful sign-in, you will return to{' '}
-              <span className="font-bold text-[rgba(255,244,230,0.72)]">{nextHref}</span>.
+              <div className="mt-2 text-sm text-[rgba(255,237,228,0.66)]">
+                Want to go back first?{' '}
+                <Link href="/" className="font-semibold text-[#ffd2a4] transition hover:text-white">
+                  Return Home
+                </Link>
+              </div>
             </div>
-
-            <div className="mt-4 text-sm text-[rgba(255,244,230,0.54)]">
-              Want to go back first?{' '}
-              <Link href="/" className="font-semibold text-white transition hover:text-[#ffd39b]">
-                Return Home
-              </Link>
-            </div>
-          </div>
-        </section>
+          </section>
+        </div>
       </main>
     </div>
   );
@@ -487,7 +556,7 @@ function LoginPageContent() {
 
 export default function LoginPage() {
   return (
-    <Suspense fallback={<LoginSkeleton />}>
+    <Suspense fallback={<LoginPageSkeleton />}>
       <LoginPageContent />
     </Suspense>
   );

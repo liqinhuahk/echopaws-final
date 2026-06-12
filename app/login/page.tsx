@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site-header';
@@ -218,7 +218,26 @@ function StatusPanel({
   );
 }
 
-export default function LoginPage() {
+function LoginPageFallback() {
+  return (
+    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
+      <SiteHeader />
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.82fr] lg:gap-10">
+          <div className="min-h-[620px]" />
+          <div className="rounded-[32px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(32,17,12,0.92),rgba(16,9,7,0.96))] p-6 shadow-[0_28px_70px_rgba(0,0,0,0.26)]">
+            <div className="flex items-center gap-3 text-sm text-[rgba(255,233,220,0.72)]">
+              <Spinner />
+              正在加载登录页面...
+            </div>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/';
@@ -460,7 +479,7 @@ export default function LoginPage() {
     },
     {
       title: 'Safer Interaction',
-      text: 'Password visibility toggle, Caps Lock notice, and clearer feedback states.',
+      text: 'Password visibility toggle, clearer feedback states, and more transparent login status.',
     },
   ];
 
@@ -698,5 +717,13 @@ export default function LoginPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

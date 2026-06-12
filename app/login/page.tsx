@@ -100,6 +100,24 @@ function getProviderLabel(user: User | null) {
   return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
 }
 
+function BrandMark() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffbf66] via-[#f59e0b] to-[#f08a24] text-xl shadow-[0_12px_30px_rgba(245,158,11,0.28)]">
+        🐾
+      </div>
+      <div className="min-w-0">
+        <p className="truncate text-[28px] font-semibold leading-none text-white">
+          EchoPaws
+        </p>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.32em] text-white/60">
+          AI Companion
+        </p>
+      </div>
+    </div>
+  );
+}
+
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
@@ -126,7 +144,13 @@ function GoogleIcon() {
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      >
         <path d="M3 12s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6Z" />
         <circle cx="12" cy="12" r="2.8" />
       </svg>
@@ -134,7 +158,13 @@ function EyeIcon({ open }: { open: boolean }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
       <path d="M3 3l18 18" />
       <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
       <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5.4 0 9 7 9 7a17.47 17.47 0 0 1-3.06 3.67" />
@@ -145,12 +175,20 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function StatusIcon({ status }: { status: StatusType }) {
   if (status === 'loading') {
-    return <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />;
+    return (
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />
+    );
   }
 
   if (status === 'success') {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-emerald-400"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <path d="M20 6 9 17l-5-5" />
       </svg>
     );
@@ -158,7 +196,13 @@ function StatusIcon({ status }: { status: StatusType }) {
 
   if (status === 'error') {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-rose-400"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <path d="M12 8v5" />
         <path d="M12 16h.01" />
         <circle cx="12" cy="12" r="9" />
@@ -167,26 +211,16 @@ function StatusIcon({ status }: { status: StatusType }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-200" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 text-amber-200"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v4l2.5 2.5" />
     </svg>
-  );
-}
-
-function BrandMark() {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffb347] to-[#f59e0b] text-xl shadow-lg shadow-amber-500/20">
-        🐾
-      </div>
-      <div>
-        <p className="text-[30px] font-semibold leading-none text-white">EchoPaws</p>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.32em] text-white/65">
-          AI Companion
-        </p>
-      </div>
-    </div>
   );
 }
 
@@ -197,61 +231,73 @@ function Header({
   currentPath: string;
   currentUser: User | null;
 }) {
-  const accountName = currentUser ? getDisplayName(currentUser) : '';
-  const accountEmail = currentUser?.email || '';
+  const currentName = currentUser ? getDisplayName(currentUser) : '';
+  const currentEmail = currentUser?.email || '';
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(12,8,5,0.72)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
-        <Link href="/" className="shrink-0">
-          <BrandMark />
-        </Link>
+    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(18,12,8,0.72)] backdrop-blur-xl">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="flex min-h-[78px] items-center justify-between gap-4">
+          <Link href="/" className="shrink-0">
+            <BrandMark />
+          </Link>
 
-        <nav className="hidden items-center gap-3 md:flex">
-          {NAV_ITEMS.map((item) => {
-            const isActive =
-              item.href === '/'
-                ? currentPath === '/'
-                : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
+          <div className="hidden items-center gap-3 lg:flex">
+            {currentUser ? (
+              <>
+                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
+                  <p className="text-sm font-medium text-white">{currentName}</p>
+                  <p className="text-xs text-white/55">{currentEmail}</p>
+                </div>
+                <Link
+                  href="/account"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
+                >
+                  Account
+                </Link>
+              </>
+            ) : (
+              <>
+                <Link
+                  href="/login"
+                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
+                >
+                  Sign In
+                </Link>
+                <Link
+                  href="/pricing"
+                  className="rounded-full bg-[#f59e0b] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
+                >
+                  Get Started
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
-                  isActive
-                    ? 'border border-amber-300/25 bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
-                    : 'text-white/78 hover:bg-white/7 hover:text-white'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
+        <div className="pb-4">
+          <nav className="flex gap-3 overflow-x-auto no-scrollbar">
+            {NAV_ITEMS.map((item) => {
+              const isActive =
+                item.href === '/'
+                  ? currentPath === '/'
+                  : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
 
-        <div className="hidden items-center gap-3 lg:flex">
-          {currentUser ? (
-            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
-              <p className="text-sm font-medium text-white">{accountName}</p>
-              <p className="text-xs text-white/55">{accountEmail}</p>
-            </div>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/pricing"
-                className="rounded-full bg-[#f59e0b] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
-              >
-                Get Started
-              </Link>
-            </>
-          )}
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                    isActive
+                      ? 'border border-amber-300/25 bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
+                      : 'text-white/78 hover:bg-white/7 hover:text-white'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
         </div>
       </div>
     </header>
@@ -284,7 +330,7 @@ function StatusPanel({
       ? 'border-rose-400/25 bg-rose-500/10'
       : status === 'loading'
       ? 'border-amber-400/25 bg-amber-500/10'
-      : 'border-amber-300/15 bg-white/5';
+      : 'border-white/10 bg-white/5';
 
   return (
     <div className={`mb-5 rounded-2xl border p-4 shadow-lg backdrop-blur ${panelClass}`}>
@@ -311,12 +357,18 @@ function StatusPanel({
             <div className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
               <div className="grid gap-2 sm:grid-cols-2">
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Account Name</p>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
+                    Account Name
+                  </p>
                   <p className="mt-1 text-sm font-medium text-white">{userName || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Email</p>
-                  <p className="mt-1 break-all text-sm font-medium text-white">{userEmail || '—'}</p>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
+                    Email
+                  </p>
+                  <p className="mt-1 break-all text-sm font-medium text-white">
+                    {userEmail || '—'}
+                  </p>
                 </div>
               </div>
             </div>
@@ -396,7 +448,9 @@ function LoginPageContent() {
 
   const [status, setStatus] = useState<StatusType>('idle');
   const [statusTitle, setStatusTitle] = useState('Welcome back to your companion space');
-  const [statusDetail, setStatusDetail] = useState('Sign in with Google or Email to continue where you left off.');
+  const [statusDetail, setStatusDetail] = useState(
+    'Sign in with Google or Email to continue where you left off.'
+  );
   const [statusProvider, setStatusProvider] = useState('Ready');
 
   const syncStatusFromUser = useCallback((user: User, providerOverride?: string) => {
@@ -613,7 +667,9 @@ function LoginPageContent() {
         } else {
           setStatus('success');
           setStatusTitle('Account created');
-          setStatusDetail('Please check your email inbox and confirm your account before signing in.');
+          setStatusDetail(
+            'Please check your email inbox and confirm your account before signing in.'
+          );
           setStatusProvider('Email');
         }
       }
@@ -633,7 +689,7 @@ function LoginPageContent() {
   const canContinue = status === 'success' && !!currentUser;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),radial-gradient(circle_at_15%_20%,_rgba(251,191,36,0.10),_transparent_24%),linear-gradient(180deg,#130c08_0%,#0f111a_38%,#0b1220_100%)] text-white">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),radial-gradient(circle_at_16%_18%,_rgba(251,191,36,0.10),_transparent_26%),linear-gradient(180deg,#1a100a_0%,#120d09_24%,#0f1119_58%,#0b1220_100%)] text-white">
       <Header currentPath={pathname || '/login'} currentUser={currentUser} />
 
       <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pt-14">
@@ -651,27 +707,27 @@ function LoginPageContent() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-8 text-white/70">
-                Keep the login experience visually aligned with the main EchoPaws site:
-                warm, soft, and reassuring. The top navigation remains visible, and the
-                signed-in account status stays clear after Google or Email login.
+                This login page now keeps the same product feeling as the EchoPaws home
+                experience: warm gradients, visible navigation, and a clear signed-in state
+                after Google or Email authentication.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 <FeatureCard
                   title="Visible site navigation"
-                  description="The login page now includes the same top-level navigation structure as the main site."
+                  description="Users can still access Home, Chat, Memories, Pricing, and Account from the login page."
                 />
                 <FeatureCard
-                  title="Matched color system"
-                  description="The background uses warmer amber-to-deep-night gradients instead of an isolated dark blue panel."
+                  title="Matched visual tone"
+                  description="The background is aligned to the home page style with warm amber highlights and deep night layers."
                 />
                 <FeatureCard
                   title="Clear signed-in state"
-                  description="After Google or Email sign-in, the account name and email remain visible in the status area."
+                  description="After Google or Email login, the account name and email remain visible in the status panel."
                 />
                 <FeatureCard
-                  title="Better continuity"
-                  description="Users can move from login to Chat, Memories, Pricing, and Account without feeling the page is disconnected."
+                  title="OAuth flow preserved"
+                  description="Google sign-in still returns through the callback route before coming back to the login page."
                 />
               </div>
             </div>
@@ -679,8 +735,8 @@ function LoginPageContent() {
             <div className="mt-10 rounded-3xl border border-white/10 bg-black/20 p-5">
               <p className="text-sm font-semibold text-white">Less noise, more trust</p>
               <p className="mt-2 text-sm leading-6 text-white/65">
-                The login page should feel like part of the same product, not a separate screen.
-                Keep the header, keep the warmth, and make account state obvious.
+                The login page should feel like part of the same product, not a detached
+                screen. Keep the header, keep the warmth, and make account state obvious.
               </p>
             </div>
           </section>
@@ -876,7 +932,7 @@ function LoginPageContent() {
 
 function LoginPageFallback() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),linear-gradient(180deg,#130c08_0%,#0b1220_100%)] text-white">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),linear-gradient(180deg,#1a100a_0%,#0b1220_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
         <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import Image from 'next/image';
 import Link from 'next/link';
 import SiteHeader from '@/components/site-header';
 
@@ -104,22 +105,27 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#f2eee4] text-[#131834]">
       <div className="relative isolate overflow-hidden">
         <div className="absolute inset-0 z-0">
-          <div
-            className="
-              absolute inset-0
-              bg-cover
-              bg-no-repeat
-              bg-[position:72%_center]
-              sm:bg-[position:74%_center]
-              md:bg-[position:76%_center]
-              lg:bg-[position:78%_center]
-              xl:bg-[position:80%_center]
-              2xl:bg-[position:center]
-            "
-            style={{ backgroundImage: "url('/images/home-hero-a.png')" }}
-          />
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,8,7,0.90)_0%,rgba(12,8,7,0.78)_22%,rgba(12,8,7,0.48)_42%,rgba(12,8,7,0.18)_68%,rgba(12,8,7,0.06)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_56%,rgba(255,129,28,0.22),transparent_28%),radial-gradient(circle_at_20%_100%,rgba(140,63,19,0.24),transparent_26%)]" />
+          <div className="absolute inset-0 overflow-hidden">
+            <Image
+              src="/images/home-hero-a.png"
+              alt=""
+              fill
+              priority
+              sizes="100vw"
+              className="
+                pointer-events-none select-none object-cover
+                object-[78%_center]
+                sm:object-[80%_center]
+                md:object-[82%_center]
+                lg:object-[84%_center]
+                xl:object-[86%_center]
+                2xl:object-[88%_center]
+              "
+            />
+          </div>
+
+          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,8,7,0.92)_0%,rgba(12,8,7,0.80)_22%,rgba(12,8,7,0.52)_42%,rgba(12,8,7,0.20)_68%,rgba(12,8,7,0.06)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_56%,rgba(255,129,28,0.22),transparent_28%),radial-gradient(circle_at_18%_100%,rgba(140,63,19,0.24),transparent_26%)]" />
           <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(242,238,228,0)_0%,rgba(242,238,228,0.98)_100%)] md:h-32" />
         </div>
 

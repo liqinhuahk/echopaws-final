@@ -69,7 +69,7 @@ function MenuIcon() {
   );
 }
 
-export default function SiteHeader() {
+function SiteHeader() {
   const pathname = usePathname() || '/';
   const [mobileOpen, setMobileOpen] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
@@ -79,17 +79,16 @@ export default function SiteHeader() {
   }, [pathname]);
 
   useEffect(() => {
-    const shouldLock = mobileOpen || contactOpen;
     const original = document.body.style.overflow;
 
-    if (shouldLock) {
+    if (mobileOpen) {
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.body.style.overflow = original;
     };
-  }, [mobileOpen, contactOpen]);
+  }, [mobileOpen]);
 
   function isActive(href?: string) {
     if (!href) return false;
@@ -289,3 +288,6 @@ export default function SiteHeader() {
     </>
   );
 }
+
+export { SiteHeader };
+export default SiteHeader;

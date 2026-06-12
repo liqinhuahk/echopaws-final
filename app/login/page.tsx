@@ -1,7 +1,14 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
 
@@ -39,16 +46,23 @@ function getSafeNextPath(raw: string | null) {
   return raw;
 }
 
-function getDisplayName(user: User | null) {
-  if (!user) return 'Unknown User';
+function getFinalContinuePath(nextPath: string) {
+  if (!nextPath || nextPath === '/login' || nextPath.startsWith('/login?')) {
+    return '/';
+  }
+  return nextPath;
+}
 
-  const metadata = user.user_metadata || {};
+function getDisplayName(user: User | null) {
+  if (!user) return 'User';
+
+  const meta = user.user_metadata ?? {};
   const fullName =
-    metadata.full_name ||
-    metadata.name ||
-    metadata.display_name ||
-    metadata.user_name ||
-    metadata.preferred_username;
+    meta.full_name ||
+    meta.name ||
+    meta.display_name ||
+    meta.user_name ||
+    meta.preferred_username;
 
   if (typeof fullName === 'string' && fullName.trim()) {
     return fullName.trim();
@@ -65,31 +79,17 @@ function getDisplayName(user: User | null) {
 function getProviderLabel(user: User | null) {
   if (!user) return 'Session';
 
-  const provider =
-    user.app_metadata?.provider ||
-    user.identities?.[0]?.provider ||
-    'email';
+  const provider = user.app_metadata?.provider || 'email';
 
   if (provider === 'google') return 'Google';
   if (provider === 'email') return 'Email';
-  return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
-}
 
-function getFinalContinuePath(nextPath: string) {
-  if (!nextPath || nextPath === '/login' || nextPath.startsWith('/login?')) {
-    return '/';
-  }
-  return nextPath;
+  return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
 }
 
 function GoogleIcon() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-      className="h-5 w-5"
-      fill="none"
-    >
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
       <path
         d="M21.805 12.23c0-.78-.064-1.35-.202-1.94H12.24v3.58h5.495c-.11.89-.705 2.23-2.028 3.13l-.018.12 2.94 2.23.204.02c1.873-1.69 2.954-4.18 2.954-7.14Z"
         fill="#4285F4"
@@ -301,15 +301,12 @@ function LoginPageContent() {
   const [statusDetail, setStatusDetail] = useState('Sign in with Google or Email to continue where you left off.');
   const [statusProvider, setStatusProvider] = useState('Ready');
 
-  const syncStatusFromUser = useCallback(
-    (user: User, providerOverride?: string) => {
-      setStatus('success');
-      setStatusTitle(`Signed in as ${getDisplayName(user)}`);
-      setStatusDetail(user.email || 'Authentication completed successfully.');
-      setStatusProvider(providerOverride || getProviderLabel(user));
-    },
-    []
-  );
+  const syncStatusFromUser = useCallback((user: User, providerOverride?: string) => {
+    setStatus('success');
+    setStatusTitle(`Signed in as ${getDisplayName(user)}`);
+    setStatusDetail(user.email || 'Authentication completed successfully.');
+    setStatusProvider(providerOverride || getProviderLabel(user));
+  }, []);
 
   const handleContinue = useCallback(() => {
     router.push(continuePath);
@@ -376,9 +373,11 @@ function LoginPageContent() {
       }
     };
 
-    init();
+    void init();
 
-    const { data: authListener } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!mounted) return;
 
       setSession(currentSession);
@@ -407,7 +406,7 @@ function LoginPageContent() {
 
     return () => {
       mounted = false;
-      authListener.subscription.unsubscribe();
+      subscription.unsubscribe();
     };
   }, [authHint, oauthHint, oauthMessageHint, supabase, syncStatusFromUser]);
 
@@ -422,6 +421,8 @@ function LoginPageContent() {
       setStatusProvider('Google');
 
       const siteUrl = getSiteUrl();
+
+      // 核心修复：Google OAuth 回调先进入 /auth/callback
       const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(nextPath)}&auth=google`;
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -445,7 +446,7 @@ function LoginPageContent() {
     }
   };
 
-  const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
+  const handleEmailAuth = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!supabase || isEmailLoading) return;
@@ -552,9 +553,8 @@ function LoginPageContent() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-8 text-white/70">
-                Keep the login experience warm, clear, and reassuring. Google sign-in and
-                Email sign-in now share the same visible status panel so users can always
-                tell whether authentication succeeded and which account is active.
+                Google sign-in and Email sign-in now share the same visible status panel,
+                so users can immediately tell whether authentication succeeded and which account is active.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
@@ -564,7 +564,7 @@ function LoginPageContent() {
                 />
                 <FeatureCard
                   title="Safer redirect flow"
-                  description="Google OAuth returns to the login flow first, so the page can confirm success before continuing."
+                  description="Google OAuth returns to the callback flow first, so the page can confirm success before continuing."
                 />
                 <FeatureCard
                   title="Less confusion"

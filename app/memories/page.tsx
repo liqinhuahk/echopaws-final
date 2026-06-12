@@ -346,12 +346,10 @@ export default function MemoriesPage() {
 
     const memoryPetId = memory.petId?.trim().toLowerCase();
     const petId = pet.id.trim().toLowerCase();
-
     if (memoryPetId && memoryPetId === petId) return true;
 
     const memoryPetName = memory.petName?.trim().toLowerCase();
     const petName = pet.name.trim().toLowerCase();
-
     if (memoryPetName && memoryPetName === petName) return true;
 
     return false;
@@ -466,8 +464,7 @@ export default function MemoriesPage() {
                 </div>
 
                 <p className="mt-5 max-w-3xl text-sm leading-7 text-[rgba(255,233,220,0.72)] sm:text-[15px]">
-                  Searchable memories, cleaner filters, and a softer brand shell so the page feels like a natural
-                  continuation of Home, Chat, and Account.
+                  Searchable memories, calmer filters, and a dedicated scrollable memory feed for longer emotion logs.
                 </p>
               </div>
 
@@ -490,7 +487,7 @@ export default function MemoriesPage() {
         </SectionCard>
 
         <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
-          <div className="space-y-5">
+          <div className="space-y-5 lg:sticky lg:top-24 lg:self-start">
             <SectionCard className="p-5">
               <div className="flex items-start gap-4">
                 <Avatar name={activePet?.name ?? 'M'} src={activePet?.avatarUrl} />
@@ -563,7 +560,7 @@ export default function MemoriesPage() {
           </div>
 
           <div className="space-y-5">
-            <SectionCard className="p-5">
+            <SectionCard className="p-5 lg:sticky lg:top-24 lg:z-20">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_220px_160px_auto_auto] md:items-end">
                 <div>
                   <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
@@ -632,60 +629,121 @@ export default function MemoriesPage() {
               <div className="mt-4 text-sm text-[rgba(255,233,220,0.64)]">{filteredMemories.length} results</div>
             </SectionCard>
 
-            <SectionCard className="min-h-[380px] p-5">
-              {state === 'loading' || state === 'idle' ? (
-                <div className="space-y-4">
-                  {Array.from({ length: 3 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="h-28 animate-pulse rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)]"
-                    />
-                  ))}
+            <SectionCard className="overflow-hidden p-4 sm:p-5">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Memory feed
+                  </div>
+                  <div className="mt-1 text-sm text-[rgba(255,233,220,0.66)]">
+                    Scroll to browse more saved emotions, preferences, and companion moments.
+                  </div>
                 </div>
-              ) : state === 'error' ? (
-                <div className="rounded-[24px] border border-[rgba(255,120,120,0.18)] bg-[rgba(255,90,90,0.06)] p-5 text-sm leading-7 text-[#ffd8d8]">
-                  {errorMessage ?? 'Unable to load memories right now.'}
-                </div>
-              ) : filteredMemories.length === 0 ? (
-                <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-5 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
-                  {allMemoriesForActivePet.length === 0
-                    ? 'No memories have been saved for this companion yet. If Chat already shows memory updates, the chat save flow likely is not writing records into the persistent memories table.'
-                    : 'No memories matched your current filters yet.'}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredMemories.map((memory) => {
-                    const stamp = memory.updatedAt ?? memory.createdAt;
 
-                    return (
-                      <article
-                        key={memory.id}
-                        className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5"
-                      >
-                        <div className="flex flex-wrap items-center gap-3">
-                          <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,180,103,0.24)] bg-[rgba(255,146,50,0.10)] px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
-                            {titleCase(memory.type)}
-                          </span>
+                <div className="shrink-0 rounded-full border border-[rgba(255,180,103,0.18)] bg-[rgba(255,146,50,0.08)] px-3 py-1.5 text-xs font-medium text-[#ffd9b5]">
+                  {filteredMemories.length} items
+                </div>
+              </div>
 
-                          {memory.source ? (
-                            <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(255,233,220,0.58)]">
-                              {memory.source}
+              <div
+                className="
+                  h-[58vh]
+                  min-h-[420px]
+                  max-h-[760px]
+                  overflow-y-auto
+                  pr-2
+                  scroll-smooth
+                  [scrollbar-width:thin]
+                  [scrollbar-color:rgba(255,180,103,0.35)_transparent]
+                  sm:h-[60vh]
+                  lg:h-[68vh]
+                "
+              >
+                <div className="space-y-4">
+                  {state === 'loading' || state === 'idle' ? (
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <div
+                        key={index}
+                        className="h-32 animate-pulse rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)]"
+                      />
+                    ))
+                  ) : state === 'error' ? (
+                    <div className="rounded-[24px] border border-[rgba(255,120,120,0.18)] bg-[rgba(255,90,90,0.06)] p-5 text-sm leading-7 text-[#ffd8d8]">
+                      {errorMessage ?? 'Unable to load memories right now.'}
+                    </div>
+                  ) : filteredMemories.length === 0 ? (
+                    <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-5 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
+                      {allMemoriesForActivePet.length === 0
+                        ? 'No memories have been saved for this companion yet. If Chat already shows memory updates, the chat save flow likely is not writing records into the persistent memories table.'
+                        : 'No memories matched your current filters yet.'}
+                    </div>
+                  ) : (
+                    filteredMemories.map((memory) => {
+                      const stamp = memory.updatedAt ?? memory.createdAt;
+                      const memoryType = memory.type.trim().toLowerCase();
+                      const isEmotion = memoryType === 'emotion';
+
+                      return (
+                        <article
+                          key={memory.id}
+                          className="
+                            rounded-[24px]
+                            border
+                            border-[rgba(255,233,220,0.08)]
+                            bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]
+                            p-4 sm:p-5
+                            shadow-[0_12px_30px_rgba(0,0,0,0.12)]
+                          "
+                        >
+                          <div className="flex flex-wrap items-center gap-3">
+                            <span
+                              className={cn(
+                                'inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]',
+                                isEmotion
+                                  ? 'border border-[rgba(255,180,103,0.24)] bg-[rgba(255,146,50,0.12)] text-[#efc39e]'
+                                  : 'border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] text-[rgba(255,233,220,0.72)]'
+                              )}
+                            >
+                              {titleCase(memory.type)}
                             </span>
-                          ) : null}
 
-                          <span className="ml-auto text-xs text-[rgba(255,233,220,0.50)]">
-                            {formatDateTime(stamp)}
-                          </span>
-                        </div>
+                            {memory.source ? (
+                              <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(255,233,220,0.58)]">
+                                {memory.source}
+                              </span>
+                            ) : null}
 
-                        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-[rgba(255,244,236,0.92)]">
-                          {memory.content}
-                        </p>
-                      </article>
-                    );
-                  })}
+                            <span className="ml-auto text-xs text-[rgba(255,233,220,0.50)]">
+                              {formatDateTime(stamp)}
+                            </span>
+                          </div>
+
+                          <div className="mt-4 rounded-[20px] border border-[rgba(255,233,220,0.06)] bg-[rgba(255,255,255,0.02)] p-4">
+                            <div className="mb-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-[rgba(255,214,179,0.54)]">
+                              {isEmotion ? 'Emotion detail' : 'Memory detail'}
+                            </div>
+
+                            <div
+                              className="
+                                max-h-28
+                                overflow-y-auto
+                                pr-1
+                                text-[15px]
+                                leading-8
+                                text-[rgba(255,244,236,0.92)]
+                                [scrollbar-width:thin]
+                                [scrollbar-color:rgba(255,180,103,0.28)_transparent]
+                              "
+                            >
+                              {memory.content}
+                            </div>
+                          </div>
+                        </article>
+                      );
+                    })
+                  )}
                 </div>
-              )}
+              </div>
             </SectionCard>
           </div>
         </div>

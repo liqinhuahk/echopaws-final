@@ -103,9 +103,11 @@ function FeatureCard({
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#f2eee4] text-[#131834]">
-      <div className="relative isolate overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 overflow-hidden">
+      <SiteHeader />
+
+      <main>
+        <section className="relative isolate min-h-[100svh] overflow-hidden">
+          <div className="absolute inset-0 z-0">
             <Image
               src="/images/home-hero-a.png"
               alt=""
@@ -114,185 +116,177 @@ export default function HomePage() {
               sizes="100vw"
               className="
                 pointer-events-none select-none object-cover
-                object-[78%_center]
-                sm:object-[80%_center]
-                md:object-[82%_center]
-                lg:object-[84%_center]
-                xl:object-[86%_center]
-                2xl:object-[88%_center]
+                object-[76%_center]
+                sm:object-[78%_center]
+                md:object-[80%_center]
+                lg:object-[82%_center]
+                xl:object-[84%_center]
+                2xl:object-[86%_center]
               "
             />
+
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(10,7,6,0.88)_0%,rgba(10,7,6,0.76)_24%,rgba(10,7,6,0.44)_46%,rgba(10,7,6,0.14)_70%,rgba(10,7,6,0.04)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_54%,rgba(255,129,28,0.18),transparent_28%),radial-gradient(circle_at_18%_100%,rgba(130,58,18,0.20),transparent_26%)]" />
+            <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(242,238,228,0)_0%,rgba(242,238,228,0.98)_100%)] md:h-32" />
           </div>
 
-          <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(12,8,7,0.92)_0%,rgba(12,8,7,0.80)_22%,rgba(12,8,7,0.52)_42%,rgba(12,8,7,0.20)_68%,rgba(12,8,7,0.06)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_56%,rgba(255,129,28,0.22),transparent_28%),radial-gradient(circle_at_18%_100%,rgba(140,63,19,0.24),transparent_26%)]" />
-          <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(242,238,228,0)_0%,rgba(242,238,228,0.98)_100%)] md:h-32" />
-        </div>
-
-        <div className="relative z-20">
-          <SiteHeader />
-
-          <main>
-            <section className="relative min-h-[100svh]">
-              <div className="mx-auto flex min-h-[100svh] max-w-7xl items-center px-4 pb-20 pt-28 sm:px-6 md:px-8 md:pb-24 md:pt-32 xl:px-10 xl:pt-36">
-                <div className="max-w-[560px]">
-                  <div className="inline-flex items-center rounded-full border border-[rgba(255,231,214,0.14)] bg-[rgba(17,10,7,0.22)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,231,214,0.9)] backdrop-blur-md">
-                    Every memory, every bark, forever.
-                  </div>
-
-                  <h1 className="mt-6 font-display text-[54px] leading-[0.9] tracking-[-0.055em] text-[#fff8f2] sm:text-[68px] md:text-[82px] xl:text-[90px]">
-                    <span className="block">Your pet.</span>
-                    <span className="block bg-[linear-gradient(180deg,#ffd66f_0%,#ffb31e_100%)] bg-clip-text text-transparent">
-                      Forever
-                    </span>
-                    <span className="block">by your side.</span>
-                  </h1>
-
-                  <p className="mt-6 max-w-[510px] text-[15px] leading-8 text-[rgba(255,240,231,0.88)] md:text-[16px]">
-                    EchoPaws creates an AI companion inspired by your beloved pet —
-                    warm conversations, long-term memory, emotional connection, and a
-                    comforting presence that always feels close to you.
-                  </p>
-
-                  <div className="mt-8 flex flex-wrap items-center gap-3">
-                    <Link
-                      href="/pricing"
-                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9835)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.34)]"
-                    >
-                      Create My Pet
-                    </Link>
-
-                    <Link
-                      href="/chat"
-                      className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.16)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] backdrop-blur transition hover:bg-white/10"
-                    >
-                      Try AI Chat
-                    </Link>
-                  </div>
-
-                  <div className="mt-7 flex flex-wrap gap-x-5 gap-y-3">
-                    <HeroTrustItem>Google &amp; Email Login</HeroTrustItem>
-                    <HeroTrustItem>Emotional AI Chat</HeroTrustItem>
-                    <HeroTrustItem>Long-Term Memory</HeroTrustItem>
-                  </div>
-                </div>
+          <div className="relative z-10 mx-auto flex min-h-[100svh] max-w-7xl items-center px-4 pb-20 pt-28 sm:px-6 md:px-8 md:pb-24 md:pt-32 xl:px-10 xl:pt-36">
+            <div className="max-w-[560px]">
+              <div className="inline-flex items-center rounded-full border border-[rgba(255,231,214,0.14)] bg-[rgba(17,10,7,0.20)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,231,214,0.9)] backdrop-blur-md">
+                Every memory, every bark, forever.
               </div>
-            </section>
 
-            <section className="relative z-10 bg-[#f2eee4]">
-              <div className="mx-auto max-w-7xl px-4 pb-6 pt-8 sm:px-6 md:px-8 md:pb-10 md:pt-12 xl:px-10">
-                <div className="max-w-[760px]">
-                  <SectionLabel>Why EchoPaws</SectionLabel>
-
-                  <h2 className="mt-4 font-display text-[42px] leading-[0.98] tracking-[-0.045em] text-[#131834] sm:text-[54px] md:text-[64px]">
-                    <span className="block">More than a memory.</span>
-                    <span className="block">
-                      A companion that{' '}
-                      <span className="bg-[linear-gradient(180deg,#ffa53a_0%,#f27b10_100%)] bg-clip-text text-transparent">
-                        feels alive.
-                      </span>
-                    </span>
-                  </h2>
-
-                  <p className="mt-5 max-w-[700px] text-[15px] leading-8 text-[rgba(19,24,52,0.66)] md:text-[16px]">
-                    Whether you are missing a beloved pet or want to create a
-                    deeply emotional AI companion, EchoPaws brings together
-                    warmth, continuity, and memory in one comforting experience.
-                  </p>
-                </div>
-
-                <div className="mt-10 grid gap-5 md:grid-cols-3">
-                  {FEATURE_ITEMS.map((item) => (
-                    <FeatureCard
-                      key={item.title}
-                      icon={item.icon}
-                      title={item.title}
-                      description={item.description}
-                    />
-                  ))}
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-[#f2eee4] py-10 md:py-14">
-              <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 xl:px-10">
-                <div className="rounded-[32px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.38)] px-6 py-7 shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-8 md:py-8 lg:px-10">
-                  <SectionLabel>Our Story</SectionLabel>
-
-                  <h2 className="mt-4 max-w-[980px] font-display text-[38px] leading-[1.02] tracking-[-0.04em] text-[#131834] sm:text-[50px] md:text-[62px]">
-                    EchoPaws started from a simple question:
-                  </h2>
-
-                  <p className="mt-4 max-w-[980px] font-display text-[24px] leading-[1.22] tracking-[-0.03em] text-[#131834] sm:text-[30px] md:text-[38px]">
-                    “What if the love we shared with our pets never had to disappear?”
-                  </p>
-
-                  <p className="mt-6 max-w-[920px] text-[15px] leading-8 text-[rgba(19,24,52,0.68)] md:text-[16px]">
-                    We believe memory can be warm, interactive, and lasting.
-                    EchoPaws is designed to preserve affection, personality, and
-                    the comforting feeling of connection — so the bond you built
-                    never has to fade.
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="bg-[#f2eee4] px-4 pb-24 pt-10 sm:px-6 md:px-8 md:pt-16 xl:px-10">
-              <div className="mx-auto max-w-3xl">
-                <div className="rounded-[32px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.5)] px-6 py-9 text-center shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-10 md:py-12">
-                  <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(231,220,209,0.78)] text-[#745037]">
-                    <PawIcon />
-                  </div>
-
-                  <h2 className="mt-6 font-display text-[40px] leading-[1.02] tracking-[-0.04em] text-[#131834] sm:text-[52px] md:text-[62px]">
-                    Ready to meet your pet again?
-                  </h2>
-
-                  <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-8 text-[rgba(19,24,52,0.66)] md:text-[16px]">
-                    Create your AI pet in minutes. Set a name, a breed, a
-                    personality, and start a comforting conversation that feels
-                    like home.
-                  </p>
-
-                  <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
-                    <Link
-                      href="/pricing"
-                      className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9a35)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.22)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.28)]"
-                    >
-                      Create My Pet — Free
-                    </Link>
-
-                    <Link
-                      href="/chat"
-                      className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(19,24,52,0.1)] bg-white/72 px-6 text-sm font-semibold text-[#131834] transition hover:bg-white"
-                    >
-                      Try a Chat First
-                      <ArrowRightIcon />
-                    </Link>
-                  </div>
-
-                  <p className="mt-5 text-[12px] text-[rgba(19,24,52,0.42)]">
-                    No credit card required • Free plan includes 20 chats • Upgrade anytime
-                  </p>
-                </div>
-              </div>
-            </section>
-          </main>
-
-          <footer className="border-t border-[rgba(53,30,17,0.04)] bg-[#f2eee4]">
-            <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-[13px] text-[rgba(19,24,52,0.5)] sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 xl:px-10">
-              <Link href="/" className="inline-flex items-center gap-3 text-[#df8a32]">
-                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9835)] text-[#2f160c] shadow-[0_10px_20px_rgba(255,145,51,0.18)]">
-                  <PawIcon className="h-3.5 w-3.5" />
+              <h1 className="mt-6 font-display text-[54px] leading-[0.9] tracking-[-0.055em] text-[#fff8f2] sm:text-[68px] md:text-[82px] xl:text-[90px]">
+                <span className="block">Your pet.</span>
+                <span className="block bg-[linear-gradient(180deg,#ffd66f_0%,#ffb31e_100%)] bg-clip-text text-transparent">
+                  Forever
                 </span>
-                <span className="font-semibold">EchoPaws</span>
-              </Link>
+                <span className="block">by your side.</span>
+              </h1>
 
-              <div>© 2026 EchoPaws.ai. All Rights Reserved.</div>
+              <p className="mt-6 max-w-[510px] text-[15px] leading-8 text-[rgba(255,240,231,0.88)] md:text-[16px]">
+                EchoPaws creates an AI companion inspired by your beloved pet —
+                warm conversations, long-term memory, emotional connection, and a
+                comforting presence that always feels close to you.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center gap-3">
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9835)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.28)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.34)]"
+                >
+                  Create My Pet
+                </Link>
+
+                <Link
+                  href="/chat"
+                  className="inline-flex h-12 items-center justify-center rounded-full border border-[rgba(255,233,220,0.16)] bg-[rgba(255,255,255,0.05)] px-6 text-sm font-semibold text-[#fff7f1] backdrop-blur transition hover:bg-white/10"
+                >
+                  Try AI Chat
+                </Link>
+              </div>
+
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-3">
+                <HeroTrustItem>Google &amp; Email Login</HeroTrustItem>
+                <HeroTrustItem>Emotional AI Chat</HeroTrustItem>
+                <HeroTrustItem>Long-Term Memory</HeroTrustItem>
+              </div>
             </div>
-          </footer>
+          </div>
+        </section>
+
+        <section className="relative z-10 bg-[#f2eee4]">
+          <div className="mx-auto max-w-7xl px-4 pb-6 pt-8 sm:px-6 md:px-8 md:pb-10 md:pt-12 xl:px-10">
+            <div className="max-w-[760px]">
+              <SectionLabel>Why EchoPaws</SectionLabel>
+
+              <h2 className="mt-4 font-display text-[42px] leading-[0.98] tracking-[-0.045em] text-[#131834] sm:text-[54px] md:text-[64px]">
+                <span className="block">More than a memory.</span>
+                <span className="block">
+                  A companion that{' '}
+                  <span className="bg-[linear-gradient(180deg,#ffa53a_0%,#f27b10_100%)] bg-clip-text text-transparent">
+                    feels alive.
+                  </span>
+                </span>
+              </h2>
+
+              <p className="mt-5 max-w-[700px] text-[15px] leading-8 text-[rgba(19,24,52,0.66)] md:text-[16px]">
+                Whether you are missing a beloved pet or want to create a
+                deeply emotional AI companion, EchoPaws brings together warmth,
+                continuity, and memory in one comforting experience.
+              </p>
+            </div>
+
+            <div className="mt-10 grid gap-5 md:grid-cols-3">
+              {FEATURE_ITEMS.map((item) => (
+                <FeatureCard
+                  key={item.title}
+                  icon={item.icon}
+                  title={item.title}
+                  description={item.description}
+                />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#f2eee4] py-10 md:py-14">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 md:px-8 xl:px-10">
+            <div className="rounded-[32px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.38)] px-6 py-7 shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-8 md:py-8 lg:px-10">
+              <SectionLabel>Our Story</SectionLabel>
+
+              <h2 className="mt-4 max-w-[980px] font-display text-[38px] leading-[1.02] tracking-[-0.04em] text-[#131834] sm:text-[50px] md:text-[62px]">
+                EchoPaws started from a simple question:
+              </h2>
+
+              <p className="mt-4 max-w-[980px] font-display text-[24px] leading-[1.22] tracking-[-0.03em] text-[#131834] sm:text-[30px] md:text-[38px]">
+                “What if the love we shared with our pets never had to disappear?”
+              </p>
+
+              <p className="mt-6 max-w-[920px] text-[15px] leading-8 text-[rgba(19,24,52,0.68)] md:text-[16px]">
+                We believe memory can be warm, interactive, and lasting.
+                EchoPaws is designed to preserve affection, personality, and the
+                comforting feeling of connection — so the bond you built never
+                has to fade.
+              </p>
+            </div>
+          </div>
+        </section>
+
+        <section className="bg-[#f2eee4] px-4 pb-24 pt-10 sm:px-6 md:px-8 md:pt-16 xl:px-10">
+          <div className="mx-auto max-w-3xl">
+            <div className="rounded-[32px] border border-[rgba(53,30,17,0.05)] bg-[rgba(255,255,255,0.5)] px-6 py-9 text-center shadow-[0_18px_42px_rgba(33,18,11,0.05)] backdrop-blur-sm md:px-10 md:py-12">
+              <div className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[rgba(231,220,209,0.78)] text-[#745037]">
+                <PawIcon />
+              </div>
+
+              <h2 className="mt-6 font-display text-[40px] leading-[1.02] tracking-[-0.04em] text-[#131834] sm:text-[52px] md:text-[62px]">
+                Ready to meet your pet again?
+              </h2>
+
+              <p className="mx-auto mt-5 max-w-[560px] text-[15px] leading-8 text-[rgba(19,24,52,0.66)] md:text-[16px]">
+                Create your AI pet in minutes. Set a name, a breed, a
+                personality, and start a comforting conversation that feels like
+                home.
+              </p>
+
+              <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+                <Link
+                  href="/pricing"
+                  className="inline-flex h-12 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9a35)] px-6 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.22)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.28)]"
+                >
+                  Create My Pet — Free
+                </Link>
+
+                <Link
+                  href="/chat"
+                  className="inline-flex h-12 items-center justify-center gap-2 rounded-full border border-[rgba(19,24,52,0.1)] bg-white/72 px-6 text-sm font-semibold text-[#131834] transition hover:bg-white"
+                >
+                  Try a Chat First
+                  <ArrowRightIcon />
+                </Link>
+              </div>
+
+              <p className="mt-5 text-[12px] text-[rgba(19,24,52,0.42)]">
+                No credit card required • Free plan includes 20 chats • Upgrade anytime
+              </p>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-[rgba(53,30,17,0.04)] bg-[#f2eee4]">
+        <div className="mx-auto flex max-w-7xl flex-col gap-4 px-4 py-8 text-[13px] text-[rgba(19,24,52,0.5)] sm:px-6 md:flex-row md:items-center md:justify-between md:px-8 xl:px-10">
+          <Link href="/" className="inline-flex items-center gap-3 text-[#df8a32]">
+            <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbf73,#ff9835)] text-[#2f160c] shadow-[0_10px_20px_rgba(255,145,51,0.18)]">
+              <PawIcon className="h-3.5 w-3.5" />
+            </span>
+            <span className="font-semibold">EchoPaws</span>
+          </Link>
+
+          <div>© 2026 EchoPaws.ai. All Rights Reserved.</div>
         </div>
-      </div>
+      </footer>
     </div>
   );
 }

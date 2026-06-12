@@ -36,7 +36,7 @@ function buildLoginReturnUrl(params: {
   return `/login?${search.toString()}`;
 }
 
-function CallbackContent() {
+function AuthCallbackContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -44,9 +44,8 @@ function CallbackContent() {
     let cancelled = false;
 
     const run = async () => {
-      const code = searchParams.get('code');
-      const auth = searchParams.get('auth') || 'google';
       const nextPath = getSafeNextPath(searchParams.get('next'));
+      const auth = searchParams.get('auth') || 'google';
 
       const oauthError = searchParams.get('error');
       const oauthErrorDescription =
@@ -62,6 +61,8 @@ function CallbackContent() {
         router.replace(target);
         return;
       }
+
+      const code = searchParams.get('code');
 
       if (!code) {
         const target = buildLoginReturnUrl({
@@ -114,13 +115,13 @@ function CallbackContent() {
   }, [router, searchParams]);
 
   return (
-    <main className="min-h-screen bg-[#0b1220] text-white">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
-        <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-2xl backdrop-blur">
+        <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />
           <h1 className="text-2xl font-semibold">正在完成 Google 登录…</h1>
-          <p className="mt-3 text-sm text-white/70">
-            请稍候，系统正在创建会话并返回登录页显示登录状态。
+          <p className="mt-3 text-sm leading-6 text-white/65">
+            请稍候，系统正在交换会话并返回登录页面展示登录结果。
           </p>
         </div>
       </div>
@@ -128,13 +129,13 @@ function CallbackContent() {
   );
 }
 
-function CallbackFallback() {
+function AuthCallbackFallback() {
   return (
-    <main className="min-h-screen bg-[#0b1220] text-white">
+    <main className="min-h-screen bg-[linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-2xl items-center justify-center px-6">
-        <div className="w-full rounded-3xl border border-white/10 bg-white/5 p-8 text-center shadow-2xl backdrop-blur">
+        <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />
-          <h1 className="text-2xl font-semibold">加载登录回调中…</h1>
+          <h1 className="text-2xl font-semibold">加载回调中…</h1>
         </div>
       </div>
     </main>
@@ -143,8 +144,8 @@ function CallbackFallback() {
 
 export default function AuthCallbackPage() {
   return (
-    <Suspense fallback={<CallbackFallback />}>
-      <CallbackContent />
+    <Suspense fallback={<AuthCallbackFallback />}>
+      <AuthCallbackContent />
     </Suspense>
   );
 }

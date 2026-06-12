@@ -1,9 +1,15 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense, useEffect, useMemo, useState } from 'react';
+import {
+  Suspense,
+  useEffect,
+  useMemo,
+  useState,
+  type FormEvent,
+} from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient, type Session, type User } from '@supabase/supabase-js';
+import { createClient, type User } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site-header';
 
 type AuthMode = 'signin' | 'signup';
@@ -51,11 +57,18 @@ function getProviderLabel(provider: AuthProvider) {
 }
 
 function getSiteUrl() {
-  return (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    (typeof window !== 'undefined' ? window.location.origin : '')
-  );
+  const fromEnv =
+    process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
+
+  if (fromEnv?.trim()) {
+    return fromEnv.replace(/\/$/, '');
+  }
+
+  if (typeof window !== 'undefined') {
+    return window.location.origin.replace(/\/$/, '');
+  }
+
+  return '';
 }
 
 function GoogleIcon() {
@@ -98,14 +111,28 @@ function Spinner() {
 
 function EyeIcon({ off = false }: { off?: boolean }) {
   return off ? (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="m3 3 18 18" />
       <path d="M10.58 10.59A2 2 0 0 0 13.4 13.4" />
       <path d="M9.88 5.09A9.77 9.77 0 0 1 12 4.88c5 0 9.27 3.11 11 7.5a11.83 11.83 0 0 1-4.17 5.94" />
       <path d="M6.61 6.61A11.79 11.79 0 0 0 1 12.38a11.83 11.83 0 0 0 7.5 6.78 10.86 10.86 0 0 0 4.18.1" />
     </svg>
   ) : (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
       <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
@@ -144,7 +171,7 @@ function StatusPanel({
         isSuccess &&
           'border-[rgba(104,211,145,0.22)] bg-[linear-gradient(180deg,rgba(64,120,77,0.18),rgba(22,36,24,0.28))]',
         isError &&
-          'border-[rgba(255,120,120,0.2)] bg-[linear-gradient(180deg,rgba(120,40,40,0.18),rgba(38,14,14,0.28))]',
+          'border-[rgba(255,120,120,0.20)] bg-[linear-gradient(180deg,rgba(120,40,40,0.18),rgba(38,14,14,0.28))]',
         isLoading &&
           'border-[rgba(255,180,103,0.22)] bg-[linear-gradient(180deg,rgba(124,71,25,0.18),rgba(30,16,9,0.28))]',
         status === 'idle' &&
@@ -158,7 +185,8 @@ function StatusPanel({
             isSuccess && 'bg-[rgba(104,211,145,0.15)] text-[#b8f0c6]',
             isError && 'bg-[rgba(255,120,120,0.14)] text-[#ffd1d1]',
             isLoading && 'bg-[rgba(255,180,103,0.14)] text-[#ffd6ad]',
-            status === 'idle' && 'bg-[rgba(255,255,255,0.05)] text-[rgba(255,233,220,0.70)]'
+            status === 'idle' &&
+              'bg-[rgba(255,255,255,0.05)] text-[rgba(255,233,220,0.70)]'
           )}
         >
           {isSuccess
@@ -176,8 +204,12 @@ function StatusPanel({
       </div>
 
       <div className="mt-3">
-        <div className="text-[15px] font-semibold text-[#fff5ee]">{title}</div>
-        <div className="mt-1 text-sm leading-6 text-[rgba(255,233,220,0.72)]">{detail}</div>
+        <div className="text-[15px] font-semibold text-[#fff5ee]">
+          {title}
+        </div>
+        <div className="mt-1 text-sm leading-6 text-[rgba(255,233,220,0.72)]">
+          {detail}
+        </div>
       </div>
 
       {isSuccess && user ? (
@@ -185,8 +217,13 @@ function StatusPanel({
           <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
             Signed-in account
           </div>
-          <div className="mt-2 text-base font-semibold text-[#fff5ee]">{displayName}</div>
-          <div className="mt-1 text-sm text-[rgba(255,233,220,0.68)]">{email || 'No email found'}</div>
+          <div className="mt-2 text-base font-semibold text-[#fff5ee]">
+            {displayName}
+          </div>
+          <div className="mt-1 text-sm text-[rgba(255,233,220,0.68)]">
+            {email || 'No email found'}
+          </div>
+
           <div className="mt-3 flex flex-wrap items-center gap-3">
             <span className="rounded-full border border-[rgba(104,211,145,0.18)] bg-[rgba(104,211,145,0.10)] px-3 py-1 text-xs text-[#b8f0c6]">
               Login successful
@@ -241,10 +278,10 @@ function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = searchParams.get('next') || '/';
+  const authHint = searchParams.get('auth');
   const supabase = useMemo(() => createBrowserSupabaseClient(), []);
 
   const [mode, setMode] = useState<AuthMode>('signin');
-  const [session, setSession] = useState<Session | null>(null);
   const [user, setUser] = useState<User | null>(null);
 
   const [email, setEmail] = useState('');
@@ -270,10 +307,12 @@ function LoginPageContent() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
+
     if (!rememberEmail) {
       window.localStorage.removeItem('echopaws.rememberedEmail');
       return;
     }
+
     if (email.trim()) {
       window.localStorage.setItem('echopaws.rememberedEmail', email.trim());
     }
@@ -283,13 +322,17 @@ function LoginPageContent() {
     if (!supabase) {
       setStatus('error');
       setStatusTitle('Supabase is not configured');
-      setStatusDetail('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      setStatusDetail(
+        'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      );
       return;
     }
 
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data, error }) => {
+    const readSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
       if (!mounted) return;
 
       if (error) {
@@ -299,39 +342,55 @@ function LoginPageContent() {
         return;
       }
 
-      const currentSession = data.session ?? null;
-      setSession(currentSession);
-      setUser(currentSession?.user ?? null);
+      const currentUser = data.session?.user ?? null;
+      setUser(currentUser);
 
-      if (currentSession?.user) {
-        const provider =
-          currentSession.user.app_metadata?.provider === 'google' ? 'google' : 'session';
+      if (currentUser) {
+        const provider: AuthProvider =
+          authHint === 'google'
+            ? 'google'
+            : currentUser.app_metadata?.provider === 'google'
+            ? 'google'
+            : 'session';
+
         setStatus('success');
         setStatusProvider(provider);
-        setStatusTitle(`Already signed in as ${getDisplayName(currentSession.user)}`);
+        setStatusTitle(`Already signed in as ${getDisplayName(currentUser)}`);
         setStatusDetail(
-          `Your ${getProviderLabel(provider)} session is active. You can continue safely.`
+          `Your ${getProviderLabel(
+            provider
+          )} session is active. You can continue safely.`
         );
       }
-    });
+    };
+
+    void readSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if (!mounted) return;
 
-      setSession(nextSession);
-      setUser(nextSession?.user ?? null);
+      const nextUser = nextSession?.user ?? null;
+      setUser(nextUser);
 
-      if (event === 'SIGNED_IN' && nextSession?.user) {
-        const provider =
-          nextSession.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+      if (event === 'SIGNED_IN' && nextUser) {
+        const provider: AuthProvider =
+          authHint === 'google'
+            ? 'google'
+            : nextUser.app_metadata?.provider === 'google'
+            ? 'google'
+            : 'email';
 
         setStatus('success');
         setStatusProvider(provider);
-        setStatusTitle(`Signed in successfully as ${getDisplayName(nextSession.user)}`);
+        setStatusTitle(
+          `Signed in successfully as ${getDisplayName(nextUser)}`
+        );
         setStatusDetail(
-          `${getProviderLabel(provider)} login completed. You can continue with this account now.`
+          `${getProviderLabel(
+            provider
+          )} login completed. You can continue with this account now.`
         );
         setIsGoogleLoading(false);
         setIsEmailLoading(false);
@@ -353,7 +412,7 @@ function LoginPageContent() {
       mounted = false;
       subscription.unsubscribe();
     };
-  }, [supabase]);
+  }, [supabase, authHint]);
 
   const handleContinue = () => {
     router.push(nextPath);
@@ -367,10 +426,14 @@ function LoginPageContent() {
       setStatus('loading');
       setStatusProvider('google');
       setStatusTitle('Redirecting to Google sign-in');
-      setStatusDetail('Please complete the Google authorization window. We will show your account name here after you return.');
+      setStatusDetail(
+        'Please complete the Google authorization window. We will show your account name here after you return.'
+      );
 
       const siteUrl = getSiteUrl();
-      const redirectTo = `${siteUrl}/login?next=${encodeURIComponent(nextPath)}`;
+      const redirectTo = `${siteUrl}/login?next=${encodeURIComponent(
+        nextPath
+      )}&auth=google`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -381,7 +444,8 @@ function LoginPageContent() {
 
       if (error) throw error;
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Google sign-in failed.';
+      const message =
+        error instanceof Error ? error.message : 'Google sign-in failed.';
       setStatus('error');
       setStatusProvider('google');
       setStatusTitle('Google sign-in failed');
@@ -390,15 +454,20 @@ function LoginPageContent() {
     }
   };
 
-  const handleEmailSubmit = async (event: React.FormEvent) => {
+  const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!supabase || isEmailLoading) return;
 
     const cleanEmail = email.trim();
+
     if (!cleanEmail || !password.trim()) {
       setStatus('error');
       setStatusProvider('email');
-      setStatusTitle(mode === 'signin' ? 'Sign-in information incomplete' : 'Account creation information incomplete');
+      setStatusTitle(
+        mode === 'signin'
+          ? 'Sign-in information incomplete'
+          : 'Account creation information incomplete'
+      );
       setStatusDetail('Please enter both your email address and password.');
       return;
     }
@@ -407,8 +476,12 @@ function LoginPageContent() {
       setIsEmailLoading(true);
       setStatus('loading');
       setStatusProvider('email');
-      setStatusTitle(mode === 'signin' ? 'Signing in with email' : 'Creating your account');
-      setStatusDetail('Please wait while we verify your email and password.');
+      setStatusTitle(
+        mode === 'signin' ? 'Signing in with email' : 'Creating your account'
+      );
+      setStatusDetail(
+        'Please wait while we verify your email and password.'
+      );
 
       if (mode === 'signin') {
         const { data, error } = await supabase.auth.signInWithPassword({
@@ -420,10 +493,11 @@ function LoginPageContent() {
 
         if (data.user) {
           setUser(data.user);
-          setSession(data.session ?? null);
           setStatus('success');
           setStatusProvider('email');
-          setStatusTitle(`Signed in successfully as ${getDisplayName(data.user)}`);
+          setStatusTitle(
+            `Signed in successfully as ${getDisplayName(data.user)}`
+          );
           setStatusDetail('Email & Password login completed successfully.');
         }
       } else {
@@ -432,7 +506,9 @@ function LoginPageContent() {
           email: cleanEmail,
           password,
           options: {
-            emailRedirectTo: `${siteUrl}/login?next=${encodeURIComponent(nextPath)}`,
+            emailRedirectTo: `${siteUrl}/login?next=${encodeURIComponent(
+              nextPath
+            )}`,
           },
         });
 
@@ -442,12 +518,15 @@ function LoginPageContent() {
           setUser(data.user);
         }
 
-        if (data.session) {
-          setSession(data.session);
+        if (data.session && data.user) {
           setStatus('success');
           setStatusProvider('email');
-          setStatusTitle(`Account created and signed in as ${getDisplayName(data.user ?? null)}`);
-          setStatusDetail('Your account has been created and is already active.');
+          setStatusTitle(
+            `Account created and signed in as ${getDisplayName(data.user)}`
+          );
+          setStatusDetail(
+            'Your account has been created and is already active.'
+          );
         } else {
           setStatus('success');
           setStatusProvider('email');
@@ -458,10 +537,13 @@ function LoginPageContent() {
         }
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Email authentication failed.';
+      const message =
+        error instanceof Error ? error.message : 'Email authentication failed.';
       setStatus('error');
       setStatusProvider('email');
-      setStatusTitle(mode === 'signin' ? 'Email sign-in failed' : 'Account creation failed');
+      setStatusTitle(
+        mode === 'signin' ? 'Email sign-in failed' : 'Account creation failed'
+      );
       setStatusDetail(message);
     } finally {
       setIsEmailLoading(false);
@@ -515,8 +597,9 @@ function LoginPageContent() {
               </h1>
 
               <p className="mt-6 max-w-[640px] text-[15px] leading-8 text-[rgba(255,233,220,0.72)]">
-                A refined sign-in experience that stays aligned with the EchoPaws home theme: warm,
-                elegant, readable, and reassuring for everyday use.
+                A refined sign-in experience that stays aligned with the
+                EchoPaws home theme: warm, elegant, readable, and reassuring
+                for everyday use.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-3">
@@ -528,7 +611,9 @@ function LoginPageContent() {
                     <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
                       {item.title}
                     </div>
-                    <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">{item.text}</p>
+                    <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">
+                      {item.text}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -547,8 +632,9 @@ function LoginPageContent() {
                   Less noise, more trust
                 </div>
                 <p className="mt-4 max-w-[680px] text-sm leading-8 text-[rgba(255,233,220,0.70)]">
-                  This page is designed to feel like part of the product, not just a utility screen —
-                  calm to enter, clear to use, and consistent with the rest of the EchoPaws experience.
+                  This page is designed to feel like part of the product, not
+                  just a utility screen — calm to enter, clear to use, and
+                  consistent with the rest of the EchoPaws experience.
                 </p>
               </div>
             </div>
@@ -595,7 +681,9 @@ function LoginPageContent() {
 
               <div className="mt-5">
                 <h2 className="font-serif text-4xl tracking-[-0.04em] text-[#fff5ee]">
-                  {mode === 'signin' ? 'Welcome back to your companion space' : 'Create your calm companion account'}
+                  {mode === 'signin'
+                    ? 'Welcome back to your companion space'
+                    : 'Create your calm companion account'}
                 </h2>
                 <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
                   {mode === 'signin'
@@ -621,7 +709,11 @@ function LoginPageContent() {
                 className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-5 text-sm font-medium text-[#fff5ee] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
               >
                 {isGoogleLoading ? <Spinner /> : <GoogleIcon />}
-                <span>{isGoogleLoading ? 'Opening Google...' : 'Continue with Google'}</span>
+                <span>
+                  {isGoogleLoading
+                    ? 'Opening Google...'
+                    : 'Continue with Google'}
+                </span>
               </button>
 
               <div className="my-6 flex items-center gap-4">
@@ -654,10 +746,18 @@ function LoginPageContent() {
                   <div className="relative">
                     <input
                       type={showPassword ? 'text' : 'password'}
-                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                      autoComplete={
+                        mode === 'signin'
+                          ? 'current-password'
+                          : 'new-password'
+                      }
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
+                      placeholder={
+                        mode === 'signin'
+                          ? 'Enter your password'
+                          : 'Create a password'
+                      }
                       className="h-12 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-white/[0.04] px-4 pr-12 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
                     />
                     <button
@@ -709,8 +809,9 @@ function LoginPageContent() {
               </form>
 
               <div className="mt-5 rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4 text-sm leading-7 text-[rgba(255,233,220,0.60)]">
-                If your account was originally created with Google, it is best to continue with Google first.
-                Your signed-in account name and email will appear above as soon as the login succeeds.
+                If your account was originally created with Google, it is best
+                to continue with Google first. Your signed-in account name and
+                email will appear above as soon as the login succeeds.
               </div>
             </div>
           </section>

@@ -1,27 +1,101 @@
-import { createServerClient } from "@supabase/ssr";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-const protectedRoutes = ["/create-pet", "/pets", "/chat", "/account", "/memories"];
+function isProtectedPath(pathname: string) {
+  return (
+    pathname === '/chat' ||
+    pathname.startsWith('/chat/') ||
+    pathname === '/memories' ||
+    pathname.startsWith('/memories/') ||
+    pathname === '/account' ||
+    pathname.startsWith('/account/')
+  );
+}
+
+function getSafeNextPath(pathname: string, search: string) {
+  const combined = `${pathname}${search || ''}`;
+  if (!combined.startsWith('/')) return '/';
+  if (combined.startsWith('//')) return '/';
+  return combined;
+}
+
+function buildLoginRedirect(request: NextRequest) {
+  const url = request.nextUrl.clone();
+  const next = getSafeNextPath(request.nextUrl.pathname, request.nextUrl.search);
+  url.pathname = '/login';
+  url.search = '';
+  url.searchParams.set('next', next);
+  return url;
+}
 
 export async function middleware(request: NextRequest) {
-  let response = NextResponse.next({ request });
+  const pathname = request.nextUrl.pathname;
+
+  if (
+    pathname.startsWith('/_next') ||
+    pathname.startsWith('/api') ||
+    pathname === '/favicon.ico' ||
+    pathname === '/robots.txt' ||
+    pathname === '/sitemap.xml'
+  ) {
+    return NextResponse.next();
+  }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
   if (!supabaseUrl || !supabaseAnonKey) {
-    return response;
+    return NextResponse.next();
   }
+
+  let response = NextResponse.next({
+    request: {
+      headers: request.headers,
+    },
+  });
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      getAll() {
-        return request.cookies.getAll();
+      get(name: string) {
+        return request.cookies.get(name)?.value;
       },
-      setAll(cookiesToSet) {
-        cookiesToSet.forEach(({ name, value, options }) => request.cookies.set(name, value));
-        response = NextResponse.next({ request });
-        cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options));
+      set(name: string, value: string, options: any) {
+        request.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+
+        response = NextResponse.next({
+          request: {
+            headers: request.headers,
+          },
+        });
+
+        response.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+      },
+      remove(name: string, options: any) {
+        request.cookies.set({
+          name,
+          value: '',
+          ...options,
+        });
+
+        response = NextResponse.next({
+          request: {
+            headers: request.headers,
+          },
+        });
+
+        response.cookies.set({
+          name,
+          value: '',
+          ...options,
+        });
       },
     },
   });
@@ -30,17 +104,41 @@ export async function middleware(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const isProtected = protectedRoutes.some((route) => request.nextUrl.pathname.startsWith(route));
+  const auth = request.nextUrl.searchParams.get('auth');
+  const oauth = request.nextUrl.searchParams.get('oauth');
+  const nextParam = request.nextUrl.searchParams.get('next');
 
-  if (isProtected && !user) {
-    const loginUrl = new URL("/login", request.url);
-    loginUrl.searchParams.set("message", "Please log in to continue.");
-    return NextResponse.redirect(loginUrl);
+  const isLoginPage = pathname === '/login';
+  const isAuthCallbackPage = pathname === '/auth/callback';
+
+  const isGoogleOauthStatusReturn =
+    isLoginPage && auth === 'google' && oauth === 'done';
+
+  if (!user && isProtectedPath(pathname)) {
+    return NextResponse.redirect(buildLoginRedirect(request));
+  }
+
+  if (isAuthCallbackPage) {
+    return response;
+  }
+
+  if (user && isLoginPage && !isGoogleOauthStatusReturn) {
+    const safeNext =
+      nextParam && nextParam.startsWith('/') && !nextParam.startsWith('//')
+        ? nextParam
+        : '/';
+
+    const redirectTarget = safeNext === '/login' ? '/' : safeNext;
+    const redirectUrl = new URL(redirectTarget, request.url);
+
+    return NextResponse.redirect(redirectUrl);
   }
 
   return response;
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    '/((?!_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js|map|txt|xml)$).*)',
+  ],
 };

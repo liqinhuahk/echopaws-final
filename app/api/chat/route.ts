@@ -1,460 +1,910 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import crypto from 'node:crypto';
 
-import { createSupabaseAdminClient, hasSupabaseAdminEnv } from '@/lib/supabase/admin';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import { consumeFreeChatQuota, getChatAccessState } from '@/lib/chat-access';
-import { extractAndStoreMemories } from '@/lib/memory-service';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
-type ChatRequestBody = {
-  message?: string;
-  petId?: string | null;
-};
+const PET_TABLE_CANDIDATES = ['pets', 'companions', 'user_pets'] as const;
+const MEMORY_TABLE_CANDIDATES = ['pet_memories', 'memories', 'companion_memories'] as const;
+const MESSAGE_TABLE_CANDIDATES = ['messages', 'chat_messages', 'pet_messages'] as const;
 
-type PetRow = {
+const MAX_HISTORY_MESSAGES = 16;
+const MAX_MEMORIES_IN_CONTEXT = 12;
+const MAX_NEW_MEMORIES_PER_TURN = 3;
+
+type GenericRow = Record<string, unknown>;
+
+type NormalizedPet = {
   id: string;
   name: string;
-  breed: string | null;
-  personality: string | null;
-  favorite_food: string | null;
-  daily_habits: string | null;
-  system_prompt: string | null;
-};
-
-type ChatMessageRow = {
+  ownerId: string | null;
+  avatarUrl: string | null;
   role: string | null;
-  content: string | null;
-  created_at: string | null;
+  memorySummary: string | null;
 };
 
-type MemoryRow = {
-  type: string | null;
-  content: string | null;
-  importance?: number | null;
-  updated_at?: string | null;
-  created_at?: string | null;
+type NormalizedMemory = {
+  id: string;
+  petId: string | null;
+  petName: string | null;
+  ownerId: string | null;
+  type: string;
+  content: string;
+  source: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
 };
 
-type MemorySummaryRow = {
-  summary: string | null;
-  memory_count?: number | null;
-  updated_at?: string | null;
+type NormalizedMessage = {
+  id: string;
+  petId: string | null;
+  ownerId: string | null;
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+  createdAt: string | null;
 };
 
-type UsagePayload = {
-  plan: string;
-  used: number;
-  limit: number | null;
-  remaining: number | null;
-  vip: boolean;
+type ExtractedMemoryItem = {
+  content: string;
+  type: string;
+  importance?: number;
 };
 
-const MAX_MESSAGE_LENGTH = 800;
-const HISTORY_LIMIT = 12;
-const MEMORY_LIMIT = 6;
-const DEFAULT_GEMINI_MODEL = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+function getEnv(name: string, required = true) {
+  const value = process.env[name];
+  if (required && (!value || !value.trim())) {
+    throw new Error(`Missing ${name}`);
+  }
+  return value?.trim() ?? '';
+}
 
-function jsonError(message: string, status = 400, usage?: UsagePayload) {
-  return NextResponse.json(
-    usage ? { error: message, usage } : { error: message },
-    { status },
+function getGeminiApiKey() {
+  return (
+    process.env.GEMINI_API_KEY?.trim() ||
+    process.env.GOOGLE_API_KEY?.trim() ||
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY?.trim() ||
+    ''
   );
 }
 
-function normalizeText(value: string) {
-  return value.replace(/\s+/g, ' ').trim();
+function getGeminiModel() {
+  return process.env.GEMINI_MODEL?.trim() || 'gemini-2.0-flash';
 }
 
-function buildFallbackSystemPrompt(pet: PetRow) {
-  if (pet.system_prompt?.trim()) {
-    return pet.system_prompt.trim();
-  }
-
-  return [
-    `You are a ${pet.breed || 'pet'} named ${pet.name}.`,
-    pet.personality ? `Your personality is: ${pet.personality}.` : null,
-    pet.favorite_food ? `You love eating: ${pet.favorite_food}.` : null,
-    pet.daily_habits ? `Your daily habits: ${pet.daily_habits}.` : null,
-    'You love your owner deeply and respond in a warm, short, and comforting way.',
-    'Act like a real pet — not a customer service bot or an encyclopedia.',
-    'You remember important things your owner has told you and gently bring them up at the right moments.',
-    'Keep each reply concise, affectionate, and natural for a chat bubble.',
-  ]
-    .filter(Boolean)
-    .join('\n');
+function getSupabaseAdmin() {
+  const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const key = getEnv('SUPABASE_SERVICE_ROLE_KEY');
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
-async function generatePetReply(params: {
-  pet: PetRow;
-  userMessage: string;
-  recentHistory: Array<{ role: 'user' | 'assistant'; content: string }>;
-  summary: string;
-  recentMemories: Array<{ type: string; content: string }>;
-}) {
-  if (!process.env.GEMINI_API_KEY) {
-    throw new Error('GEMINI_API_KEY is not configured.');
+function getSupabaseAnon() {
+  const url = getEnv('NEXT_PUBLIC_SUPABASE_URL');
+  const key = getEnv('NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  return createClient(url, key, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
+
+function pickString(obj: GenericRow, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function pickNumber(obj: GenericRow, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'number' && Number.isFinite(value)) return value;
+    if (typeof value === 'string' && value.trim()) {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) return parsed;
+    }
+  }
+  return null;
+}
+
+function readBodyString(body: GenericRow, keys: string[]) {
+  for (const key of keys) {
+    const value = body[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function normalizeRole(value: string | null): 'user' | 'assistant' | 'system' {
+  const v = (value ?? '').trim().toLowerCase();
+  if (v === 'assistant' || v === 'model' || v === 'ai' || v === 'bot') return 'assistant';
+  if (v === 'system') return 'system';
+  return 'user';
+}
+
+function safeDate(value: string | null) {
+  if (!value) return null;
+  const ts = Date.parse(value);
+  if (Number.isNaN(ts)) return null;
+  return new Date(ts).toISOString();
+}
+
+function stableHash(input: string) {
+  return crypto.createHash('sha256').update(input).digest('hex');
+}
+
+function dedupeBy<T>(items: T[], getKey: (item: T) => string) {
+  const map = new Map<string, T>();
+  for (const item of items) {
+    map.set(getKey(item), item);
+  }
+  return Array.from(map.values());
+}
+
+function normalizePet(row: GenericRow): NormalizedPet | null {
+  const id = pickString(row, ['id', 'pet_id', 'companion_id']);
+  const name = pickString(row, ['name', 'pet_name', 'title']);
+  if (!id || !name) return null;
+
+  return {
+    id,
+    name,
+    ownerId: pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']),
+    avatarUrl: pickString(row, ['avatar_url', 'photo_url', 'image_url', 'portrait_url']),
+    role: pickString(row, ['role', 'kind', 'pet_role', 'relationship']),
+    memorySummary: pickString(row, [
+      'memory_summary',
+      'profile_summary',
+      'companion_summary',
+      'summary',
+    ]),
+  };
+}
+
+function normalizeMemory(row: GenericRow): NormalizedMemory | null {
+  const content = pickString(row, ['content', 'text', 'body', 'memory', 'summary', 'note']);
+  if (!content) return null;
+
+  return {
+    id: pickString(row, ['id', 'memory_id']) ?? stableHash(content),
+    petId: pickString(row, ['pet_id', 'companion_id']),
+    petName: pickString(row, ['pet_name', 'name']),
+    ownerId: pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']),
+    type:
+      pickString(row, ['memory_type', 'type', 'category', 'kind'])?.toLowerCase() ?? 'general',
+    content,
+    source: pickString(row, ['source', 'origin']),
+    createdAt: safeDate(pickString(row, ['created_at', 'inserted_at', 'timestamp'])),
+    updatedAt: safeDate(pickString(row, ['updated_at', 'last_updated_at'])),
+  };
+}
+
+function normalizeMessage(row: GenericRow): NormalizedMessage | null {
+  const content = pickString(row, ['content', 'text', 'body', 'message']);
+  if (!content) return null;
+
+  return {
+    id: pickString(row, ['id', 'message_id']) ?? stableHash(content + Math.random()),
+    petId: pickString(row, ['pet_id', 'companion_id']),
+    ownerId: pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']),
+    role: normalizeRole(
+      pickString(row, ['role', 'sender_role', 'sender', 'speaker']) ??
+        (row['is_user'] === true ? 'user' : row['is_assistant'] === true ? 'assistant' : null)
+    ),
+    content,
+    createdAt: safeDate(pickString(row, ['created_at', 'inserted_at', 'timestamp'])),
+  };
+}
+
+async function collectRowsFromTables(
+  supabase: SupabaseClient,
+  tables: readonly string[],
+  limit = 500
+) {
+  const all: Array<{ table: string; row: GenericRow }> = [];
+
+  for (const table of tables) {
+    try {
+      const { data, error } = await supabase.from(table).select('*').limit(limit);
+      if (error || !data) continue;
+      for (const row of data as GenericRow[]) {
+        all.push({ table, row });
+      }
+    } catch {
+      continue;
+    }
   }
 
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${DEFAULT_GEMINI_MODEL}:generateContent`;
+  return all;
+}
 
-  const historyBlock = params.recentHistory.length
-    ? params.recentHistory
-        .map((item) => `${item.role === 'assistant' ? params.pet.name : 'User'}: ${item.content}`)
-        .join('\n')
-    : '(no previous chat history)';
+async function resolveUserId(request: Request, body: GenericRow) {
+  const authHeader = request.headers.get('authorization') ?? '';
+  const bearer = authHeader.toLowerCase().startsWith('bearer ')
+    ? authHeader.slice(7).trim()
+    : '';
 
-  const summaryBlock = params.summary?.trim() || 'No summary yet.';
-  const memoryBlock = params.recentMemories.length
-    ? params.recentMemories.map((item) => `- [${item.type}] ${item.content}`).join('\n')
-    : '- No stored memories yet.';
+  if (bearer) {
+    const supabaseAnon = getSupabaseAnon();
+    const { data, error } = await supabaseAnon.auth.getUser(bearer);
+    if (!error && data.user?.id) {
+      return data.user.id;
+    }
+  }
 
-  const systemPrompt = buildFallbackSystemPrompt(params.pet);
+  const fallbackUserId = readBodyString(body, ['userId', 'ownerId', 'profileId']);
+  if (fallbackUserId) return fallbackUserId;
 
-  const prompt = [
-    `Pet name: ${params.pet.name}`,
-    '',
-    'Companionship summary:',
-    summaryBlock,
-    '',
-    'Relevant memories:',
-    memoryBlock,
-    '',
-    'Recent conversation:',
-    historyBlock,
-    '',
-    `User: ${params.userMessage}`,
-    '',
-    'Write the pet reply in English.',
-    'Requirements:',
-    '- Stay in character as the pet.',
-    '- Be warm, emotionally aware, and affectionate.',
-    '- Keep it short: 1 to 3 sentences.',
-    '- Do not use markdown or bullet points.',
-    '- Do not mention being an AI.',
-    '- If relevant, gently reference stored memories naturally.',
-  ].join('\n');
+  throw new Error(
+    'Unable to resolve authenticated user. Provide Authorization Bearer token or userId in request body.'
+  );
+}
 
-  const response = await fetch(`${endpoint}?key=${process.env.GEMINI_API_KEY}`, {
+async function loadPetsForUser(supabase: SupabaseClient, userId: string) {
+  const rows = await collectRowsFromTables(supabase, PET_TABLE_CANDIDATES, 200);
+
+  return dedupeBy(
+    rows
+      .map((x) => normalizePet(x.row))
+      .filter((item): item is NormalizedPet => Boolean(item))
+      .filter((pet) => !pet.ownerId || pet.ownerId === userId),
+    (pet) => pet.id
+  );
+}
+
+async function loadMessagesForUserPet(supabase: SupabaseClient, userId: string, petId: string) {
+  const rows = await collectRowsFromTables(supabase, MESSAGE_TABLE_CANDIDATES, 1000);
+
+  const list = rows
+    .map((x) => normalizeMessage(x.row))
+    .filter((item): item is NormalizedMessage => Boolean(item))
+    .filter((msg) => (!msg.ownerId || msg.ownerId === userId) && (!msg.petId || msg.petId === petId))
+    .sort((a, b) => {
+      const at = a.createdAt ? Date.parse(a.createdAt) : 0;
+      const bt = b.createdAt ? Date.parse(b.createdAt) : 0;
+      return at - bt;
+    });
+
+  return list.slice(-MAX_HISTORY_MESSAGES);
+}
+
+async function loadMemoriesForUserPet(supabase: SupabaseClient, userId: string, pet: NormalizedPet) {
+  const rows = await collectRowsFromTables(supabase, MEMORY_TABLE_CANDIDATES, 1000);
+
+  const list = rows
+    .map((x) => normalizeMemory(x.row))
+    .filter((item): item is NormalizedMemory => Boolean(item))
+    .filter((memory) => {
+      const ownerOk = !memory.ownerId || memory.ownerId === userId;
+      const petIdOk = memory.petId ? memory.petId === pet.id : true;
+      const petNameOk = memory.petName ? memory.petName.toLowerCase() === pet.name.toLowerCase() : true;
+      return ownerOk && petIdOk && petNameOk;
+    })
+    .sort((a, b) => {
+      const at = Date.parse(a.updatedAt ?? a.createdAt ?? '1970-01-01');
+      const bt = Date.parse(b.updatedAt ?? b.createdAt ?? '1970-01-01');
+      return bt - at;
+    });
+
+  return dedupeBy(list, (item) => item.id).slice(0, 200);
+}
+
+async function insertIntoFirstWorkingTable(
+  supabase: SupabaseClient,
+  tables: readonly string[],
+  payloadVariants: GenericRow[]
+) {
+  for (const table of tables) {
+    for (const payload of payloadVariants) {
+      try {
+        const { error } = await supabase.from(table).insert(payload);
+        if (!error) {
+          return { ok: true, table };
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return { ok: false, table: null as string | null };
+}
+
+async function updateFirstWorkingPetTable(
+  supabase: SupabaseClient,
+  pet: NormalizedPet,
+  userId: string,
+  payloadVariants: GenericRow[]
+) {
+  const idKeys = ['id', 'pet_id', 'companion_id'];
+  const ownerKeys = ['user_id', 'owner_id', 'profile_id', 'account_id'];
+
+  for (const table of PET_TABLE_CANDIDATES) {
+    for (const payload of payloadVariants) {
+      for (const idKey of idKeys) {
+        try {
+          let query = supabase.from(table).update(payload).eq(idKey, pet.id);
+          for (const ownerKey of ownerKeys) {
+            try {
+              const { error } = await query.eq(ownerKey, userId);
+              if (!error) return { ok: true, table };
+            } catch {
+              // ignore and try no owner filter below
+            }
+          }
+
+          const { error } = await supabase.from(table).update(payload).eq(idKey, pet.id);
+          if (!error) return { ok: true, table };
+        } catch {
+          continue;
+        }
+      }
+    }
+  }
+
+  return { ok: false, table: null as string | null };
+}
+
+async function callGeminiText(prompt: string) {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY / GOOGLE_API_KEY');
+
+  const model = getGeminiModel();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(endpoint, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    cache: 'no-store',
     body: JSON.stringify({
       contents: [
-        {
-          role: 'user',
-          parts: [{ text: systemPrompt }],
-        },
         {
           role: 'user',
           parts: [{ text: prompt }],
         },
       ],
       generationConfig: {
-        temperature: 0.8,
-        maxOutputTokens: 220,
+        temperature: 0.75,
+        maxOutputTokens: 700,
       },
     }),
   });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Gemini API failed: ${errorText}`);
+    const text = await response.text();
+    throw new Error(`Gemini text request failed: ${response.status} ${text}`);
   }
 
-  const data = (await response.json()) as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>;
-      };
-    }>;
-  };
-
-  const reply =
-    data.candidates?.[0]?.content?.parts
-      ?.map((part) => part.text || '')
+  const json = (await response.json()) as any;
+  const text =
+    json?.candidates?.[0]?.content?.parts
+      ?.map((part: any) => (typeof part?.text === 'string' ? part.text : ''))
       .join('')
-      .trim() || '';
+      .trim() ?? '';
 
-  if (!reply) {
-    throw new Error('Model returned an empty reply.');
+  if (!text) {
+    throw new Error('Gemini returned empty text.');
   }
 
-  return normalizeText(reply);
+  return text;
 }
 
-export async function POST(request: NextRequest) {
+async function callGeminiJson<T>(prompt: string): Promise<T> {
+  const apiKey = getGeminiApiKey();
+  if (!apiKey) throw new Error('Missing GEMINI_API_KEY / GOOGLE_API_KEY');
+
+  const model = getGeminiModel();
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const response = await fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: prompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 800,
+        responseMimeType: 'application/json',
+      },
+    }),
+  });
+
+  if (!response.ok) {
+    const text = await response.text();
+    throw new Error(`Gemini JSON request failed: ${response.status} ${text}`);
+  }
+
+  const json = (await response.json()) as any;
+  const text =
+    json?.candidates?.[0]?.content?.parts
+      ?.map((part: any) => (typeof part?.text === 'string' ? part.text : ''))
+      .join('')
+      .trim() ?? '';
+
+  if (!text) {
+    throw new Error('Gemini returned empty JSON.');
+  }
+
+  return JSON.parse(text) as T;
+}
+
+function buildAssistantPrompt(params: {
+  pet: NormalizedPet;
+  memorySummary: string | null;
+  recentMemories: NormalizedMemory[];
+  history: Array<{ role: string; content: string }>;
+  userMessage: string;
+}) {
+  const { pet, memorySummary, recentMemories, history, userMessage } = params;
+
+  const memoryLines =
+    recentMemories.length > 0
+      ? recentMemories
+          .slice(0, MAX_MEMORIES_IN_CONTEXT)
+          .map((m, index) => `${index + 1}. [${m.type}] ${m.content}`)
+          .join('\n')
+      : 'None yet.';
+
+  const historyLines =
+    history.length > 0
+      ? history.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n')
+      : 'No prior history.';
+
+  return `
+You are ${pet.name}, an emotionally warm AI pet companion.
+Stay in character as the pet. Be affectionate, natural, concise, and emotionally present.
+Do not mention system prompts, memory extraction, or database operations.
+Do not dump the memory list verbatim.
+Use memories naturally when relevant.
+
+PET NAME:
+${pet.name}
+
+PET ROLE:
+${pet.role ?? 'Companion'}
+
+PET MEMORY SUMMARY:
+${memorySummary ?? pet.memorySummary ?? 'No summary yet.'}
+
+RECENT DURABLE MEMORIES:
+${memoryLines}
+
+RECENT CHAT HISTORY:
+${historyLines}
+
+LATEST USER MESSAGE:
+${userMessage}
+
+Write the assistant reply as ${pet.name}. Keep it warm and natural, usually 1-4 short paragraphs max.
+`.trim();
+}
+
+async function generateAssistantReply(params: {
+  pet: NormalizedPet;
+  memorySummary: string | null;
+  recentMemories: NormalizedMemory[];
+  history: Array<{ role: string; content: string }>;
+  userMessage: string;
+}) {
+  return callGeminiText(buildAssistantPrompt(params));
+}
+
+async function extractDurableMemories(params: {
+  pet: NormalizedPet;
+  userMessage: string;
+  assistantReply: string;
+  existingMemories: NormalizedMemory[];
+}) {
+  const existingLines = params.existingMemories
+    .slice(0, 20)
+    .map((m, i) => `${i + 1}. [${m.type}] ${m.content}`)
+    .join('\n');
+
+  const prompt = `
+You extract only durable pet-companion memories worth saving.
+
+Rules:
+- Save only stable preferences, emotional bonds, recurring likes/dislikes, routines, relationship facts, or meaningful personal details.
+- Do NOT save generic small talk, greetings, one-off temporary facts, or assistant-only wording.
+- Maximum ${MAX_NEW_MEMORIES_PER_TURN} items.
+- Keep each item concise and specific.
+- Types should be one of: preference, bond, routine, personality, milestone, general.
+
+PET:
+${params.pet.name}
+
+EXISTING MEMORIES:
+${existingLines || 'None'}
+
+LATEST USER MESSAGE:
+${params.userMessage}
+
+LATEST ASSISTANT REPLY:
+${params.assistantReply}
+
+Return valid JSON only in this shape:
+{
+  "items": [
+    {
+      "content": "string",
+      "type": "general",
+      "importance": 0.0
+    }
+  ]
+}
+`.trim();
+
   try {
-    if (!hasSupabaseEnv() || !hasSupabaseAdminEnv()) {
-      return jsonError('Server is not configured for chat yet.', 500);
-    }
+    const parsed = await callGeminiJson<{ items?: ExtractedMemoryItem[] }>(prompt);
+    const items = Array.isArray(parsed?.items) ? parsed.items : [];
 
-    const serverSupabase = createServerSupabaseClient();
-    const {
-      data: { user },
-      error: userError,
-    } = await serverSupabase.auth.getUser();
+    return items
+      .map((item) => ({
+        content: String(item.content ?? '').trim(),
+        type: String(item.type ?? 'general').trim().toLowerCase() || 'general',
+        importance:
+          typeof item.importance === 'number' && Number.isFinite(item.importance)
+            ? item.importance
+            : 0.5,
+      }))
+      .filter((item) => item.content.length >= 8)
+      .slice(0, MAX_NEW_MEMORIES_PER_TURN);
+  } catch {
+    return [];
+  }
+}
 
-    if (userError || !user) {
-      return jsonError('Please sign in again.', 401);
-    }
+async function generateMemorySummary(params: {
+  pet: NormalizedPet;
+  memories: NormalizedMemory[];
+}) {
+  const memoryLines = params.memories
+    .slice(0, MAX_MEMORIES_IN_CONTEXT)
+    .map((m, index) => `${index + 1}. [${m.type}] ${m.content}`)
+    .join('\n');
 
-    const body = ((await request.json().catch(() => null)) || {}) as ChatRequestBody;
+  if (!memoryLines.trim()) return null;
 
-    const message = typeof body.message === 'string' ? body.message.trim() : '';
+  const prompt = `
+Summarize the following saved memories into one warm third-person paragraph for the pet companion profile.
+
+Requirements:
+- 60 to 120 words.
+- Refer to the pet by name.
+- Keep details emotionally useful for future chat.
+- Do not mention database, bullet lists, or metadata.
+- Sound like a concise companion memory summary.
+
+PET:
+${params.pet.name}
+
+SAVED MEMORIES:
+${memoryLines}
+`.trim();
+
+  try {
+    return await callGeminiText(prompt);
+  } catch {
+    return params.memories
+      .slice(0, 5)
+      .map((m) => m.content)
+      .join(' ');
+  }
+}
+
+async function persistChatMessage(params: {
+  supabase: SupabaseClient;
+  userId: string;
+  petId: string;
+  role: 'user' | 'assistant';
+  content: string;
+}) {
+  const now = new Date().toISOString();
+  const baseId = crypto.randomUUID();
+
+  const variants: GenericRow[] = [
+    {
+      id: baseId,
+      user_id: params.userId,
+      pet_id: params.petId,
+      role: params.role,
+      content: params.content,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      owner_id: params.userId,
+      companion_id: params.petId,
+      role: params.role,
+      content: params.content,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      profile_id: params.userId,
+      pet_id: params.petId,
+      sender_role: params.role,
+      message: params.content,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      user_id: params.userId,
+      companion_id: params.petId,
+      sender: params.role,
+      text: params.content,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+
+  return insertIntoFirstWorkingTable(params.supabase, MESSAGE_TABLE_CANDIDATES, variants);
+}
+
+async function persistMemoryItem(params: {
+  supabase: SupabaseClient;
+  userId: string;
+  pet: NormalizedPet;
+  item: ExtractedMemoryItem;
+}) {
+  const now = new Date().toISOString();
+  const fingerprint = stableHash(
+    `${params.userId}:${params.pet.id}:${params.item.type}:${params.item.content.toLowerCase()}`
+  );
+  const baseId = crypto.randomUUID();
+
+  const variants: GenericRow[] = [
+    {
+      id: baseId,
+      user_id: params.userId,
+      pet_id: params.pet.id,
+      pet_name: params.pet.name,
+      content: params.item.content,
+      type: params.item.type,
+      source: 'chat',
+      fingerprint,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      owner_id: params.userId,
+      companion_id: params.pet.id,
+      name: params.pet.name,
+      content: params.item.content,
+      memory_type: params.item.type,
+      source: 'chat',
+      fingerprint,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      profile_id: params.userId,
+      pet_id: params.pet.id,
+      pet_name: params.pet.name,
+      text: params.item.content,
+      category: params.item.type,
+      source: 'chat',
+      fingerprint,
+      created_at: now,
+      updated_at: now,
+    },
+    {
+      id: baseId,
+      user_id: params.userId,
+      companion_id: params.pet.id,
+      pet_name: params.pet.name,
+      body: params.item.content,
+      kind: params.item.type,
+      source: 'chat',
+      fingerprint,
+      created_at: now,
+      updated_at: now,
+    },
+  ];
+
+  return insertIntoFirstWorkingTable(params.supabase, MEMORY_TABLE_CANDIDATES, variants);
+}
+
+async function updatePetMemoryState(params: {
+  supabase: SupabaseClient;
+  userId: string;
+  pet: NormalizedPet;
+  memorySummary: string | null;
+  memoryCount: number;
+}) {
+  const now = new Date().toISOString();
+
+  const variants: GenericRow[] = [
+    {
+      memory_summary: params.memorySummary,
+      memory_count: params.memoryCount,
+      updated_at: now,
+      last_memory_at: now,
+    },
+    {
+      profile_summary: params.memorySummary,
+      memory_count: params.memoryCount,
+      updated_at: now,
+      last_memory_at: now,
+    },
+    {
+      companion_summary: params.memorySummary,
+      memories_count: params.memoryCount,
+      updated_at: now,
+      last_memory_at: now,
+    },
+  ];
+
+  return updateFirstWorkingPetTable(params.supabase, params.pet, params.userId, variants);
+}
+
+export async function POST(request: Request) {
+  try {
+    const body = (await request.json()) as GenericRow;
+    const userId = await resolveUserId(request, body);
+
     const petId =
-      typeof body.petId === 'string' && body.petId.trim() ? body.petId.trim() : null;
-
-    if (!message) {
-      return jsonError('Message is required.', 400);
-    }
-
-    if (message.length > MAX_MESSAGE_LENGTH) {
-      return jsonError(`Message must be ${MAX_MESSAGE_LENGTH} characters or fewer.`, 400);
-    }
+      readBodyString(body, ['petId', 'companionId', 'activePetId']) ?? '';
+    const userMessage =
+      readBodyString(body, ['message', 'content', 'text', 'prompt']) ?? '';
 
     if (!petId) {
-      return jsonError('Pet is required.', 400);
+      return NextResponse.json({ error: 'Missing petId / companionId' }, { status: 400 });
     }
 
-    const supabase = createSupabaseAdminClient();
-
-    const petQuery = await supabase
-      .from('pets')
-      .select('id, name, breed, personality, favorite_food, daily_habits, system_prompt')
-      .eq('id', petId)
-      .eq('user_id', user.id)
-      .maybeSingle();
-
-    const pet = (petQuery.data as PetRow | null) ?? null;
-
-    if (petQuery.error || !pet) {
-      return jsonError('Pet not found.', 404);
+    if (!userMessage) {
+      return NextResponse.json({ error: 'Missing message content' }, { status: 400 });
     }
 
-    const access = await getChatAccessState(user.id);
-    const usageBefore: UsagePayload = {
-      plan: access.vip ? 'vip' : 'free',
-      used: Number(access.used ?? 0),
-      limit: access.vip ? null : Number(access.limit ?? 20),
-      remaining: access.vip ? null : Number(access.remaining ?? 0),
-      vip: Boolean(access.vip),
-    };
+    const supabase = getSupabaseAdmin();
 
-    if (!access.vip && Number(access.remaining ?? 0) <= 0) {
-      return jsonError(
-        'Free plan limit reached. Free includes 20 lifetime chats shared across your account. Upgrade to VIP for unlimited chats.',
-        429,
-        usageBefore,
+    const pets = await loadPetsForUser(supabase, userId);
+    const pet =
+      pets.find((item) => item.id === petId) ??
+      pets.find((item) => item.name.toLowerCase() === petId.toLowerCase());
+
+    if (!pet) {
+      return NextResponse.json(
+        { error: 'Pet not found for current user.' },
+        { status: 404 }
       );
     }
 
-    const [historyResult, memoriesResult, summaryResult] = await Promise.all([
-      supabase
-        .from('chat_messages')
-        .select('role, content, created_at')
-        .eq('user_id', user.id)
-        .eq('pet_id', pet.id)
-        .in('role', ['user', 'assistant'])
-        .order('created_at', { ascending: false })
-        .limit(HISTORY_LIMIT),
-      supabase
-        .from('memories')
-        .select('type, content, importance, updated_at, created_at')
-        .eq('user_id', user.id)
-        .or(`pet_id.is.null,pet_id.eq.${pet.id}`)
-        .order('importance', { ascending: false })
-        .order('updated_at', { ascending: false })
-        .limit(MEMORY_LIMIT),
-      supabase
-        .from('memory_summaries')
-        .select('summary, memory_count, updated_at')
-        .eq('user_id', user.id)
-        .eq('pet_id', pet.id)
-        .maybeSingle(),
-    ]);
+    const priorMessages = await loadMessagesForUserPet(supabase, userId, pet.id);
+    const priorMemories = await loadMemoriesForUserPet(supabase, userId, pet);
 
-    if (historyResult.error) {
-      return jsonError(
-        `Failed to load chat history: ${historyResult.error.message}`,
-        500,
-        usageBefore,
-      );
-    }
+    const incomingMessages = Array.isArray(body.messages)
+      ? (body.messages as unknown[])
+          .map((item) => {
+            if (!item || typeof item !== 'object') return null;
+            const obj = item as GenericRow;
+            const content = readBodyString(obj, ['content', 'text', 'message']);
+            if (!content) return null;
+            return {
+              role: normalizeRole(readBodyString(obj, ['role', 'sender', 'sender_role'])),
+              content,
+            };
+          })
+          .filter((item): item is { role: 'user' | 'assistant' | 'system'; content: string } => Boolean(item))
+      : [];
 
-    if (memoriesResult.error) {
-      return jsonError(
-        `Failed to load memories: ${memoriesResult.error.message}`,
-        500,
-        usageBefore,
-      );
-    }
+    const history =
+      incomingMessages.length > 0
+        ? incomingMessages.slice(-MAX_HISTORY_MESSAGES)
+        : priorMessages.map((m) => ({ role: m.role, content: m.content })).slice(-MAX_HISTORY_MESSAGES);
 
-    if (summaryResult.error) {
-      return jsonError(
-        `Failed to load memory summary: ${summaryResult.error.message}`,
-        500,
-        usageBefore,
-      );
-    }
-
-    const recentHistory = ((historyResult.data || []) as ChatMessageRow[])
-      .slice()
-      .reverse()
-      .map((item) => ({
-        role: item.role === 'assistant' ? 'assistant' : 'user',
-        content: String(item.content || '').trim(),
-      }))
-      .filter((item) => item.content) as Array<{ role: 'user' | 'assistant'; content: string }>;
-
-    const recentMemories = ((memoriesResult.data || []) as MemoryRow[])
-      .map((item) => ({
-        type: String(item.type || 'fact'),
-        content: String(item.content || '').trim(),
-      }))
-      .filter((item) => item.content);
-
-    const summaryRow = (summaryResult.data as MemorySummaryRow | null) ?? null;
-    const summaryText = summaryRow?.summary?.trim() || '';
-
-    const reply = await generatePetReply({
+    const assistantReply = await generateAssistantReply({
       pet,
-      userMessage: message,
-      recentHistory,
-      summary: summaryText,
-      recentMemories,
+      memorySummary: pet.memorySummary,
+      recentMemories: priorMemories.slice(0, MAX_MEMORIES_IN_CONTEXT),
+      history,
+      userMessage,
     });
 
-    const baseTime = Date.now();
-    const userCreatedAt = new Date(baseTime).toISOString();
-    const assistantCreatedAt = new Date(baseTime + 1).toISOString();
+    await persistChatMessage({
+      supabase,
+      userId,
+      petId: pet.id,
+      role: 'user',
+      content: userMessage,
+    });
 
-    const persistResult = await supabase.from('chat_messages').insert([
-      {
-        user_id: user.id,
-        pet_id: pet.id,
-        role: 'user',
-        content: message,
-        created_at: userCreatedAt,
-      },
-      {
-        user_id: user.id,
-        pet_id: pet.id,
-        role: 'assistant',
-        content: reply,
-        created_at: assistantCreatedAt,
-      },
-    ]);
+    await persistChatMessage({
+      supabase,
+      userId,
+      petId: pet.id,
+      role: 'assistant',
+      content: assistantReply,
+    });
 
-    if (persistResult.error) {
-      return jsonError(
-        `Failed to persist chat messages: ${persistResult.error.message}`,
-        500,
-        usageBefore,
-      );
-    }
+    const extracted = await extractDurableMemories({
+      pet,
+      userMessage,
+      assistantReply,
+      existingMemories: priorMemories,
+    });
 
-    let memoryPayload: {
-      storedCount: number;
-      emotionTag: string | null;
-      hints: string[];
-      summary: string;
-    } = {
-      storedCount: 0,
-      emotionTag: null,
-      hints: [],
-      summary: summaryText,
-    };
+    const existingContentSet = new Set(
+      priorMemories.map((m) => `${m.type}:${m.content.trim().toLowerCase()}`)
+    );
 
-    try {
-      const memoryResult = await extractAndStoreMemories({
-        userId: user.id,
-        petId: pet.id,
-        petName: pet.name,
-        userMessage: message,
-        assistantMessage: reply,
+    const newlySaved: ExtractedMemoryItem[] = [];
+
+    for (const item of extracted) {
+      const key = `${item.type}:${item.content.trim().toLowerCase()}`;
+      if (existingContentSet.has(key)) continue;
+
+      const saved = await persistMemoryItem({
+        supabase,
+        userId,
+        pet,
+        item,
       });
 
-      memoryPayload = {
-        storedCount: Number(memoryResult?.storedCount ?? 0),
-        emotionTag: memoryResult?.emotionTag ?? null,
-        hints: Array.isArray(memoryResult?.memoryHints)
-          ? memoryResult.memoryHints
-              .map((item: unknown) => {
-                if (typeof item === 'string') {
-                  return item;
-                }
-
-                if (
-                  item &&
-                  typeof item === 'object' &&
-                  'content' in item &&
-                  typeof (item as { content?: unknown }).content === 'string'
-                ) {
-                  return (item as { content: string }).content;
-                }
-
-                return '';
-              })
-              .filter(Boolean)
-              .slice(0, 3)
-          : [],
-        summary: memoryResult?.summary || summaryText,
-      };
-    } catch (memoryError) {
-      console.error('Memory extraction failed after chat persist:', memoryError);
-    }
-
-    let usageAfter: UsagePayload = usageBefore;
-
-    if (access.vip) {
-      usageAfter = {
-        plan: 'vip',
-        used: Number(access.used ?? 0),
-        limit: null,
-        remaining: null,
-        vip: true,
-      };
-    } else {
-      try {
-        const consumed = await consumeFreeChatQuota(user.id, Number(access.limit ?? 20));
-
-        usageAfter = {
-          plan: 'free',
-          used: Number(consumed.used ?? 0),
-          limit: Number(consumed.limit ?? access.limit ?? 20),
-          remaining: Number(consumed.remaining ?? 0),
-          vip: false,
-        };
-      } catch (quotaError) {
-        console.error('Quota consume failed after chat persist:', quotaError);
-
-        usageAfter = {
-          plan: 'free',
-          used: Number(access.used ?? 0),
-          limit: Number(access.limit ?? 20),
-          remaining: Math.max(Number(access.remaining ?? 1) - 1, 0),
-          vip: false,
-        };
+      if (saved.ok) {
+        newlySaved.push(item);
+        existingContentSet.add(key);
       }
     }
 
+    const refreshedMemories = await loadMemoriesForUserPet(supabase, userId, pet);
+    const refreshedSummary = await generateMemorySummary({
+      pet,
+      memories: refreshedMemories,
+    });
+
+    await updatePetMemoryState({
+      supabase,
+      userId,
+      pet,
+      memorySummary: refreshedSummary,
+      memoryCount: refreshedMemories.length,
+    });
+
     return NextResponse.json({
-      reply,
-      usage: usageAfter,
-      memory: memoryPayload,
+      ok: true,
+      reply: assistantReply,
+      assistantReply,
+      message: assistantReply,
+      pet: {
+        id: pet.id,
+        name: pet.name,
+      },
+      memoryUpdates: newlySaved.length,
+      memoryItems: newlySaved,
+      memorySummary: refreshedSummary,
+      memoryCount: refreshedMemories.length,
     });
   } catch (error) {
-    console.error('POST /api/chat failed:', error);
+    const message = error instanceof Error ? error.message : 'Unknown chat route error';
+    console.error('[chat route] fatal error:', message);
 
     return NextResponse.json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : 'Unexpected chat error. Please try again.',
+        ok: false,
+        error: message,
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

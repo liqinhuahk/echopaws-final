@@ -8,17 +8,28 @@ function getSafeNextPath(raw: string | null) {
   return raw;
 }
 
-function buildLoginReturnUrl(request: NextRequest, params: {
-  nextPath: string;
-  auth?: string;
-  oauth: 'done' | 'error';
-  message?: string;
-}) {
+function buildLoginReturnUrl(
+  request: NextRequest,
+  params: {
+    nextPath: string;
+    auth?: string;
+    oauth: 'done' | 'error';
+    message?: string;
+  }
+) {
   const url = new URL('/login', request.url);
   url.searchParams.set('next', params.nextPath);
-  if (params.auth) url.searchParams.set('auth', params.auth);
+
+  if (params.auth) {
+    url.searchParams.set('auth', params.auth);
+  }
+
   url.searchParams.set('oauth', params.oauth);
-  if (params.message) url.searchParams.set('message', params.message);
+
+  if (params.message) {
+    url.searchParams.set('message', params.message);
+  }
+
   return url;
 }
 
@@ -68,31 +79,22 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  let response = NextResponse.redirect(
-    buildLoginReturnUrl(request, {
-      nextPath,
-      auth,
-      oauth: 'done',
-    })
-  );
+  const successRedirectUrl = buildLoginReturnUrl(request, {
+    nextPath,
+    auth,
+    oauth: 'done',
+  });
+
+  const response = NextResponse.redirect(successRedirectUrl);
 
   const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
     cookies: {
-      get(name: string) {
-        return request.cookies.get(name)?.value;
+      getAll() {
+        return request.cookies.getAll();
       },
-      set(name: string, value: string, options: any) {
-        response.cookies.set({
-          name,
-          value,
-          ...options,
-        });
-      },
-      remove(name: string, options: any) {
-        response.cookies.set({
-          name,
-          value: '',
-          ...options,
+      setAll(cookiesToSet) {
+        cookiesToSet.forEach(({ name, value, options }) => {
+          response.cookies.set(name, value, options);
         });
       },
     },

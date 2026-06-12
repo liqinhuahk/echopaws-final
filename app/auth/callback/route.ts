@@ -1,142 +1,129 @@
-import { NextRequest, NextResponse } from 'next/server';
-import {
-  createServerSupabaseClient,
-  hasSupabaseEnv,
-} from '@/lib/supabase/server';
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient } from '@supabase/ssr';
 
-function sanitizeNextPath(value: string | null | undefined, fallback = '/account') {
-  const raw = (value ?? '').trim();
-
-  if (!raw) return fallback;
-
-  // 只允许站内相对路径，避免 open redirect
-  if (!raw.startsWith('/')) return fallback;
-  if (raw.startsWith('//')) return fallback;
-
+function getSafeNextPath(raw: string | null) {
+  if (!raw) return '/';
+  if (!raw.startsWith('/')) return '/';
+  if (raw.startsWith('//')) return '/';
   return raw;
 }
 
-function buildAbsoluteUrl(request: NextRequest, path: string) {
-  return new URL(path, request.nextUrl.origin);
-}
-
-function buildLoginRedirect(
-  request: NextRequest,
-  params: { message?: string; error?: string },
-) {
-  const search = new URLSearchParams();
-
-  if (params.message) {
-    search.set('message', params.message);
-  }
-
-  if (params.error) {
-    search.set('error', params.error);
-  }
-
-  const query = search.toString();
-  const pathname = query ? `/login?${query}` : '/login';
-
-  return buildAbsoluteUrl(request, pathname);
-}
-
-function toFriendlyCallbackError(message: string, fallback: string) {
-  const raw = message.trim();
-  if (!raw) return fallback;
-
-  const lowered = raw.toLowerCase();
-
-  if (
-    lowered.includes('invalid_grant') ||
-    lowered.includes('bad_oauth_state') ||
-    lowered.includes('oauth') ||
-    lowered.includes('code verifier')
-  ) {
-    return 'Google sign-in session expired or is invalid. Please try again.';
-  }
-
-  if (
-    lowered.includes('redirect') ||
-    lowered.includes('redirect_to') ||
-    lowered.includes('invalid redirect')
-  ) {
-    return 'Auth redirect URL is not configured correctly. Please check Supabase URL Configuration and NEXT_PUBLIC_SITE_URL.';
-  }
-
-  if (
-    lowered.includes('provider') &&
-    (lowered.includes('disabled') || lowered.includes('not enabled'))
-  ) {
-    return 'Google sign-in is not enabled yet in Supabase.';
-  }
-
-  return raw || fallback;
+function buildLoginReturnUrl(request: NextRequest, params: {
+  nextPath: string;
+  auth?: string;
+  oauth: 'done' | 'error';
+  message?: string;
+}) {
+  const url = new URL('/login', request.url);
+  url.searchParams.set('next', params.nextPath);
+  if (params.auth) url.searchParams.set('auth', params.auth);
+  url.searchParams.set('oauth', params.oauth);
+  if (params.message) url.searchParams.set('message', params.message);
+  return url;
 }
 
 export async function GET(request: NextRequest) {
-  const requestUrl = request.nextUrl;
-  const code = requestUrl.searchParams.get('code');
-  const next = sanitizeNextPath(
-    requestUrl.searchParams.get('next'),
-    '/account',
-  );
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  const providerError =
-    requestUrl.searchParams.get('error_description') ||
-    requestUrl.searchParams.get('error') ||
-    requestUrl.searchParams.get('error_code');
+  const code = request.nextUrl.searchParams.get('code');
+  const auth = request.nextUrl.searchParams.get('auth') || 'google';
+  const nextPath = getSafeNextPath(request.nextUrl.searchParams.get('next'));
 
-  if (!hasSupabaseEnv()) {
+  const oauthError = request.nextUrl.searchParams.get('error');
+  const oauthErrorDescription =
+    request.nextUrl.searchParams.get('error_description') ||
+    request.nextUrl.searchParams.get('error_code');
+
+  if (oauthError) {
     return NextResponse.redirect(
-      buildLoginRedirect(request, {
-        error: 'Please configure Supabase environment variables first.',
-      }),
+      buildLoginReturnUrl(request, {
+        nextPath,
+        auth,
+        oauth: 'error',
+        message: oauthErrorDescription || oauthError,
+      })
     );
   }
 
-  if (providerError) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.redirect(
-      buildLoginRedirect(request, {
-        error: toFriendlyCallbackError(
-          providerError,
-          'Google sign-in failed. Please try again.',
-        ),
-      }),
+      buildLoginReturnUrl(request, {
+        nextPath,
+        auth,
+        oauth: 'error',
+        message: 'Missing Supabase public environment variables',
+      })
     );
   }
 
   if (!code) {
     return NextResponse.redirect(
-      buildLoginRedirect(request, {
-        error: 'Missing auth code. Please try signing in again.',
-      }),
+      buildLoginReturnUrl(request, {
+        nextPath,
+        auth,
+        oauth: 'error',
+        message: 'Missing OAuth code',
+      })
     );
   }
 
+  let response = NextResponse.redirect(
+    buildLoginReturnUrl(request, {
+      nextPath,
+      auth,
+      oauth: 'done',
+    })
+  );
+
+  const supabase = createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookies: {
+      get(name: string) {
+        return request.cookies.get(name)?.value;
+      },
+      set(name: string, value: string, options: any) {
+        response.cookies.set({
+          name,
+          value,
+          ...options,
+        });
+      },
+      remove(name: string, options: any) {
+        response.cookies.set({
+          name,
+          value: '',
+          ...options,
+        });
+      },
+    },
+  });
+
   try {
-    const supabase = createServerSupabaseClient();
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (error) {
       return NextResponse.redirect(
-        buildLoginRedirect(request, {
-          error: toFriendlyCallbackError(
-            error.message,
-            'Could not complete sign-in. Please try again.',
-          ),
-        }),
+        buildLoginReturnUrl(request, {
+          nextPath,
+          auth,
+          oauth: 'error',
+          message: error.message || 'Failed to exchange code for session',
+        })
       );
     }
+
+    return response;
   } catch (error) {
     return NextResponse.redirect(
-      buildLoginRedirect(request, {
-        error: toFriendlyCallbackError(
-          error instanceof Error ? error.message : '',
-          'Could not complete sign-in. Please try again.',
-        ),
-      }),
+      buildLoginReturnUrl(request, {
+        nextPath,
+        auth,
+        oauth: 'error',
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Failed to complete Google sign-in',
+      })
     );
   }
-
-  return NextResponse.redirect(buildAbsoluteUrl(request, next));
 }

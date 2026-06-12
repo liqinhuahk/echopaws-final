@@ -1,39 +1,36 @@
 import Stripe from 'stripe';
 
-let stripeClient: Stripe | null = null;
-
-export function hasStripeEnv() {
-  return Boolean(process.env.STRIPE_SECRET_KEY && process.env.STRIPE_PRICE_VIP_MONTHLY);
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error('Missing STRIPE_SECRET_KEY');
 }
 
-export function getStripeClient() {
-  if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('Missing STRIPE_SECRET_KEY.');
+export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+export const STRIPE_VIP_PRICE_ID = process.env.STRIPE_PRICE_VIP_MONTHLY || '';
+
+export async function getOrCreateStripeCustomer(params: {
+  email: string;
+  name?: string | null;
+  supabaseUserId?: string;
+}) {
+  const { email, name, supabaseUserId } = params;
+
+  const existing = await stripe.customers.list({
+    email,
+    limit: 1,
+  });
+
+  if (existing.data.length > 0) {
+    return existing.data[0];
   }
 
-  if (!stripeClient) {
-    stripeClient = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: '2026-04-22.dahlia',
-    });
-  }
-
-  return stripeClient;
-}
-
-export function getSiteUrl() {
-  const raw = (
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.NEXT_PUBLIC_APP_URL ||
-    process.env.SITE_URL ||
-    'http://localhost:3000'
-  ).trim();
-
-  const normalized = raw.replace(/^['"]|['"]$/g, '');
-
-  const withProtocol =
-    normalized.startsWith('http://') || normalized.startsWith('https://')
-      ? normalized
-      : `https://${normalized}`;
-
-  return withProtocol.replace(/\/$/, '');
+  return stripe.customers.create({
+    email,
+    name: name ?? undefined,
+    metadata: supabaseUserId
+      ? {
+          supabase_user_id: supabaseUserId,
+        }
+      : undefined,
+  });
 }

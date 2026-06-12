@@ -1,275 +1,265 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-} from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient, type User } from '@supabase/supabase-js';
-import SiteHeader from '@/components/site-header';
+import { createClient, type Session, type User } from '@supabase/supabase-js';
 
 type AuthMode = 'signin' | 'signup';
-type AuthProvider = 'google' | 'email' | 'session' | null;
-type AuthStatus = 'idle' | 'loading' | 'success' | 'error';
-
-function cn(...values: Array<string | false | null | undefined>) {
-  return values.filter(Boolean).join(' ');
-}
+type StatusType = 'idle' | 'loading' | 'success' | 'error';
 
 function createBrowserSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!url || !anon) return null;
+  if (!url || !anonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
+  }
 
-  return createClient(url, anon, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  });
-}
-
-function getDisplayName(user: User | null) {
-  if (!user) return '';
-
-  const meta = user.user_metadata ?? {};
-  const candidates = [
-    typeof meta.full_name === 'string' ? meta.full_name : '',
-    typeof meta.name === 'string' ? meta.name : '',
-    typeof meta.display_name === 'string' ? meta.display_name : '',
-    typeof meta.user_name === 'string' ? meta.user_name : '',
-    user.email ?? '',
-  ];
-
-  return candidates.find((v) => v && v.trim())?.trim() ?? 'Signed-in user';
-}
-
-function getProviderLabel(provider: AuthProvider) {
-  if (provider === 'google') return 'Google';
-  if (provider === 'email') return 'Email & Password';
-  if (provider === 'session') return 'Active Session';
-  return 'Authentication';
+  return createClient(url, anonKey);
 }
 
 function getSiteUrl() {
-  const fromEnv =
-    process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_APP_URL;
-
-  if (fromEnv?.trim()) {
-    return fromEnv.replace(/\/$/, '');
-  }
-
-  if (typeof window !== 'undefined') {
+  if (typeof window !== 'undefined' && window.location?.origin) {
     return window.location.origin.replace(/\/$/, '');
   }
 
-  return '';
+  const envSiteUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    'https://beta.echopaws.ai';
+
+  return envSiteUrl.replace(/\/$/, '');
+}
+
+function getSafeNextPath(raw: string | null) {
+  if (!raw) return '/';
+  if (!raw.startsWith('/')) return '/';
+  if (raw.startsWith('//')) return '/';
+  return raw;
+}
+
+function getDisplayName(user: User | null) {
+  if (!user) return 'Unknown User';
+
+  const metadata = user.user_metadata || {};
+  const fullName =
+    metadata.full_name ||
+    metadata.name ||
+    metadata.display_name ||
+    metadata.user_name ||
+    metadata.preferred_username;
+
+  if (typeof fullName === 'string' && fullName.trim()) {
+    return fullName.trim();
+  }
+
+  if (user.email) {
+    const [localPart] = user.email.split('@');
+    if (localPart) return localPart;
+  }
+
+  return 'User';
+}
+
+function getProviderLabel(user: User | null) {
+  if (!user) return 'Session';
+
+  const provider =
+    user.app_metadata?.provider ||
+    user.identities?.[0]?.provider ||
+    'email';
+
+  if (provider === 'google') return 'Google';
+  if (provider === 'email') return 'Email';
+  return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
+}
+
+function getFinalContinuePath(nextPath: string) {
+  if (!nextPath || nextPath === '/login' || nextPath.startsWith('/login?')) {
+    return '/';
+  }
+  return nextPath;
 }
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      className="h-5 w-5"
+      fill="none"
+    >
       <path
-        fill="#EA4335"
-        d="M12 10.2v3.9h5.5c-.24 1.25-.96 2.3-2.04 3.01l3.3 2.56c1.92-1.77 3.03-4.37 3.03-7.46 0-.71-.06-1.39-.18-2.04H12Z"
+        d="M21.805 12.23c0-.78-.064-1.35-.202-1.94H12.24v3.58h5.495c-.11.89-.705 2.23-2.028 3.13l-.018.12 2.94 2.23.204.02c1.873-1.69 2.954-4.18 2.954-7.14Z"
+        fill="#4285F4"
       />
       <path
+        d="M12.24 21.75c2.69 0 4.949-.86 6.598-2.34l-3.144-2.37c-.842.57-1.97.97-3.454.97-2.635 0-4.867-1.69-5.663-4.03l-.115.01-3.058 2.31-.04.108c1.638 3.16 4.997 5.34 8.876 5.34Z"
         fill="#34A853"
-        d="M12 22c2.75 0 5.06-.91 6.75-2.47l-3.3-2.56c-.91.61-2.08.97-3.45.97-2.65 0-4.9-1.79-5.7-4.19l-3.41 2.63A10 10 0 0 0 12 22Z"
       />
       <path
-        fill="#4A90E2"
-        d="M6.3 13.75A5.99 5.99 0 0 1 6 12c0-.61.1-1.2.3-1.75L2.9 7.62A10 10 0 0 0 2 12c0 1.62.39 3.15 1.09 4.5l3.21-2.75Z"
-      />
-      <path
+        d="M6.577 13.98a5.858 5.858 0 0 1-.331-1.98c0-.69.12-1.35.322-1.98l-.005-.132-3.096-2.35-.101.047A9.622 9.622 0 0 0 2.52 12c0 1.58.386 3.07 1.069 4.42l2.988-2.44Z"
         fill="#FBBC05"
-        d="M12 5.98c1.5 0 2.85.52 3.91 1.54l2.93-2.93C17.05 2.91 14.74 2 12 2A10 10 0 0 0 3.09 7.5l3.41 2.75c.8-2.4 3.05-4.27 5.5-4.27Z"
+      />
+      <path
+        d="M12.24 5.99c1.873 0 3.14.79 3.86 1.45l2.818-2.68C17.18 3.18 14.93 2.25 12.24 2.25c-3.88 0-7.238 2.18-8.876 5.34l3.202 2.44c.805-2.34 3.037-4.04 5.672-4.04Z"
+        fill="#EA4335"
       />
     </svg>
   );
 }
 
-function Spinner() {
+function EyeIcon({ open }: { open: boolean }) {
+  if (open) {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <path d="M3 12s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6Z" />
+        <circle cx="12" cy="12" r="2.8" />
+      </svg>
+    );
+  }
+
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4 animate-spin"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="M21 12a9 9 0 1 1-6.2-8.56" />
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <path d="M3 3l18 18" />
+      <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
+      <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5.4 0 9 7 9 7a17.47 17.47 0 0 1-3.06 3.67" />
+      <path d="M6.11 6.11C4.18 7.4 3 9 3 9s3.6 7 9 7c1.67 0 3.14-.46 4.4-1.15" />
     </svg>
   );
 }
 
-function EyeIcon({ off = false }: { off?: boolean }) {
-  return off ? (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="m3 3 18 18" />
-      <path d="M10.58 10.59A2 2 0 0 0 13.4 13.4" />
-      <path d="M9.88 5.09A9.77 9.77 0 0 1 12 4.88c5 0 9.27 3.11 11 7.5a11.83 11.83 0 0 1-4.17 5.94" />
-      <path d="M6.61 6.61A11.79 11.79 0 0 0 1 12.38a11.83 11.83 0 0 0 7.5 6.78 10.86 10.86 0 0 0 4.18.1" />
-    </svg>
-  ) : (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-4 w-4"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      aria-hidden="true"
-    >
-      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
-      <circle cx="12" cy="12" r="3" />
+function StatusIcon({ status }: { status: StatusType }) {
+  if (status === 'loading') {
+    return <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />;
+  }
+
+  if (status === 'success') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M20 6 9 17l-5-5" />
+      </svg>
+    );
+  }
+
+  if (status === 'error') {
+    return (
+      <svg viewBox="0 0 24 24" className="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M12 8v5" />
+        <path d="M12 16h.01" />
+        <circle cx="12" cy="12" r="9" />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" className="h-5 w-5 text-sky-300" fill="none" stroke="currentColor" strokeWidth="2">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v4l2.5 2.5" />
     </svg>
   );
 }
 
 function StatusPanel({
   status,
-  provider,
   title,
   detail,
-  user,
-  nextPath,
+  provider,
+  userName,
+  userEmail,
+  canContinue,
   onContinue,
 }: {
-  status: AuthStatus;
-  provider: AuthProvider;
+  status: StatusType;
   title: string;
   detail: string;
-  user: User | null;
-  nextPath: string;
+  provider: string;
+  userName: string;
+  userEmail: string;
+  canContinue: boolean;
   onContinue: () => void;
 }) {
-  const isSuccess = status === 'success';
-  const isError = status === 'error';
-  const isLoading = status === 'loading';
-
-  const displayName = getDisplayName(user);
-  const email = user?.email ?? '';
-  const providerLabel = getProviderLabel(provider);
+  const panelClass =
+    status === 'success'
+      ? 'border-emerald-400/25 bg-emerald-500/10'
+      : status === 'error'
+      ? 'border-rose-400/25 bg-rose-500/10'
+      : status === 'loading'
+      ? 'border-amber-400/25 bg-amber-500/10'
+      : 'border-sky-400/20 bg-sky-500/10';
 
   return (
-    <div
-      className={cn(
-        'mb-5 rounded-[24px] border p-4 shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition',
-        isSuccess &&
-          'border-[rgba(104,211,145,0.22)] bg-[linear-gradient(180deg,rgba(64,120,77,0.18),rgba(22,36,24,0.28))]',
-        isError &&
-          'border-[rgba(255,120,120,0.20)] bg-[linear-gradient(180deg,rgba(120,40,40,0.18),rgba(38,14,14,0.28))]',
-        isLoading &&
-          'border-[rgba(255,180,103,0.22)] bg-[linear-gradient(180deg,rgba(124,71,25,0.18),rgba(30,16,9,0.28))]',
-        status === 'idle' &&
-          'border-[rgba(255,233,220,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]'
-      )}
-    >
-      <div className="flex flex-wrap items-center gap-3">
-        <span
-          className={cn(
-            'inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]',
-            isSuccess && 'bg-[rgba(104,211,145,0.15)] text-[#b8f0c6]',
-            isError && 'bg-[rgba(255,120,120,0.14)] text-[#ffd1d1]',
-            isLoading && 'bg-[rgba(255,180,103,0.14)] text-[#ffd6ad]',
-            status === 'idle' &&
-              'bg-[rgba(255,255,255,0.05)] text-[rgba(255,233,220,0.70)]'
+    <div className={`mb-5 rounded-2xl border p-4 shadow-lg backdrop-blur ${panelClass}`}>
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 shrink-0">
+          <StatusIcon status={status} />
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <p className="text-sm font-semibold text-white">{title}</p>
+            {provider ? (
+              <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-[11px] text-white/80">
+                {provider}
+              </span>
+            ) : null}
+          </div>
+
+          {detail ? (
+            <p className="mt-1 text-sm leading-6 text-white/75">{detail}</p>
+          ) : null}
+
+          {(userName || userEmail) && (
+            <div className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Account Name</p>
+                  <p className="mt-1 text-sm font-medium text-white">{userName || '—'}</p>
+                </div>
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">Email</p>
+                  <p className="mt-1 break-all text-sm font-medium text-white">{userEmail || '—'}</p>
+                </div>
+              </div>
+            </div>
           )}
-        >
-          {isSuccess
-            ? 'Signed in'
-            : isError
-            ? 'Sign-in issue'
-            : isLoading
-            ? 'Authenticating'
-            : 'Account status'}
-        </span>
 
-        <span className="text-xs text-[rgba(255,233,220,0.56)]">
-          {provider ? providerLabel : 'Ready'}
-        </span>
-      </div>
+          {canContinue && (
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={onContinue}
+                className="inline-flex items-center justify-center rounded-xl bg-[#f59e0b] px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
+              >
+                Continue
+              </button>
 
-      <div className="mt-3">
-        <div className="text-[15px] font-semibold text-[#fff5ee]">
-          {title}
-        </div>
-        <div className="mt-1 text-sm leading-6 text-[rgba(255,233,220,0.72)]">
-          {detail}
+              <Link
+                href="/account"
+                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10"
+              >
+                Account
+              </Link>
+            </div>
+          )}
         </div>
       </div>
-
-      {isSuccess && user ? (
-        <div className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.03)] p-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
-            Signed-in account
-          </div>
-          <div className="mt-2 text-base font-semibold text-[#fff5ee]">
-            {displayName}
-          </div>
-          <div className="mt-1 text-sm text-[rgba(255,233,220,0.68)]">
-            {email || 'No email found'}
-          </div>
-
-          <div className="mt-3 flex flex-wrap items-center gap-3">
-            <span className="rounded-full border border-[rgba(104,211,145,0.18)] bg-[rgba(104,211,145,0.10)] px-3 py-1 text-xs text-[#b8f0c6]">
-              Login successful
-            </span>
-            <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-xs text-[rgba(255,233,220,0.66)]">
-              Method: {providerLabel}
-            </span>
-          </div>
-
-          <div className="mt-4 flex flex-wrap gap-3">
-            <button
-              type="button"
-              onClick={onContinue}
-              className="inline-flex h-10 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-4 text-sm font-semibold text-[#2f160c] shadow-[0_12px_24px_rgba(255,145,51,0.22)] transition hover:-translate-y-0.5"
-            >
-              Continue to {nextPath === '/' ? 'Home' : nextPath}
-            </button>
-
-            <Link
-              href="/account"
-              className="inline-flex h-10 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm font-medium text-[#fff5ee] transition hover:bg-white/5"
-            >
-              View account
-            </Link>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
 
-function LoginPageFallback() {
+function FeatureCard({
+  title,
+  description,
+}: {
+  title: string;
+  description: string;
+}) {
   return (
-    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
-      <SiteHeader />
-      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.82fr] lg:gap-10">
-          <div className="min-h-[620px]" />
-          <div className="rounded-[32px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(32,17,12,0.92),rgba(16,9,7,0.96))] p-6 shadow-[0_28px_70px_rgba(0,0,0,0.26)]">
-            <div className="flex items-center gap-3 text-sm text-[rgba(255,233,220,0.72)]">
-              <Spinner />
-              正在加载登录页面...
-            </div>
-          </div>
-        </div>
-      </main>
+    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
+      <p className="text-sm font-semibold text-white">{title}</p>
+      <p className="mt-2 text-sm leading-6 text-white/65">{description}</p>
     </div>
   );
 }
@@ -277,132 +267,139 @@ function LoginPageFallback() {
 function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = searchParams.get('next') || '/';
+
+  const nextParam = searchParams.get('next');
   const authHint = searchParams.get('auth');
-  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const oauthHint = searchParams.get('oauth');
+  const oauthMessageHint = searchParams.get('message');
+
+  const nextPath = useMemo(() => getSafeNextPath(nextParam), [nextParam]);
+  const continuePath = useMemo(() => getFinalContinuePath(nextPath), [nextPath]);
+
+  const supabase = useMemo(() => {
+    try {
+      return createBrowserSupabaseClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
   const [mode, setMode] = useState<AuthMode>('signin');
-  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberEmail, setRememberEmail] = useState(true);
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [rememberEmail, setRememberEmail] = useState(true);
 
-  const [status, setStatus] = useState<AuthStatus>('idle');
-  const [statusProvider, setStatusProvider] = useState<AuthProvider>(null);
-  const [statusTitle, setStatusTitle] = useState('Ready to sign in');
-  const [statusDetail, setStatusDetail] = useState(
-    'Choose Google or email and password. Your login result and account name will appear here.'
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+
+  const [status, setStatus] = useState<StatusType>('idle');
+  const [statusTitle, setStatusTitle] = useState('Welcome back to your companion space');
+  const [statusDetail, setStatusDetail] = useState('Sign in with Google or Email to continue where you left off.');
+  const [statusProvider, setStatusProvider] = useState('Ready');
+
+  const syncStatusFromUser = useCallback(
+    (user: User, providerOverride?: string) => {
+      setStatus('success');
+      setStatusTitle(`Signed in as ${getDisplayName(user)}`);
+      setStatusDetail(user.email || 'Authentication completed successfully.');
+      setStatusProvider(providerOverride || getProviderLabel(user));
+    },
+    []
   );
 
-  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
-  const [isEmailLoading, setIsEmailLoading] = useState(false);
+  const handleContinue = useCallback(() => {
+    router.push(continuePath);
+  }, [continuePath, router]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    const cached = window.localStorage.getItem('echopaws.rememberedEmail');
-    if (cached) setEmail(cached);
+
+    const savedEmail = window.localStorage.getItem('echopaws-remembered-email') || '';
+    const savedRemember = window.localStorage.getItem('echopaws-remember-email');
+
+    if (savedEmail) setEmail(savedEmail);
+    if (savedRemember !== null) setRememberEmail(savedRemember === 'true');
   }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    if (!rememberEmail) {
-      window.localStorage.removeItem('echopaws.rememberedEmail');
-      return;
-    }
-
-    if (email.trim()) {
-      window.localStorage.setItem('echopaws.rememberedEmail', email.trim());
-    }
-  }, [email, rememberEmail]);
 
   useEffect(() => {
     if (!supabase) {
       setStatus('error');
-      setStatusTitle('Supabase is not configured');
-      setStatusDetail(
-        'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.'
-      );
+      setStatusTitle('Auth client unavailable');
+      setStatusDetail('Missing Supabase public environment variables.');
+      setStatusProvider('Config');
       return;
     }
 
     let mounted = true;
 
-    const readSession = async () => {
+    if (oauthHint === 'error') {
+      setStatus('error');
+      setStatusTitle('Google sign-in failed');
+      setStatusDetail(oauthMessageHint || 'Unable to complete Google sign-in.');
+      setStatusProvider('Google');
+    } else if (authHint === 'google' && oauthHint === 'done') {
+      setStatus('loading');
+      setStatusTitle('Google sign-in completed');
+      setStatusDetail('Syncing your account session…');
+      setStatusProvider('Google');
+    }
+
+    const init = async () => {
       const { data, error } = await supabase.auth.getSession();
 
       if (!mounted) return;
 
       if (error) {
         setStatus('error');
-        setStatusTitle('Unable to read current session');
-        setStatusDetail(error.message);
+        setStatusTitle('Failed to read session');
+        setStatusDetail(error.message || 'Please refresh and try again.');
+        setStatusProvider('Session');
         return;
       }
 
-      const currentUser = data.session?.user ?? null;
-      setUser(currentUser);
+      const currentSession = data.session;
+      setSession(currentSession);
 
-      if (currentUser) {
-        const provider: AuthProvider =
-          authHint === 'google'
-            ? 'google'
-            : currentUser.app_metadata?.provider === 'google'
-            ? 'google'
-            : 'session';
+      if (currentSession?.user) {
+        const provider =
+          authHint === 'google' || oauthHint === 'done'
+            ? 'Google'
+            : getProviderLabel(currentSession.user);
 
-        setStatus('success');
-        setStatusProvider(provider);
-        setStatusTitle(`Already signed in as ${getDisplayName(currentUser)}`);
-        setStatusDetail(
-          `Your ${getProviderLabel(
-            provider
-          )} session is active. You can continue safely.`
-        );
+        syncStatusFromUser(currentSession.user, provider);
+        setIsGoogleLoading(false);
+        setIsEmailLoading(false);
       }
     };
 
-    void readSession();
+    init();
 
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+    const { data: authListener } = supabase.auth.onAuthStateChange((event, currentSession) => {
       if (!mounted) return;
 
-      const nextUser = nextSession?.user ?? null;
-      setUser(nextUser);
+      setSession(currentSession);
 
-      if (event === 'SIGNED_IN' && nextUser) {
-        const provider: AuthProvider =
-          authHint === 'google'
-            ? 'google'
-            : nextUser.app_metadata?.provider === 'google'
-            ? 'google'
-            : 'email';
+      if (event === 'SIGNED_IN' && currentSession?.user) {
+        const provider =
+          authHint === 'google' || oauthHint === 'done'
+            ? 'Google'
+            : getProviderLabel(currentSession.user);
 
-        setStatus('success');
-        setStatusProvider(provider);
-        setStatusTitle(
-          `Signed in successfully as ${getDisplayName(nextUser)}`
-        );
-        setStatusDetail(
-          `${getProviderLabel(
-            provider
-          )} login completed. You can continue with this account now.`
-        );
+        syncStatusFromUser(currentSession.user, provider);
         setIsGoogleLoading(false);
         setIsEmailLoading(false);
       }
 
       if (event === 'SIGNED_OUT') {
+        setSession(null);
         setStatus('idle');
-        setStatusProvider(null);
-        setStatusTitle('Ready to sign in');
-        setStatusDetail(
-          'Choose Google or email and password. Your login result and account name will appear here.'
-        );
+        setStatusTitle('Welcome back to your companion space');
+        setStatusDetail('Sign in with Google or Email to continue where you left off.');
+        setStatusProvider('Ready');
         setIsGoogleLoading(false);
         setIsEmailLoading(false);
       }
@@ -410,13 +407,9 @@ function LoginPageContent() {
 
     return () => {
       mounted = false;
-      subscription.unsubscribe();
+      authListener.subscription.unsubscribe();
     };
-  }, [supabase, authHint]);
-
-  const handleContinue = () => {
-    router.push(nextPath);
-  };
+  }, [authHint, oauthHint, oauthMessageHint, supabase, syncStatusFromUser]);
 
   const handleGoogleSignIn = async () => {
     if (!supabase || isGoogleLoading) return;
@@ -424,16 +417,12 @@ function LoginPageContent() {
     try {
       setIsGoogleLoading(true);
       setStatus('loading');
-      setStatusProvider('google');
-      setStatusTitle('Redirecting to Google sign-in');
-      setStatusDetail(
-        'Please complete the Google authorization window. We will show your account name here after you return.'
-      );
+      setStatusTitle('Redirecting to Google sign-in…');
+      setStatusDetail('Please complete account selection in the Google window.');
+      setStatusProvider('Google');
 
       const siteUrl = getSiteUrl();
-      const redirectTo = `${siteUrl}/login?next=${encodeURIComponent(
-        nextPath
-      )}&auth=google`;
+      const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(nextPath)}&auth=google`;
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
@@ -442,382 +431,363 @@ function LoginPageContent() {
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Google sign-in failed.';
-      setStatus('error');
-      setStatusProvider('google');
-      setStatusTitle('Google sign-in failed');
-      setStatusDetail(message);
       setIsGoogleLoading(false);
+      setStatus('error');
+      setStatusTitle('Google sign-in failed');
+      setStatusDetail(
+        error instanceof Error ? error.message : 'Unable to start Google sign-in.'
+      );
+      setStatusProvider('Google');
     }
   };
 
-  const handleEmailSubmit = async (event: FormEvent<HTMLFormElement>) => {
+  const handleEmailAuth = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
     if (!supabase || isEmailLoading) return;
 
-    const cleanEmail = email.trim();
-
-    if (!cleanEmail || !password.trim()) {
+    if (!email.trim() || !password.trim()) {
       setStatus('error');
-      setStatusProvider('email');
-      setStatusTitle(
-        mode === 'signin'
-          ? 'Sign-in information incomplete'
-          : 'Account creation information incomplete'
-      );
-      setStatusDetail('Please enter both your email address and password.');
+      setStatusTitle(mode === 'signin' ? 'Email sign-in failed' : 'Create account failed');
+      setStatusDetail('Please enter both email and password.');
+      setStatusProvider('Email');
+      return;
+    }
+
+    if (mode === 'signup' && password !== confirmPassword) {
+      setStatus('error');
+      setStatusTitle('Create account failed');
+      setStatusDetail('Password and Confirm Password do not match.');
+      setStatusProvider('Email');
       return;
     }
 
     try {
       setIsEmailLoading(true);
       setStatus('loading');
-      setStatusProvider('email');
-      setStatusTitle(
-        mode === 'signin' ? 'Signing in with email' : 'Creating your account'
-      );
+      setStatusTitle(mode === 'signin' ? 'Signing in with email…' : 'Creating your account…');
       setStatusDetail(
-        'Please wait while we verify your email and password.'
+        mode === 'signin'
+          ? 'Verifying your credentials now.'
+          : 'Preparing your EchoPaws account.'
       );
+      setStatusProvider('Email');
+
+      if (typeof window !== 'undefined') {
+        if (rememberEmail) {
+          window.localStorage.setItem('echopaws-remembered-email', email.trim());
+          window.localStorage.setItem('echopaws-remember-email', 'true');
+        } else {
+          window.localStorage.removeItem('echopaws-remembered-email');
+          window.localStorage.setItem('echopaws-remember-email', 'false');
+        }
+      }
 
       if (mode === 'signin') {
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: cleanEmail,
+          email: email.trim(),
           password,
         });
 
         if (error) throw error;
 
         if (data.user) {
-          setUser(data.user);
-          setStatus('success');
-          setStatusProvider('email');
-          setStatusTitle(
-            `Signed in successfully as ${getDisplayName(data.user)}`
-          );
-          setStatusDetail('Email & Password login completed successfully.');
+          setSession(data.session ?? null);
+          syncStatusFromUser(data.user, 'Email');
         }
       } else {
-        const siteUrl = getSiteUrl();
         const { data, error } = await supabase.auth.signUp({
-          email: cleanEmail,
+          email: email.trim(),
           password,
           options: {
-            emailRedirectTo: `${siteUrl}/login?next=${encodeURIComponent(
-              nextPath
-            )}`,
+            emailRedirectTo: `${getSiteUrl()}/login?next=${encodeURIComponent(nextPath)}`,
           },
         });
 
         if (error) throw error;
 
-        if (data.user) {
-          setUser(data.user);
-        }
-
-        if (data.session && data.user) {
-          setStatus('success');
-          setStatusProvider('email');
-          setStatusTitle(
-            `Account created and signed in as ${getDisplayName(data.user)}`
-          );
-          setStatusDetail(
-            'Your account has been created and is already active.'
-          );
+        if (data.user && data.session) {
+          setSession(data.session);
+          syncStatusFromUser(data.user, 'Email');
         } else {
           setStatus('success');
-          setStatusProvider('email');
-          setStatusTitle('Account created successfully');
-          setStatusDetail(
-            'Please check your inbox for verification mail if confirmation is required before sign-in.'
-          );
+          setStatusTitle('Account created');
+          setStatusDetail('Please check your email inbox and confirm your account before signing in.');
+          setStatusProvider('Email');
         }
       }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : 'Email authentication failed.';
       setStatus('error');
-      setStatusProvider('email');
-      setStatusTitle(
-        mode === 'signin' ? 'Email sign-in failed' : 'Account creation failed'
-      );
-      setStatusDetail(message);
+      setStatusTitle(mode === 'signin' ? 'Email sign-in failed' : 'Create account failed');
+      setStatusDetail(error instanceof Error ? error.message : 'Authentication failed.');
+      setStatusProvider('Email');
     } finally {
       setIsEmailLoading(false);
     }
   };
 
-  const featureItems = [
-    {
-      title: 'Better Readability',
-      text: 'Clearer hierarchy, softer contrast, and easier reading across the whole page.',
-    },
-    {
-      title: 'Gentler Form Feel',
-      text: 'Softer surfaces, calmer spacing, and more comfortable inputs for daily use.',
-    },
-    {
-      title: 'Safer Interaction',
-      text: 'Password visibility toggle, clearer feedback states, and more transparent login status.',
-    },
-  ];
+  const currentUser = session?.user ?? null;
+  const currentName = currentUser ? getDisplayName(currentUser) : '';
+  const currentEmail = currentUser?.email || '';
+  const canContinue = status === 'success' && !!currentUser;
 
   return (
-    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
-      <SiteHeader />
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,140,48,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(255,170,82,0.10),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(255,110,52,0.08),transparent_30%)]"
-      />
-      <div
-        aria-hidden="true"
-        className="pointer-events-none fixed inset-0 z-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] [background-size:44px_44px]"
-      />
-
-      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.82fr] lg:gap-10">
-          <section className="flex min-h-[620px] items-center">
-            <div className="w-full">
-              <div className="inline-flex items-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
-                Warm Luxury Login
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_30%),linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
+      <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
+        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
+          <section className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl lg:p-10">
+            <div>
+              <div className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-[0.18em] text-amber-200">
+                ECHOPAWS LOGIN
               </div>
 
-              <h1 className="mt-6 max-w-[680px] font-serif text-5xl leading-[0.94] tracking-[-0.05em] text-[#fff5ee] sm:text-6xl">
+              <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
                 Sign in with calm,
                 <br />
-                continue with
-                <span className="bg-[linear-gradient(180deg,#ffd59d,#ff9b37)] bg-clip-text text-transparent">
-                  {' '}
-                  comfort
-                </span>
+                continue with comfort
               </h1>
 
-              <p className="mt-6 max-w-[640px] text-[15px] leading-8 text-[rgba(255,233,220,0.72)]">
-                A refined sign-in experience that stays aligned with the
-                EchoPaws home theme: warm, elegant, readable, and reassuring
-                for everyday use.
+              <p className="mt-5 max-w-xl text-base leading-8 text-white/70">
+                Keep the login experience warm, clear, and reassuring. Google sign-in and
+                Email sign-in now share the same visible status panel so users can always
+                tell whether authentication succeeded and which account is active.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-3">
-                {featureItems.map((item) => (
-                  <div
-                    key={item.title}
-                    className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_14px_34px_rgba(0,0,0,0.16)]"
-                  >
-                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
-                      {item.title}
-                    </div>
-                    <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">
-                      {item.text}
-                    </p>
-                  </div>
-                ))}
+              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                <FeatureCard
+                  title="Clear success feedback"
+                  description="After Google or Email sign-in, the page shows a clear signed-in state with account name and email."
+                />
+                <FeatureCard
+                  title="Safer redirect flow"
+                  description="Google OAuth returns to the login flow first, so the page can confirm success before continuing."
+                />
+                <FeatureCard
+                  title="Less confusion"
+                  description="Users no longer have to guess whether they are signed in when Google returns from account selection."
+                />
+                <FeatureCard
+                  title="Gentle account overview"
+                  description="The auth status card stays visible at the top of the form and highlights the active account identity."
+                />
               </div>
+            </div>
 
-              <div className="mt-6 rounded-[28px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
-                    EchoPaws feeling
-                  </div>
-                  <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[10px] text-[rgba(255,233,220,0.60)]">
-                    Home-aligned
-                  </span>
-                </div>
-
-                <div className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#fff5ee]">
-                  Less noise, more trust
-                </div>
-                <p className="mt-4 max-w-[680px] text-sm leading-8 text-[rgba(255,233,220,0.70)]">
-                  This page is designed to feel like part of the product, not
-                  just a utility screen — calm to enter, clear to use, and
-                  consistent with the rest of the EchoPaws experience.
-                </p>
-              </div>
+            <div className="mt-10 rounded-3xl border border-white/10 bg-black/20 p-5">
+              <p className="text-sm font-semibold text-white">Less noise, more trust</p>
+              <p className="mt-2 text-sm leading-6 text-white/65">
+                The login page should always answer three questions immediately:
+                whether sign-in worked, which account is active, and where the user goes next.
+              </p>
             </div>
           </section>
 
-          <section className="flex items-center">
-            <div className="w-full rounded-[32px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(32,17,12,0.92),rgba(16,9,7,0.96))] p-5 shadow-[0_28px_70px_rgba(0,0,0,0.26)] sm:p-6">
-              <div className="flex items-center justify-between gap-3">
-                <div className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
-                  Auth
-                </div>
-
-                <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[10px] text-[rgba(255,233,220,0.60)]">
-                  Redirect → {nextPath}
-                </span>
+          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+            <div className="mb-6 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-sm uppercase tracking-[0.24em] text-amber-200/80">
+                  Companion Access
+                </p>
+                <h2 className="mt-2 text-2xl font-semibold text-white">
+                  {mode === 'signin' ? 'Welcome back' : 'Create your account'}
+                </h2>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 rounded-full border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-1">
+              <div className="inline-flex rounded-2xl border border-white/10 bg-white/5 p-1">
                 <button
                   type="button"
                   onClick={() => setMode('signin')}
-                  className={cn(
-                    'inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition',
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                     mode === 'signin'
-                      ? 'bg-[linear-gradient(180deg,#ffcd88,#ff9f3f)] text-[#2f160c] shadow-[0_10px_22px_rgba(255,145,51,0.20)]'
-                      : 'text-[rgba(255,233,220,0.70)] hover:text-white'
-                  )}
+                      ? 'bg-[#f59e0b] text-slate-950'
+                      : 'text-white/70 hover:text-white'
+                  }`}
                 >
                   Sign In
                 </button>
                 <button
                   type="button"
                   onClick={() => setMode('signup')}
-                  className={cn(
-                    'inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition',
+                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
                     mode === 'signup'
-                      ? 'bg-[linear-gradient(180deg,#ffcd88,#ff9f3f)] text-[#2f160c] shadow-[0_10px_22px_rgba(255,145,51,0.20)]'
-                      : 'text-[rgba(255,233,220,0.70)] hover:text-white'
-                  )}
+                      ? 'bg-[#f59e0b] text-slate-950'
+                      : 'text-white/70 hover:text-white'
+                  }`}
                 >
                   Create Account
                 </button>
               </div>
+            </div>
 
-              <div className="mt-5">
-                <h2 className="font-serif text-4xl tracking-[-0.04em] text-[#fff5ee]">
-                  {mode === 'signin'
-                    ? 'Welcome back to your companion space'
-                    : 'Create your calm companion account'}
-                </h2>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
-                  {mode === 'signin'
-                    ? 'Continue with Google or sign in with email and password.'
-                    : 'Use Google or create an account with your email and password.'}
-                </p>
+            <StatusPanel
+              status={status}
+              title={statusTitle}
+              detail={statusDetail}
+              provider={statusProvider}
+              userName={currentName}
+              userEmail={currentEmail}
+              canContinue={canContinue}
+              onContinue={handleContinue}
+            />
+
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={!supabase || isGoogleLoading}
+              className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {isGoogleLoading ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
+              ) : (
+                <GoogleIcon />
+              )}
+              <span>{isGoogleLoading ? 'Opening Google…' : 'Continue with Google'}</span>
+            </button>
+
+            <div className="my-6 flex items-center gap-3">
+              <div className="h-px flex-1 bg-white/10" />
+              <span className="text-xs uppercase tracking-[0.22em] text-white/40">
+                Or use email
+              </span>
+              <div className="h-px flex-1 bg-white/10" />
+            </div>
+
+            <form onSubmit={handleEmailAuth} className="space-y-4">
+              <div>
+                <label htmlFor="email" className="mb-2 block text-sm font-medium text-white/80">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="you@example.com"
+                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
+                />
               </div>
 
-              <StatusPanel
-                status={status}
-                provider={statusProvider}
-                title={statusTitle}
-                detail={statusDetail}
-                user={user}
-                nextPath={nextPath}
-                onContinue={handleContinue}
-              />
-
-              <button
-                type="button"
-                onClick={handleGoogleSignIn}
-                disabled={isGoogleLoading}
-                className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-5 text-sm font-medium text-[#fff5ee] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                {isGoogleLoading ? <Spinner /> : <GoogleIcon />}
-                <span>
-                  {isGoogleLoading
-                    ? 'Opening Google...'
-                    : 'Continue with Google'}
-                </span>
-              </button>
-
-              <div className="my-6 flex items-center gap-4">
-                <div className="h-px flex-1 bg-[rgba(255,233,220,0.08)]" />
-                <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,233,220,0.40)]">
-                  Or use email
+              <div>
+                <label htmlFor="password" className="mb-2 block text-sm font-medium text-white/80">
+                  Password
+                </label>
+                <div className="relative">
+                  <input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-12 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute inset-y-0 right-3 inline-flex items-center text-white/55 transition hover:text-white"
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    <EyeIcon open={showPassword} />
+                  </button>
                 </div>
-                <div className="h-px flex-1 bg-[rgba(255,233,220,0.08)]" />
               </div>
 
-              <form onSubmit={handleEmailSubmit}>
+              {mode === 'signup' && (
                 <div>
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
-                    Email address
+                  <label
+                    htmlFor="confirmPassword"
+                    className="mb-2 block text-sm font-medium text-white/80"
+                  >
+                    Confirm Password
                   </label>
                   <input
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    placeholder="you@example.com"
-                    className="h-12 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-white/[0.04] px-4 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
+                    id="confirmPassword"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    placeholder="Confirm your password"
+                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
                   />
                 </div>
+              )}
 
-                <div className="mt-4">
-                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
-                    Password
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      autoComplete={
-                        mode === 'signin'
-                          ? 'current-password'
-                          : 'new-password'
-                      }
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={
-                        mode === 'signin'
-                          ? 'Enter your password'
-                          : 'Create a password'
-                      }
-                      className="h-12 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-white/[0.04] px-4 pr-12 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword((v) => !v)}
-                      className="absolute inset-y-0 right-0 inline-flex w-12 items-center justify-center text-[rgba(255,233,220,0.48)] transition hover:text-white"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
-                    >
-                      <EyeIcon off={showPassword} />
-                    </button>
-                  </div>
-                </div>
+              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
+                <label className="inline-flex items-center gap-2 text-sm text-white/70">
+                  <input
+                    type="checkbox"
+                    checked={rememberEmail}
+                    onChange={(e) => setRememberEmail(e.target.checked)}
+                    className="h-4 w-4 rounded border-white/20 bg-white/5 text-amber-400 focus:ring-amber-400"
+                  />
+                  Remember my email
+                </label>
 
-                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
-                  <label className="inline-flex items-center gap-2 text-sm text-[rgba(255,233,220,0.72)]">
-                    <input
-                      type="checkbox"
-                      checked={rememberEmail}
-                      onChange={(e) => setRememberEmail(e.target.checked)}
-                      className="h-4 w-4 rounded border-[rgba(255,233,220,0.18)] bg-transparent accent-[#ffac58]"
-                    />
-                    Remember my email
-                  </label>
-
+                {mode === 'signin' ? (
                   <Link
-                    href="/forgot-password"
-                    className="text-sm text-[rgba(255,233,220,0.68)] transition hover:text-white"
+                    href="/login"
+                    className="text-sm text-amber-200/90 transition hover:text-amber-100"
                   >
                     Forgot password
                   </Link>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isEmailLoading}
-                  className="mt-4 inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(180deg,#ffd092,#ff9a35)] px-5 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.30)] disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {isEmailLoading ? <Spinner /> : null}
-                  <span>
-                    {isEmailLoading
-                      ? mode === 'signin'
-                        ? 'Signing in...'
-                        : 'Creating account...'
-                      : mode === 'signin'
-                      ? 'Sign In'
-                      : 'Create Account'}
-                  </span>
-                </button>
-              </form>
-
-              <div className="mt-5 rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4 text-sm leading-7 text-[rgba(255,233,220,0.60)]">
-                If your account was originally created with Google, it is best
-                to continue with Google first. Your signed-in account name and
-                email will appear above as soon as the login succeeds.
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMode('signin')}
+                    className="text-left text-sm text-amber-200/90 transition hover:text-amber-100"
+                  >
+                    Already have an account
+                  </button>
+                )}
               </div>
+
+              <button
+                type="submit"
+                disabled={!supabase || isEmailLoading}
+                className="inline-flex w-full items-center justify-center rounded-2xl bg-[#f59e0b] px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {isEmailLoading
+                  ? mode === 'signin'
+                    ? 'Signing In…'
+                    : 'Creating Account…'
+                  : mode === 'signin'
+                  ? 'Sign In'
+                  : 'Create Account'}
+              </button>
+            </form>
+
+            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/60">
+              <p>
+                {currentUser
+                  ? `Current session: ${getDisplayName(currentUser)} · ${currentUser.email || 'No email'}`
+                  : 'No active session yet. After Google or Email sign-in, this page will show your account name and login result here.'}
+              </p>
             </div>
           </section>
         </div>
-      </main>
-    </div>
+      </div>
+    </main>
+  );
+}
+
+function LoginPageFallback() {
+  return (
+    <main className="min-h-screen bg-[linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
+      <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
+        <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
+          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />
+          <h1 className="text-2xl font-semibold">Loading login page…</h1>
+          <p className="mt-3 text-sm text-white/65">
+            Preparing secure sign-in and session status.
+          </p>
+        </div>
+      </div>
+    </main>
   );
 }
 

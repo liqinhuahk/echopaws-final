@@ -1,841 +1,702 @@
 'use client';
 
 import Link from 'next/link';
-import {
-  Suspense,
-  useEffect,
-  useMemo,
-  useState,
-  type FormEvent,
-  type KeyboardEvent,
-  type ReactNode,
-} from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type Session, type User } from '@supabase/supabase-js';
 import SiteHeader from '@/components/site-header';
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const AUTH_CALLBACK_PATH = '/auth/callback';
-
 type AuthMode = 'signin' | 'signup';
+type AuthProvider = 'google' | 'email' | 'session' | null;
+type AuthStatus = 'idle' | 'loading' | 'success' | 'error';
 
-function cn(...classes: Array<string | false | null | undefined>) {
-  return classes.filter(Boolean).join(' ');
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
 }
 
-function EyeIcon({ visible }: { visible: boolean }) {
-  if (visible) {
-    return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden="true"
-      >
-        <path d="M2.25 12s3.75-7 9.75-7 9.75 7 9.75 7-3.75 7-9.75 7-9.75-7-9.75-7Z" />
-        <circle cx="12" cy="12" r="3.25" />
-      </svg>
-    );
-  }
+function createBrowserSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 3l18 18" />
-      <path d="M10.58 10.58A3 3 0 0 0 13.42 13.42" />
-      <path d="M9.88 5.08A10.94 10.94 0 0 1 12 4.88c6 0 9.75 7.12 9.75 7.12a16.3 16.3 0 0 1-3.03 3.94" />
-      <path d="M6.66 6.67C4.42 8.23 2.99 10.78 2.25 12c0 0 3.75 7 9.75 7 1.76 0 3.35-.43 4.77-1.16" />
-    </svg>
-  );
+  if (!url || !anon) return null;
+
+  return createClient(url, anon, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
 }
 
-function MailIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="3" y="5" width="18" height="14" rx="3" />
-      <path d="M4 7l8 6 8-6" />
-    </svg>
-  );
+function getDisplayName(user: User | null) {
+  if (!user) return '';
+
+  const meta = user.user_metadata ?? {};
+  const candidates = [
+    typeof meta.full_name === 'string' ? meta.full_name : '',
+    typeof meta.name === 'string' ? meta.name : '',
+    typeof meta.display_name === 'string' ? meta.display_name : '',
+    typeof meta.user_name === 'string' ? meta.user_name : '',
+    user.email ?? '',
+  ];
+
+  return candidates.find((v) => v && v.trim())?.trim() ?? 'Signed-in user';
 }
 
-function LockIcon() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="4" y="10" width="16" height="10" rx="3" />
-      <path d="M8 10V7.75A4 4 0 0 1 12 4a4 4 0 0 1 4 3.75V10" />
-    </svg>
-  );
+function getProviderLabel(provider: AuthProvider) {
+  if (provider === 'google') return 'Google';
+  if (provider === 'email') return 'Email & Password';
+  if (provider === 'session') return 'Active Session';
+  return 'Authentication';
 }
 
-function UserIcon() {
+function getSiteUrl() {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.7"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Z" />
-      <path d="M4 20a8 8 0 0 1 16 0" />
-    </svg>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="currentColor" aria-hidden="true">
-      <path d="M12 2l1.85 5.15L19 9l-5.15 1.85L12 16l-1.85-5.15L5 9l5.15-1.85L12 2Z" />
-      <path d="M18.5 15l.92 2.58L22 18.5l-2.58.92L18.5 22l-.92-2.58L15 18.5l2.58-.92L18.5 15Z" />
-      <path d="M5.5 14l.76 2.24L8.5 17l-2.24.76L5.5 20l-.76-2.24L2.5 17l2.24-.76L5.5 14Z" />
-    </svg>
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.NEXT_PUBLIC_APP_URL ||
+    (typeof window !== 'undefined' ? window.location.origin : '')
   );
 }
 
 function GoogleIcon() {
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" aria-hidden="true">
+    <svg viewBox="0 0 24 24" className="h-4 w-4" aria-hidden="true">
       <path
-        d="M21.8 12.23c0-.78-.07-1.53-.2-2.23H12v4.22h5.49a4.7 4.7 0 0 1-2.04 3.08v2.56h3.3c1.93-1.78 3.05-4.4 3.05-7.63Z"
-        fill="#4285F4"
-      />
-      <path
-        d="M12 22c2.76 0 5.07-.91 6.76-2.47l-3.3-2.56c-.91.61-2.08.98-3.46.98-2.66 0-4.91-1.8-5.72-4.22H2.87v2.65A10 10 0 0 0 12 22Z"
-        fill="#34A853"
-      />
-      <path
-        d="M6.28 13.73A5.98 5.98 0 0 1 6 12c0-.6.1-1.18.28-1.73V7.62H2.87A10 10 0 0 0 2 12c0 1.61.38 3.13 1.05 4.38l3.23-2.65Z"
-        fill="#FBBC05"
-      />
-      <path
-        d="M12 6.05c1.5 0 2.86.52 3.93 1.54l2.95-2.95C17.06 2.91 14.75 2 12 2A10 10 0 0 0 2.87 7.62l3.41 2.65c.81-2.42 3.06-4.22 5.72-4.22Z"
         fill="#EA4335"
+        d="M12 10.2v3.9h5.5c-.24 1.25-.96 2.3-2.04 3.01l3.3 2.56c1.92-1.77 3.03-4.37 3.03-7.46 0-.71-.06-1.39-.18-2.04H12Z"
+      />
+      <path
+        fill="#34A853"
+        d="M12 22c2.75 0 5.06-.91 6.75-2.47l-3.3-2.56c-.91.61-2.08.97-3.45.97-2.65 0-4.9-1.79-5.7-4.19l-3.41 2.63A10 10 0 0 0 12 22Z"
+      />
+      <path
+        fill="#4A90E2"
+        d="M6.3 13.75A5.99 5.99 0 0 1 6 12c0-.61.1-1.2.3-1.75L2.9 7.62A10 10 0 0 0 2 12c0 1.62.39 3.15 1.09 4.5l3.21-2.75Z"
+      />
+      <path
+        fill="#FBBC05"
+        d="M12 5.98c1.5 0 2.85.52 3.91 1.54l2.93-2.93C17.05 2.91 14.74 2 12 2A10 10 0 0 0 3.09 7.5l3.41 2.75c.8-2.4 3.05-4.27 5.5-4.27Z"
       />
     </svg>
   );
 }
 
-function AuthSkeleton() {
+function Spinner() {
   return (
-    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
-      <SiteHeader />
-      <main className="mx-auto max-w-7xl px-6 pb-16 pt-24 md:px-8 md:pt-28 xl:px-10 xl:pt-32">
-        <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] xl:gap-10">
-          <div className="space-y-5">
-            <div className="h-8 w-44 animate-pulse rounded-full bg-white/10" />
-            <div className="h-20 max-w-[540px] animate-pulse rounded-[32px] bg-white/10" />
-            <div className="h-24 max-w-[600px] animate-pulse rounded-[28px] bg-white/5" />
-          </div>
-
-          <div className="mx-auto mt-2 w-full max-w-[520px] rounded-[32px] border border-white/10 bg-white/5 p-6 backdrop-blur-xl md:mt-4 xl:mt-0">
-            <div className="h-11 w-full animate-pulse rounded-full bg-white/10" />
-            <div className="mt-6 h-14 w-full animate-pulse rounded-2xl bg-white/10" />
-            <div className="mt-6 space-y-4">
-              <div className="h-14 w-full animate-pulse rounded-[20px] bg-white/10" />
-              <div className="h-14 w-full animate-pulse rounded-[20px] bg-white/10" />
-              <div className="h-12 w-full animate-pulse rounded-full bg-white/10" />
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+    <svg
+      viewBox="0 0 24 24"
+      className="h-4 w-4 animate-spin"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      aria-hidden="true"
+    >
+      <path d="M21 12a9 9 0 1 1-6.2-8.56" />
+    </svg>
   );
 }
 
-function InputField({
-  label,
-  type,
-  autoComplete,
-  value,
-  onChange,
-  placeholder,
-  icon,
-  rightSlot,
-  onKeyUp,
-  onKeyDown,
+function EyeIcon({ off = false }: { off?: boolean }) {
+  return off ? (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="m3 3 18 18" />
+      <path d="M10.58 10.59A2 2 0 0 0 13.4 13.4" />
+      <path d="M9.88 5.09A9.77 9.77 0 0 1 12 4.88c5 0 9.27 3.11 11 7.5a11.83 11.83 0 0 1-4.17 5.94" />
+      <path d="M6.61 6.61A11.79 11.79 0 0 0 1 12.38a11.83 11.83 0 0 0 7.5 6.78 10.86 10.86 0 0 0 4.18.1" />
+    </svg>
+  ) : (
+    <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
+function StatusPanel({
+  status,
+  provider,
+  title,
+  detail,
+  user,
+  nextPath,
+  onContinue,
 }: {
-  label: string;
-  type: string;
-  autoComplete?: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  icon: ReactNode;
-  rightSlot?: ReactNode;
-  onKeyUp?: (event: KeyboardEvent<HTMLInputElement>) => void;
-  onKeyDown?: (event: KeyboardEvent<HTMLInputElement>) => void;
+  status: AuthStatus;
+  provider: AuthProvider;
+  title: string;
+  detail: string;
+  user: User | null;
+  nextPath: string;
+  onContinue: () => void;
 }) {
+  const isSuccess = status === 'success';
+  const isError = status === 'error';
+  const isLoading = status === 'loading';
+
+  const displayName = getDisplayName(user);
+  const email = user?.email ?? '';
+  const providerLabel = getProviderLabel(provider);
+
   return (
-    <label className="block">
-      <span className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.24em] text-[rgba(255,224,206,0.54)]">
-        {label}
-      </span>
-
-      <div className="group relative">
-        <div className="pointer-events-none absolute inset-y-0 left-0 flex w-12 items-center justify-center text-[rgba(84,56,44,0.68)]">
-          {icon}
-        </div>
-
-        <input
-          type={type}
-          autoComplete={autoComplete}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          onKeyUp={onKeyUp}
-          onKeyDown={onKeyDown}
-          placeholder={placeholder}
+    <div
+      className={cn(
+        'mb-5 rounded-[24px] border p-4 shadow-[0_12px_30px_rgba(0,0,0,0.12)] transition',
+        isSuccess &&
+          'border-[rgba(104,211,145,0.22)] bg-[linear-gradient(180deg,rgba(64,120,77,0.18),rgba(22,36,24,0.28))]',
+        isError &&
+          'border-[rgba(255,120,120,0.2)] bg-[linear-gradient(180deg,rgba(120,40,40,0.18),rgba(38,14,14,0.28))]',
+        isLoading &&
+          'border-[rgba(255,180,103,0.22)] bg-[linear-gradient(180deg,rgba(124,71,25,0.18),rgba(30,16,9,0.28))]',
+        status === 'idle' &&
+          'border-[rgba(255,233,220,0.10)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))]'
+      )}
+    >
+      <div className="flex flex-wrap items-center gap-3">
+        <span
           className={cn(
-            'h-14 w-full rounded-[20px] border border-[rgba(255,222,204,0.12)]',
-            'bg-[linear-gradient(180deg,rgba(255,252,250,0.96),rgba(249,244,239,0.96))]',
-            'pl-12 pr-4 text-[15px] text-[#1d1511] shadow-[inset_0_1px_0_rgba(255,255,255,0.55)]',
-            'outline-none transition duration-200',
-            'placeholder:text-[rgba(70,49,38,0.42)]',
-            'focus:border-[#ffae69] focus:bg-white focus:ring-4 focus:ring-[rgba(255,164,84,0.14)]',
-            'group-hover:border-[rgba(255,190,142,0.18)]',
-            rightSlot ? 'pr-14' : ''
+            'inline-flex h-8 items-center rounded-full px-3 text-[11px] font-semibold uppercase tracking-[0.18em]',
+            isSuccess && 'bg-[rgba(104,211,145,0.15)] text-[#b8f0c6]',
+            isError && 'bg-[rgba(255,120,120,0.14)] text-[#ffd1d1]',
+            isLoading && 'bg-[rgba(255,180,103,0.14)] text-[#ffd6ad]',
+            status === 'idle' && 'bg-[rgba(255,255,255,0.05)] text-[rgba(255,233,220,0.70)]'
           )}
-        />
+        >
+          {isSuccess
+            ? 'Signed in'
+            : isError
+            ? 'Sign-in issue'
+            : isLoading
+            ? 'Authenticating'
+            : 'Account status'}
+        </span>
 
-        {rightSlot ? (
-          <div className="absolute inset-y-0 right-0 flex items-center justify-center">
-            {rightSlot}
-          </div>
-        ) : null}
+        <span className="text-xs text-[rgba(255,233,220,0.56)]">
+          {provider ? providerLabel : 'Ready'}
+        </span>
       </div>
-    </label>
-  );
-}
 
-function LoginPageContent() {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const next = useMemo(() => {
-    const raw = searchParams.get('next');
-    if (!raw || !raw.startsWith('/')) return '/chat';
-    return raw;
-  }, [searchParams]);
-
-  const [mode, setMode] = useState<AuthMode>('signin');
-  const [fullName, setFullName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [capsLockOn, setCapsLockOn] = useState(false);
-
-  const [rememberMe, setRememberMe] = useState(true);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
-
-  const supabase = useMemo(() => {
-    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) return null;
-    return createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-  }, []);
-
-  const passwordStrength = useMemo(() => {
-    const value = password.trim();
-    if (!value) return { score: 0, label: 'Not entered', color: 'bg-white/10' };
-
-    let score = 0;
-    if (value.length >= 8) score += 1;
-    if (/[A-Z]/.test(value)) score += 1;
-    if (/[0-9]/.test(value)) score += 1;
-    if (/[^A-Za-z0-9]/.test(value)) score += 1;
-
-    if (score <= 1) return { score, label: 'Weak', color: 'bg-[#ff8f7a]' };
-    if (score === 2) return { score, label: 'Fair', color: 'bg-[#ffbf73]' };
-    if (score === 3) return { score, label: 'Good', color: 'bg-[#ffc96d]' };
-    return { score, label: 'Strong', color: 'bg-[#71d49b]' };
-  }, [password]);
-
-  useEffect(() => {
-    setError(null);
-    setMessage(null);
-  }, [mode]);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    const savedEmail = window.localStorage.getItem('echopaws_last_email');
-    if (savedEmail && !email) {
-      setEmail(savedEmail);
-    }
-  }, [email]);
-
-  function getCallbackUrl() {
-    if (typeof window === 'undefined') return '';
-    return `${window.location.origin}${AUTH_CALLBACK_PATH}?next=${encodeURIComponent(next)}`;
-  }
-
-  function clearFeedback() {
-    setError(null);
-    setMessage(null);
-  }
-
-  function normalizeError(input: unknown) {
-    const raw =
-      typeof input === 'string'
-        ? input
-        : input instanceof Error
-          ? input.message
-          : 'Something went wrong. Please try again.';
-
-    const msg = raw.toLowerCase();
-
-    if (msg.includes('invalid login credentials')) {
-      return 'Incorrect email or password. Please try again.';
-    }
-    if (msg.includes('email not confirmed')) {
-      return 'Your email address has not been verified yet. Please check your inbox.';
-    }
-    if (msg.includes('user already registered')) {
-      return 'This email is already registered. Please sign in instead.';
-    }
-    if (msg.includes('password should be at least')) {
-      return 'Your password is too short. Please use at least 6 characters.';
-    }
-    if (msg.includes('network')) {
-      return 'A network issue was detected. Please try again in a moment.';
-    }
-
-    return raw || 'Something went wrong. Please try again.';
-  }
-
-  async function handleGoogleLogin() {
-    clearFeedback();
-
-    if (!supabase) {
-      setError('Supabase environment variables are not configured.');
-      return;
-    }
-
-    try {
-      setGoogleLoading(true);
-
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: getCallbackUrl(),
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'select_account',
-          },
-        },
-      });
-
-      if (error) {
-        setError(normalizeError(error));
-      }
-    } catch (err) {
-      setError(normalizeError(err));
-    } finally {
-      setGoogleLoading(false);
-    }
-  }
-
-  async function handleForgotPassword() {
-    clearFeedback();
-
-    if (!supabase) {
-      setError('Supabase environment variables are not configured.');
-      return;
-    }
-
-    if (!email.trim()) {
-      setError('Please enter your email address first.');
-      return;
-    }
-
-    try {
-      setLoading(true);
-
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: getCallbackUrl(),
-      });
-
-      if (error) {
-        setError(normalizeError(error));
-        return;
-      }
-
-      setMessage('A password reset email has been sent to your inbox.');
-    } catch (err) {
-      setError(normalizeError(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    clearFeedback();
-
-    if (!supabase) {
-      setError('Supabase environment variables are not configured.');
-      return;
-    }
-
-    if (!email.trim()) {
-      setError('Please enter your email address.');
-      return;
-    }
-
-    if (!password.trim()) {
-      setError('Please enter your password.');
-      return;
-    }
-
-    if (mode === 'signup') {
-      if (!fullName.trim()) {
-        setError('Please enter your name.');
-        return;
-      }
-
-      if (password.length < 6) {
-        setError('Password must be at least 6 characters long.');
-        return;
-      }
-
-      if (password !== confirmPassword) {
-        setError('The two passwords do not match.');
-        return;
-      }
-    }
-
-    try {
-      setLoading(true);
-
-      if (mode === 'signin') {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: email.trim(),
-          password,
-        });
-
-        if (error) {
-          setError(normalizeError(error));
-          return;
-        }
-
-        if (rememberMe && typeof window !== 'undefined') {
-          window.localStorage.setItem('echopaws_last_email', email.trim());
-        }
-
-        router.push(next);
-        router.refresh();
-        return;
-      }
-
-      const { error } = await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          emailRedirectTo: getCallbackUrl(),
-          data: {
-            full_name: fullName.trim(),
-          },
-        },
-      });
-
-      if (error) {
-        setError(normalizeError(error));
-        return;
-      }
-
-      setMessage('Your account has been created. Please verify your email before signing in.');
-    } catch (err) {
-      setError(normalizeError(err));
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="min-h-screen overflow-x-hidden bg-[#0b0706] text-[#f8efe8]">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_18%,rgba(255,148,67,0.18),transparent_24%),radial-gradient(circle_at_82%_16%,rgba(255,175,96,0.10),transparent_22%),radial-gradient(circle_at_50%_100%,rgba(255,120,64,0.08),transparent_32%)]" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.12)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.12)_1px,transparent_1px)] [background-size:44px_44px]" />
-
-      <SiteHeader />
-
-      <main className="relative mx-auto max-w-7xl px-6 pb-16 pt-24 md:px-8 md:pt-28 xl:px-10 xl:pt-32">
-        <div className="grid items-start gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(420px,520px)] xl:gap-10">
-          <section className="pt-2 xl:pt-10">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.26em] text-[#efc39e] backdrop-blur-sm">
-              <SparkIcon />
-              Warm Luxury Login
-            </div>
-
-            <h1 className="mt-6 max-w-[720px] text-balance text-[44px] font-semibold leading-[0.94] tracking-[-0.05em] text-[#fff8f2] md:text-[58px] xl:text-[74px]">
-              Sign in with calm,
-              <br />
-              continue with{' '}
-              <span className="bg-gradient-to-r from-[#ffd8b3] via-[#ffbe77] to-[#ff9440] bg-clip-text text-transparent">
-                comfort
-              </span>
-            </h1>
-
-            <p className="mt-6 max-w-[620px] text-[15px] leading-8 text-[rgba(255,239,231,0.72)] md:text-[16px]">
-              A refined sign-in experience that stays aligned with the EchoPaws home theme:
-              warm, elegant, readable, and reassuring for everyday use.
-            </p>
-
-            <div className="mt-8 grid gap-4 md:grid-cols-3">
-              <div className="rounded-[28px] border border-[rgba(255,230,214,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#e9bb96]">
-                  Better readability
-                </div>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  Clearer hierarchy, softer contrast, and easier reading across the whole page.
-                </p>
-              </div>
-
-              <div className="rounded-[28px] border border-[rgba(255,230,214,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#e9bb96]">
-                  Gentler form feel
-                </div>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  Softer surfaces, calmer spacing, and more comfortable inputs for daily use.
-                </p>
-              </div>
-
-              <div className="rounded-[28px] border border-[rgba(255,230,214,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.045),rgba(255,255,255,0.02))] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)] backdrop-blur-sm">
-                <div className="text-[11px] font-semibold uppercase tracking-[0.24em] text-[#e9bb96]">
-                  Safer interaction
-                </div>
-                <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.68)]">
-                  Password visibility toggle, Caps Lock notice, and clearer feedback states.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-8 max-w-[640px] rounded-[30px] border border-[rgba(255,228,212,0.12)] bg-[linear-gradient(180deg,rgba(26,14,11,0.76),rgba(15,8,7,0.86))] p-6 shadow-[0_24px_70px_rgba(0,0,0,0.3)] backdrop-blur-xl">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-[11px] font-semibold uppercase tracking-[0.26em] text-[#eabf9a]">
-                    EchoPaws feeling
-                  </div>
-                  <h2 className="mt-3 text-[24px] font-semibold tracking-[-0.03em] text-[#fff5ee]">
-                    Less noise, more trust
-                  </h2>
-                </div>
-
-                <div className="rounded-full border border-[rgba(255,221,202,0.14)] bg-white/5 px-3 py-1.5 text-[11px] font-medium text-[rgba(255,235,223,0.66)]">
-                  Home-aligned
-                </div>
-              </div>
-
-              <p className="mt-4 text-sm leading-8 text-[rgba(255,239,231,0.68)]">
-                This page is designed to feel like part of the product, not just a utility screen —
-                calm to enter, clear to use, and consistent with the rest of the EchoPaws experience.
-              </p>
-            </div>
-          </section>
-
-          <section className="self-start">
-            <div className="relative mx-auto mt-2 w-full max-w-[520px] md:mt-4 xl:mt-0">
-              <div className="absolute -inset-3 rounded-[40px] bg-[radial-gradient(circle_at_top,rgba(255,165,88,0.16),transparent_38%)] blur-2xl" />
-              <div className="relative rounded-[32px] border border-[rgba(255,233,220,0.14)] bg-[linear-gradient(180deg,rgba(32,17,13,0.82),rgba(16,9,8,0.94))] p-5 shadow-[0_30px_100px_rgba(0,0,0,0.48)] backdrop-blur-2xl md:p-6">
-                <div className="mb-5 flex flex-wrap items-center justify-between gap-3 pt-1">
-                  <div className="inline-flex items-center gap-2 rounded-full border border-[rgba(255,214,182,0.18)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.28em] text-[#efc39e]">
-                    Auth
-                  </div>
-
-                  <div className="rounded-full border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-3 py-1.5 text-[11px] text-[rgba(255,234,224,0.6)]">
-                    Redirect → <span className="text-[#ffd4a8]">{next}</span>
-                  </div>
-                </div>
-
-                <div className="rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] p-1">
-                  <div className="grid grid-cols-2 gap-1">
-                    <button
-                      type="button"
-                      onClick={() => setMode('signin')}
-                      className={cn(
-                        'rounded-full px-4 py-3 text-sm font-semibold transition',
-                        mode === 'signin'
-                          ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
-                          : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
-                      )}
-                    >
-                      Sign In
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setMode('signup')}
-                      className={cn(
-                        'rounded-full px-4 py-3 text-sm font-semibold transition',
-                        mode === 'signup'
-                          ? 'bg-gradient-to-r from-[#ffc887] to-[#ff9430] text-[#2f160c] shadow-[0_12px_30px_rgba(255,151,57,0.36)]'
-                          : 'text-[rgba(255,238,229,0.7)] hover:bg-white/5'
-                      )}
-                    >
-                      Create Account
-                    </button>
-                  </div>
-                </div>
-
-                <div className="mt-6">
-                  <h2 className="text-[26px] font-semibold tracking-[-0.03em] text-[#fff6f0]">
-                    {mode === 'signin'
-                      ? 'Welcome back to your companion space'
-                      : 'Create your EchoPaws account'}
-                  </h2>
-
-                  <p className="mt-3 text-sm leading-7 text-[rgba(255,238,229,0.66)]">
-                    {mode === 'signin'
-                      ? 'Continue with Google or sign in with email and password.'
-                      : 'Create an account to continue with Chat, Memories, and the rest of your EchoPaws experience.'}
-                  </p>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={loading || googleLoading}
-                  className="mt-6 flex h-14 w-full items-center justify-center gap-3 rounded-[20px] border border-[rgba(255,233,220,0.12)] bg-[linear-gradient(180deg,rgba(255,255,255,0.06),rgba(255,255,255,0.035))] px-4 text-sm font-semibold text-[#fff4ed] transition hover:border-[rgba(255,214,182,0.18)] hover:bg-[rgba(255,255,255,0.07)] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <GoogleIcon />
-                  {googleLoading ? 'Connecting to Google…' : 'Continue with Google'}
-                </button>
-
-                <div className="my-6 flex items-center gap-4">
-                  <div className="h-px flex-1 bg-white/10" />
-                  <span className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,224,206,0.38)]">
-                    Or use email
-                  </span>
-                  <div className="h-px flex-1 bg-white/10" />
-                </div>
-
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  {mode === 'signup' ? (
-                    <InputField
-                      label="Your name"
-                      type="text"
-                      autoComplete="name"
-                      value={fullName}
-                      onChange={setFullName}
-                      placeholder="How should your pet call you?"
-                      icon={<UserIcon />}
-                    />
-                  ) : null}
-
-                  <InputField
-                    label="Email address"
-                    type="email"
-                    autoComplete="email"
-                    value={email}
-                    onChange={setEmail}
-                    placeholder="you@example.com"
-                    icon={<MailIcon />}
-                  />
-
-                  <InputField
-                    label="Password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                    value={password}
-                    onChange={setPassword}
-                    placeholder={mode === 'signin' ? 'Enter your password' : 'Create a secure password'}
-                    icon={<LockIcon />}
-                    onKeyUp={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
-                    onKeyDown={(e) => setCapsLockOn(e.getModifierState('CapsLock'))}
-                    rightSlot={
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? 'Hide password' : 'Show password'}
-                        aria-pressed={showPassword}
-                        className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
-                      >
-                        <EyeIcon visible={showPassword} />
-                      </button>
-                    }
-                  />
-
-                  {capsLockOn ? (
-                    <div className="rounded-2xl border border-[rgba(255,191,115,0.18)] bg-[rgba(255,173,92,0.10)] px-4 py-3 text-sm text-[#ffd9b3]">
-                      Caps Lock is on. Please check your password carefully.
-                    </div>
-                  ) : null}
-
-                  {mode === 'signup' ? (
-                    <>
-                      <InputField
-                        label="Confirm password"
-                        type={showConfirmPassword ? 'text' : 'password'}
-                        autoComplete="new-password"
-                        value={confirmPassword}
-                        onChange={setConfirmPassword}
-                        placeholder="Re-enter your password"
-                        icon={<LockIcon />}
-                        rightSlot={
-                          <button
-                            type="button"
-                            onClick={() => setShowConfirmPassword((v) => !v)}
-                            aria-label={
-                              showConfirmPassword ? 'Hide confirm password' : 'Show confirm password'
-                            }
-                            aria-pressed={showConfirmPassword}
-                            className="mr-1 flex h-12 w-12 items-center justify-center rounded-full text-[#6c5244] transition hover:bg-[rgba(77,47,33,0.08)] hover:text-[#2a1811] focus:outline-none"
-                          >
-                            <EyeIcon visible={showConfirmPassword} />
-                          </button>
-                        }
-                      />
-
-                      <div className="rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4">
-                        <div className="flex items-center justify-between gap-4">
-                          <span className="text-sm font-medium text-[rgba(255,240,232,0.78)]">
-                            Password strength
-                          </span>
-                          <span className="text-sm font-semibold text-[#ffe0bf]">
-                            {passwordStrength.label}
-                          </span>
-                        </div>
-
-                        <div className="mt-3 grid grid-cols-4 gap-2">
-                          {[1, 2, 3, 4].map((n) => (
-                            <div
-                              key={n}
-                              className={cn(
-                                'h-2 rounded-full',
-                                passwordStrength.score >= n ? passwordStrength.color : 'bg-white/10'
-                              )}
-                            />
-                          ))}
-                        </div>
-
-                        <p className="mt-3 text-xs leading-6 text-[rgba(255,235,223,0.54)]">
-                          For better security, use 8+ characters with uppercase letters, numbers,
-                          or symbols.
-                        </p>
-                      </div>
-                    </>
-                  ) : null}
-
-                  <div className="flex items-center justify-between gap-4 rounded-[22px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] px-4 py-3">
-                    <label className="flex cursor-pointer items-center gap-3 text-sm text-[rgba(255,241,233,0.72)]">
-                      <input
-                        type="checkbox"
-                        checked={rememberMe}
-                        onChange={(e) => setRememberMe(e.target.checked)}
-                        className="h-4 w-4 rounded border-white/20 bg-transparent text-[#ff9c46] focus:ring-[#ff9c46]"
-                      />
-                      Remember my email
-                    </label>
-
-                    {mode === 'signin' ? (
-                      <button
-                        type="button"
-                        onClick={handleForgotPassword}
-                        disabled={loading || googleLoading}
-                        className="text-sm font-medium text-[#ffd2a7] transition hover:text-white disabled:cursor-not-allowed disabled:opacity-60"
-                      >
-                        Forgot password
-                      </button>
-                    ) : (
-                      <span className="text-xs text-[rgba(255,235,223,0.46)]">
-                        Email verification required
-                      </span>
-                    )}
-                  </div>
-
-                  {error ? (
-                    <div className="rounded-[22px] border border-[rgba(255,117,117,0.2)] bg-[rgba(121,24,24,0.18)] px-4 py-3 text-sm leading-7 text-[#ffd9d9]">
-                      {error}
-                    </div>
-                  ) : null}
-
-                  {message ? (
-                    <div className="rounded-[22px] border border-[rgba(255,192,122,0.2)] bg-[rgba(255,164,84,0.12)] px-4 py-3 text-sm leading-7 text-[#ffe2bf]">
-                      {message}
-                    </div>
-                  ) : null}
-
-                  <button
-                    type="submit"
-                    disabled={loading || googleLoading}
-                    className="inline-flex h-12 w-full items-center justify-center rounded-full bg-gradient-to-r from-[#ffc887] via-[#ffab55] to-[#ff9430] px-6 text-sm font-semibold text-[#31180d] shadow-[0_16px_38px_rgba(255,145,51,0.34)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_46px_rgba(255,145,51,0.42)] disabled:cursor-not-allowed disabled:opacity-60"
-                  >
-                    {loading
-                      ? mode === 'signin'
-                        ? 'Signing in…'
-                        : 'Creating account…'
-                      : mode === 'signin'
-                        ? 'Sign In'
-                        : 'Create Account'}
-                  </button>
-                </form>
-
-                <div className="mt-6 rounded-[24px] border border-[rgba(255,233,220,0.1)] bg-[rgba(255,255,255,0.03)] p-4 text-sm leading-7 text-[rgba(255,238,229,0.64)]">
-                  If your account was originally created with Google, it is best to continue with
-                  Google first. You can set or reset an email password later if needed.
-                </div>
-
-                <div className="mt-5 flex flex-wrap items-center justify-between gap-3 text-sm text-[rgba(255,236,226,0.56)]">
-                  <span>
-                    Need a softer landing first?{' '}
-                    <Link href="/" className="font-semibold text-[#ffd1a3] transition hover:text-white">
-                      Return Home
-                    </Link>
-                  </span>
-
-                  <span>
-                    After sign-in you will continue to{' '}
-                    <span className="font-medium text-[#ffe1c0]">{next}</span>
-                  </span>
-                </div>
-              </div>
-            </div>
-          </section>
+      <div className="mt-3">
+        <div className="text-[15px] font-semibold text-[#fff5ee]">{title}</div>
+        <div className="mt-1 text-sm leading-6 text-[rgba(255,233,220,0.72)]">{detail}</div>
+      </div>
+
+      {isSuccess && user ? (
+        <div className="mt-4 rounded-[18px] border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.03)] p-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
+            Signed-in account
+          </div>
+          <div className="mt-2 text-base font-semibold text-[#fff5ee]">{displayName}</div>
+          <div className="mt-1 text-sm text-[rgba(255,233,220,0.68)]">{email || 'No email found'}</div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <span className="rounded-full border border-[rgba(104,211,145,0.18)] bg-[rgba(104,211,145,0.10)] px-3 py-1 text-xs text-[#b8f0c6]">
+              Login successful
+            </span>
+            <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-xs text-[rgba(255,233,220,0.66)]">
+              Method: {providerLabel}
+            </span>
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={onContinue}
+              className="inline-flex h-10 items-center justify-center rounded-full bg-[linear-gradient(180deg,#ffbe72,#ff9430)] px-4 text-sm font-semibold text-[#2f160c] shadow-[0_12px_24px_rgba(255,145,51,0.22)] transition hover:-translate-y-0.5"
+            >
+              Continue to {nextPath === '/' ? 'Home' : nextPath}
+            </button>
+
+            <Link
+              href="/account"
+              className="inline-flex h-10 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-4 text-sm font-medium text-[#fff5ee] transition hover:bg-white/5"
+            >
+              View account
+            </Link>
+          </div>
         </div>
-      </main>
+      ) : null}
     </div>
   );
 }
 
 export default function LoginPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const nextPath = searchParams.get('next') || '/';
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+
+  const [mode, setMode] = useState<AuthMode>('signin');
+  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<User | null>(null);
+
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [rememberEmail, setRememberEmail] = useState(true);
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [status, setStatus] = useState<AuthStatus>('idle');
+  const [statusProvider, setStatusProvider] = useState<AuthProvider>(null);
+  const [statusTitle, setStatusTitle] = useState('Ready to sign in');
+  const [statusDetail, setStatusDetail] = useState(
+    'Choose Google or email and password. Your login result and account name will appear here.'
+  );
+
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [isEmailLoading, setIsEmailLoading] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const cached = window.localStorage.getItem('echopaws.rememberedEmail');
+    if (cached) setEmail(cached);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (!rememberEmail) {
+      window.localStorage.removeItem('echopaws.rememberedEmail');
+      return;
+    }
+    if (email.trim()) {
+      window.localStorage.setItem('echopaws.rememberedEmail', email.trim());
+    }
+  }, [email, rememberEmail]);
+
+  useEffect(() => {
+    if (!supabase) {
+      setStatus('error');
+      setStatusTitle('Supabase is not configured');
+      setStatusDetail('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.');
+      return;
+    }
+
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!mounted) return;
+
+      if (error) {
+        setStatus('error');
+        setStatusTitle('Unable to read current session');
+        setStatusDetail(error.message);
+        return;
+      }
+
+      const currentSession = data.session ?? null;
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        const provider =
+          currentSession.user.app_metadata?.provider === 'google' ? 'google' : 'session';
+        setStatus('success');
+        setStatusProvider(provider);
+        setStatusTitle(`Already signed in as ${getDisplayName(currentSession.user)}`);
+        setStatusDetail(
+          `Your ${getProviderLabel(provider)} session is active. You can continue safely.`
+        );
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (!mounted) return;
+
+      setSession(nextSession);
+      setUser(nextSession?.user ?? null);
+
+      if (event === 'SIGNED_IN' && nextSession?.user) {
+        const provider =
+          nextSession.user.app_metadata?.provider === 'google' ? 'google' : 'email';
+
+        setStatus('success');
+        setStatusProvider(provider);
+        setStatusTitle(`Signed in successfully as ${getDisplayName(nextSession.user)}`);
+        setStatusDetail(
+          `${getProviderLabel(provider)} login completed. You can continue with this account now.`
+        );
+        setIsGoogleLoading(false);
+        setIsEmailLoading(false);
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setStatus('idle');
+        setStatusProvider(null);
+        setStatusTitle('Ready to sign in');
+        setStatusDetail(
+          'Choose Google or email and password. Your login result and account name will appear here.'
+        );
+        setIsGoogleLoading(false);
+        setIsEmailLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const handleContinue = () => {
+    router.push(nextPath);
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (!supabase || isGoogleLoading) return;
+
+    try {
+      setIsGoogleLoading(true);
+      setStatus('loading');
+      setStatusProvider('google');
+      setStatusTitle('Redirecting to Google sign-in');
+      setStatusDetail('Please complete the Google authorization window. We will show your account name here after you return.');
+
+      const siteUrl = getSiteUrl();
+      const redirectTo = `${siteUrl}/login?next=${encodeURIComponent(nextPath)}`;
+
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo,
+        },
+      });
+
+      if (error) throw error;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Google sign-in failed.';
+      setStatus('error');
+      setStatusProvider('google');
+      setStatusTitle('Google sign-in failed');
+      setStatusDetail(message);
+      setIsGoogleLoading(false);
+    }
+  };
+
+  const handleEmailSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!supabase || isEmailLoading) return;
+
+    const cleanEmail = email.trim();
+    if (!cleanEmail || !password.trim()) {
+      setStatus('error');
+      setStatusProvider('email');
+      setStatusTitle(mode === 'signin' ? 'Sign-in information incomplete' : 'Account creation information incomplete');
+      setStatusDetail('Please enter both your email address and password.');
+      return;
+    }
+
+    try {
+      setIsEmailLoading(true);
+      setStatus('loading');
+      setStatusProvider('email');
+      setStatusTitle(mode === 'signin' ? 'Signing in with email' : 'Creating your account');
+      setStatusDetail('Please wait while we verify your email and password.');
+
+      if (mode === 'signin') {
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: cleanEmail,
+          password,
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          setUser(data.user);
+          setSession(data.session ?? null);
+          setStatus('success');
+          setStatusProvider('email');
+          setStatusTitle(`Signed in successfully as ${getDisplayName(data.user)}`);
+          setStatusDetail('Email & Password login completed successfully.');
+        }
+      } else {
+        const siteUrl = getSiteUrl();
+        const { data, error } = await supabase.auth.signUp({
+          email: cleanEmail,
+          password,
+          options: {
+            emailRedirectTo: `${siteUrl}/login?next=${encodeURIComponent(nextPath)}`,
+          },
+        });
+
+        if (error) throw error;
+
+        if (data.user) {
+          setUser(data.user);
+        }
+
+        if (data.session) {
+          setSession(data.session);
+          setStatus('success');
+          setStatusProvider('email');
+          setStatusTitle(`Account created and signed in as ${getDisplayName(data.user ?? null)}`);
+          setStatusDetail('Your account has been created and is already active.');
+        } else {
+          setStatus('success');
+          setStatusProvider('email');
+          setStatusTitle('Account created successfully');
+          setStatusDetail(
+            'Please check your inbox for verification mail if confirmation is required before sign-in.'
+          );
+        }
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Email authentication failed.';
+      setStatus('error');
+      setStatusProvider('email');
+      setStatusTitle(mode === 'signin' ? 'Email sign-in failed' : 'Account creation failed');
+      setStatusDetail(message);
+    } finally {
+      setIsEmailLoading(false);
+    }
+  };
+
+  const featureItems = [
+    {
+      title: 'Better Readability',
+      text: 'Clearer hierarchy, softer contrast, and easier reading across the whole page.',
+    },
+    {
+      title: 'Gentler Form Feel',
+      text: 'Softer surfaces, calmer spacing, and more comfortable inputs for daily use.',
+    },
+    {
+      title: 'Safer Interaction',
+      text: 'Password visibility toggle, Caps Lock notice, and clearer feedback states.',
+    },
+  ];
+
   return (
-    <Suspense fallback={<AuthSkeleton />}>
-      <LoginPageContent />
-    </Suspense>
+    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
+      <SiteHeader />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,140,48,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(255,170,82,0.10),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(255,110,52,0.08),transparent_30%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] [background-size:44px_44px]"
+      />
+
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1.05fr_0.82fr] lg:gap-10">
+          <section className="flex min-h-[620px] items-center">
+            <div className="w-full">
+              <div className="inline-flex items-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
+                Warm Luxury Login
+              </div>
+
+              <h1 className="mt-6 max-w-[680px] font-serif text-5xl leading-[0.94] tracking-[-0.05em] text-[#fff5ee] sm:text-6xl">
+                Sign in with calm,
+                <br />
+                continue with
+                <span className="bg-[linear-gradient(180deg,#ffd59d,#ff9b37)] bg-clip-text text-transparent">
+                  {' '}
+                  comfort
+                </span>
+              </h1>
+
+              <p className="mt-6 max-w-[640px] text-[15px] leading-8 text-[rgba(255,233,220,0.72)]">
+                A refined sign-in experience that stays aligned with the EchoPaws home theme: warm,
+                elegant, readable, and reassuring for everyday use.
+              </p>
+
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                {featureItems.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5 shadow-[0_14px_34px_rgba(0,0,0,0.16)]"
+                  >
+                    <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
+                      {item.title}
+                    </div>
+                    <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">{item.text}</p>
+                  </div>
+                ))}
+              </div>
+
+              <div className="mt-6 rounded-[28px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-6">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc39e]">
+                    EchoPaws feeling
+                  </div>
+                  <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[10px] text-[rgba(255,233,220,0.60)]">
+                    Home-aligned
+                  </span>
+                </div>
+
+                <div className="mt-3 font-serif text-3xl tracking-[-0.04em] text-[#fff5ee]">
+                  Less noise, more trust
+                </div>
+                <p className="mt-4 max-w-[680px] text-sm leading-8 text-[rgba(255,233,220,0.70)]">
+                  This page is designed to feel like part of the product, not just a utility screen —
+                  calm to enter, clear to use, and consistent with the rest of the EchoPaws experience.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          <section className="flex items-center">
+            <div className="w-full rounded-[32px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(32,17,12,0.92),rgba(16,9,7,0.96))] p-5 shadow-[0_28px_70px_rgba(0,0,0,0.26)] sm:p-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
+                  Auth
+                </div>
+
+                <span className="rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 py-1 text-[10px] text-[rgba(255,233,220,0.60)]">
+                  Redirect → {nextPath}
+                </span>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 rounded-full border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)] p-1">
+                <button
+                  type="button"
+                  onClick={() => setMode('signin')}
+                  className={cn(
+                    'inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition',
+                    mode === 'signin'
+                      ? 'bg-[linear-gradient(180deg,#ffcd88,#ff9f3f)] text-[#2f160c] shadow-[0_10px_22px_rgba(255,145,51,0.20)]'
+                      : 'text-[rgba(255,233,220,0.70)] hover:text-white'
+                  )}
+                >
+                  Sign In
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('signup')}
+                  className={cn(
+                    'inline-flex h-11 items-center justify-center rounded-full text-sm font-semibold transition',
+                    mode === 'signup'
+                      ? 'bg-[linear-gradient(180deg,#ffcd88,#ff9f3f)] text-[#2f160c] shadow-[0_10px_22px_rgba(255,145,51,0.20)]'
+                      : 'text-[rgba(255,233,220,0.70)] hover:text-white'
+                  )}
+                >
+                  Create Account
+                </button>
+              </div>
+
+              <div className="mt-5">
+                <h2 className="font-serif text-4xl tracking-[-0.04em] text-[#fff5ee]">
+                  {mode === 'signin' ? 'Welcome back to your companion space' : 'Create your calm companion account'}
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
+                  {mode === 'signin'
+                    ? 'Continue with Google or sign in with email and password.'
+                    : 'Use Google or create an account with your email and password.'}
+                </p>
+              </div>
+
+              <StatusPanel
+                status={status}
+                provider={statusProvider}
+                title={statusTitle}
+                detail={statusDetail}
+                user={user}
+                nextPath={nextPath}
+                onContinue={handleContinue}
+              />
+
+              <button
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                className="inline-flex h-12 w-full items-center justify-center gap-3 rounded-2xl border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-5 text-sm font-medium text-[#fff5ee] transition hover:bg-white/5 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isGoogleLoading ? <Spinner /> : <GoogleIcon />}
+                <span>{isGoogleLoading ? 'Opening Google...' : 'Continue with Google'}</span>
+              </button>
+
+              <div className="my-6 flex items-center gap-4">
+                <div className="h-px flex-1 bg-[rgba(255,233,220,0.08)]" />
+                <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[rgba(255,233,220,0.40)]">
+                  Or use email
+                </div>
+                <div className="h-px flex-1 bg-[rgba(255,233,220,0.08)]" />
+              </div>
+
+              <form onSubmit={handleEmailSubmit}>
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Email address
+                  </label>
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="h-12 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-white/[0.04] px-4 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
+                  />
+                </div>
+
+                <div className="mt-4">
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
+                      className="h-12 w-full rounded-2xl border border-[rgba(255,233,220,0.12)] bg-white/[0.04] px-4 pr-12 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((v) => !v)}
+                      className="absolute inset-y-0 right-0 inline-flex w-12 items-center justify-center text-[rgba(255,233,220,0.48)] transition hover:text-white"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <EyeIcon off={showPassword} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-3">
+                  <label className="inline-flex items-center gap-2 text-sm text-[rgba(255,233,220,0.72)]">
+                    <input
+                      type="checkbox"
+                      checked={rememberEmail}
+                      onChange={(e) => setRememberEmail(e.target.checked)}
+                      className="h-4 w-4 rounded border-[rgba(255,233,220,0.18)] bg-transparent accent-[#ffac58]"
+                    />
+                    Remember my email
+                  </label>
+
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-[rgba(255,233,220,0.68)] transition hover:text-white"
+                  >
+                    Forgot password
+                  </Link>
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={isEmailLoading}
+                  className="mt-4 inline-flex h-12 w-full items-center justify-center gap-3 rounded-full bg-[linear-gradient(180deg,#ffd092,#ff9a35)] px-5 text-sm font-semibold text-[#2f160c] shadow-[0_16px_30px_rgba(255,145,51,0.24)] transition hover:-translate-y-0.5 hover:shadow-[0_20px_36px_rgba(255,145,51,0.30)] disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {isEmailLoading ? <Spinner /> : null}
+                  <span>
+                    {isEmailLoading
+                      ? mode === 'signin'
+                        ? 'Signing in...'
+                        : 'Creating account...'
+                      : mode === 'signin'
+                      ? 'Sign In'
+                      : 'Create Account'}
+                  </span>
+                </button>
+              </form>
+
+              <div className="mt-5 rounded-[20px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-4 text-sm leading-7 text-[rgba(255,233,220,0.60)]">
+                If your account was originally created with Google, it is best to continue with Google first.
+                Your signed-in account name and email will appear above as soon as the login succeeds.
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
   );
 }

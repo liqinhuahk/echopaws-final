@@ -1,367 +1,1445 @@
+'use client';
+
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { revalidatePath } from 'next/cache';
-import { SiteHeader } from '@/components/site-header';
-import { getPetsForUser } from '@/lib/pets';
-import { createServerSupabaseClient, hasSupabaseEnv } from '@/lib/supabase/server';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import SiteHeader from '@/components/site-header';
 
-type SearchParamsValue = string | string[] | undefined;
-type SearchParamsRecord = Record<string, SearchParamsValue>;
-type MemoriesPageProps = {
-  searchParams?: Promise<SearchParamsRecord> | SearchParamsRecord;
-};
-
-type MemoryRow = {
+type PetRecord = {
   id: string;
-  pet_id: string;
-  content: string;
-  memory_type?: string | null;
-  priority?: number | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-type SummaryRow = {
-  pet_id: string;
-  summary?: string | null;
-  updated_at?: string | null;
-};
-
-function pickFirst(value: SearchParamsValue) {
-  return Array.isArray(value) ? value[0] : value;
-}
-
-function buildTypeLabel(type?: string | null) {
-  if (!type) return 'Memory';
-  return type.charAt(0).toUpperCase() + type.slice(1);
-}
-
-function formatDateLabel(value?: string | null) {
-  if (!value) return 'Unknown time';
-  const date = new Date(value);
-  return date.toLocaleString();
-}
-
-function buildExcerpt(text: string, max = 110) {
-  if (!text) return '';
-  return text.length <= max ? text : `${text.slice(0, max).trim()}…`;
-}
-
-function PetAvatar({
-  src,
-  name,
-  className = 'h-14 w-14',
-}: {
-  src?: string | null;
   name: string;
-  className?: string;
-}) {
-  if (src) {
-    return (
-      <img
-        src={src}
-        alt={name}
-        className={`${className} rounded-2xl object-cover ring-1 ring-white/10`}
-      />
-    );
+  role: string;
+  avatarUrl: string | null;
+  ownerId: string | null;
+};
+
+type MemoryRecord = {
+  id: string;
+  petId: string | null;
+  petName: string | null;
+  ownerId: string | null;
+  type: string;
+  content: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  source: string | null;
+};
+
+type LoadState = 'idle' | 'loading' | 'ready' | 'error';
+
+const PET_TABLE_CANDIDATES = ['pets', 'companions', 'user_pets'] as const;
+const MEMORY_TABLE_CANDIDATES = ['pet_memories', 'memories', 'companion_memories'] as const;
+
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
+
+function createBrowserSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anon) return null;
+  return createClient(url, anon, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
+}
+
+function pickString(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function pickBoolean(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'boolean') return value;
+  }
+  return null;
+}
+
+function parseDate(value: string | null) {
+  if (!value) return null;
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? null : t;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return 'Unknown time';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatRelative(value: string | null) {
+  if (!value) return 'Unknown time';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+
+  const diff = date.getTime() - Date.now();
+  const abs = Math.abs(diff);
+
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+  if (abs < hour) return rtf.format(Math.round(diff / minute), 'minute');
+  if (abs < day) return rtf.format(Math.round(diff / hour), 'hour');
+  return rtf.format(Math.round(diff / day), 'day');
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/[_-]/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (s) => s.toUpperCase());
+}
+
+function normalizePet(row: Record<string, unknown>): PetRecord | null {
+  const id =
+    pickString(row, ['id', 'pet_id', 'companion_id']) ??
+    `pet-${pickString(row, ['name', 'pet_name', 'title']) ?? Math.random().toString(36).slice(2)}`;
+
+  const name = pickString(row, ['name', 'pet_name', 'title']) ?? 'Companion';
+  const ownerId = pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']);
+  const avatarUrl = pickString(row, ['avatar_url', 'photo_url', 'image_url', 'portrait_url']);
+  const explicitRole = pickString(row, ['role', 'kind', 'pet_role', 'relationship']);
+  const isPrimary = pickBoolean(row, ['is_primary', 'primary_pet']);
+
+  return {
+    id,
+    name,
+    ownerId,
+    avatarUrl,
+    role: explicitRole ?? (isPrimary ? 'Primary pet' : 'Companion'),
+  };
+}
+
+function normalizeMemory(row: Record<string, unknown>): MemoryRecord | null {
+  const content = pickString(row, ['content', 'text', 'body', 'memory', 'summary', 'note']);
+  if (!content) return null;
+
+  const createdAt = pickString(row, ['created_at', 'inserted_at', 'timestamp']);
+  const updatedAt = pickString(row, ['updated_at', 'last_updated_at']);
+
+  return {
+    id: pickString(row, ['id', 'memory_id']) ?? `memory-${Math.random().toString(36).slice(2)}`,
+    petId: pickString(row, ['pet_id', 'companion_id']),
+    petName: pickString(row, ['pet_name', 'name']),
+    ownerId: pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']),
+    type: pickString(row, ['memory_type', 'type', 'category', 'kind']) ?? 'general',
+    content,
+    createdAt,
+    updatedAt,
+    source: pickString(row, ['source', 'origin']),
+  };
+}
+
+async function firstSuccessfulTable<T>(
+  supabase: SupabaseClient,
+  tables: readonly string[],
+  run: (table: string) => Promise<{ data: T[] | null; error: { message?: string } | null }>
+) {
+  let lastError: string | null = null;
+
+  for (const table of tables) {
+    try {
+      const { data, error } = await run(table);
+      if (!error) {
+        return { table, data: data ?? [], error: null as string | null };
+      }
+      lastError = error.message ?? `Failed reading ${table}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Failed reading ${table}`;
+    }
   }
 
-  return (
+  return { table: null as string | null, data: [] as T[], error: lastError };
+}
+
+function Avatar({
+  name,
+  src,
+  size = 'md',
+}: {
+  name: string;
+  src?: string | null;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClass =
+    size === 'sm' ? 'h-10 w-10 text-sm' : size === 'lg' ? 'h-14 w-14 text-lg' : 'h-12 w-12 text-base';
+
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      className={cn(
+        sizeClass,
+        'rounded-2xl border border-[rgba(255,214,179,0.18)] object-cover shadow-[0_10px_26px_rgba(0,0,0,0.22)]'
+      )}
+    />
+  ) : (
     <div
-      className={`${className} inline-flex items-center justify-center rounded-2xl bg-gradient-to-br from-amber-300/20 to-orange-500/20 text-lg font-black text-amber-200 ring-1 ring-white/10`}
+      className={cn(
+        sizeClass,
+        'flex items-center justify-center rounded-2xl border border-[rgba(255,214,179,0.18)] bg-[linear-gradient(180deg,#ffbe72,#ff9531)] font-semibold text-[#2f160c] shadow-[0_10px_26px_rgba(255,145,51,0.2)]'
+      )}
     >
       {name.slice(0, 1).toUpperCase()}
     </div>
   );
 }
 
-export default async function MemoriesPage({ searchParams }: MemoriesPageProps) {
-  if (!hasSupabaseEnv()) {
-    redirect('/login?error=Please%20configure%20Supabase%20environment%20variables%20first.');
-  }
+function SectionCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-[28px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(28,15,11,0.84),rgba(14,8,6,0.92))] shadow-[0_30px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
 
-  const resolvedSearchParams = searchParams ? await searchParams : {};
-  const petIdFromQuery = pickFirst(resolvedSearchParams.petId);
-  const query = (pickFirst(resolvedSearchParams.query) ?? '').trim().toLowerCase();
-  const type = (pickFirst(resolvedSearchParams.type) ?? '').trim().toLowerCase();
-  const sort = (pickFirst(resolvedSearchParams.sort) ?? 'latest').trim().toLowerCase();
+export default function MemoriesPage() {
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const [state, setState] = useState<LoadState>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const supabase = createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const [pets, setPets] = useState<PetRecord[]>([]);
+  const [memories, setMemories] = useState<MemoryRecord[]>([]);
+  const [activePetId, setActivePetId] = useState<string | null>(null);
 
-  if (!user) {
-    redirect('/login?message=Please%20sign%20in%20to%20view%20memories.');
-  }
+  const [draftSearch, setDraftSearch] = useState('');
+  const [draftType, setDraftType] = useState('all');
+  const [draftSort, setDraftSort] = useState<'latest' | 'oldest'>('latest');
 
-  const petOverview = await getPetsForUser(user.id);
-  const pets = petOverview?.pets ?? [];
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedType, setAppliedType] = useState('all');
+  const [appliedSort, setAppliedSort] = useState<'latest' | 'oldest'>('latest');
 
-  if (!pets.length) {
-    redirect('/create-pet?message=Create%20your%20first%20pet%20to%20start%20using%20memories.');
-  }
+  const loadData = useCallback(async () => {
+    if (!supabase) {
+      setState('error');
+      setErrorMessage(
+        'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      );
+      return;
+    }
 
-  const selectedPet =
-    pets.find((pet) => String(pet.id) === String(petIdFromQuery)) ||
-    pets.find((pet) => pet.id === petOverview?.defaultPetId) ||
-    pets[0];
+    setState('loading');
+    setErrorMessage(null);
 
-  const petImage =
-    (selectedPet as any)?.image_url ??
-    (selectedPet as any)?.imageUrl ??
-    (selectedPet as any)?.photo_url ??
-    (selectedPet as any)?.photoUrl ??
-    null;
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
 
-  const { data: rawMemories } = await supabase
-    .from('pet_memories')
-    .select('*')
-    .eq('pet_id', selectedPet.id)
-    .order('updated_at', { ascending: false });
+      if (authError) throw authError;
 
-  const { data: rawSummary } = await supabase
-    .from('pet_memory_summaries')
-    .select('*')
-    .eq('pet_id', selectedPet.id)
-    .maybeSingle();
-
-  const summaryRow = (rawSummary as SummaryRow | null) ?? null;
-  const allMemories = ((rawMemories as MemoryRow[] | null) ?? []).filter(Boolean);
-
-  const filteredMemories = allMemories
-    .filter((item) => {
-      const queryMatch = query ? item.content?.toLowerCase().includes(query) : true;
-      const typeMatch = type ? (item.memory_type ?? '').toLowerCase() === type : true;
-      return queryMatch && typeMatch;
-    })
-    .sort((a, b) => {
-      if (sort === 'oldest') {
-        return new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime();
+      if (!user) {
+        setState('error');
+        setErrorMessage('Please sign in to view your memories.');
+        return;
       }
-      return new Date(b.updated_at ?? 0).getTime() - new Date(a.updated_at ?? 0).getTime();
-    });
 
-  async function deleteMemoryAction(formData: FormData) {
-    'use server';
+      const petResult = await firstSuccessfulTable<Record<string, unknown>>(
+        supabase,
+        PET_TABLE_CANDIDATES,
+        async (table) => {
+          const query = supabase.from(table).select('*').limit(100);
+          return query;
+        }
+      );
 
-    if (!hasSupabaseEnv()) return;
+      const memoryResult = await firstSuccessfulTable<Record<string, unknown>>(
+        supabase,
+        MEMORY_TABLE_CANDIDATES,
+        async (table) => {
+          const query = supabase.from(table).select('*').limit(500);
+          return query;
+        }
+      );
 
-    const memoryId = String(formData.get('memoryId') ?? '');
-    if (!memoryId) return;
+      const normalizedPets = (petResult.data ?? [])
+        .map((row) => normalizePet(row))
+        .filter((item): item is PetRecord => Boolean(item))
+        .filter((item) => !item.ownerId || item.ownerId === user.id);
 
-    const serverSupabase = createServerSupabaseClient();
-    await serverSupabase.from('pet_memories').delete().eq('id', memoryId);
+      const normalizedMemories = (memoryResult.data ?? [])
+        .map((row) => normalizeMemory(row))
+        .filter((item): item is MemoryRecord => Boolean(item))
+        .filter((item) => !item.ownerId || item.ownerId === user.id);
 
-    revalidatePath('/memories');
-  }
+      let resolvedPets = normalizedPets;
+      if (resolvedPets.length === 0 && normalizedMemories.length > 0) {
+        const synthetic = new Map<string, PetRecord>();
+        for (const memory of normalizedMemories) {
+          const key = memory.petId ?? memory.petName ?? memory.id;
+          if (!synthetic.has(key)) {
+            synthetic.set(key, {
+              id: memory.petId ?? key,
+              name: memory.petName ?? 'Companion',
+              role: 'Companion',
+              avatarUrl: null,
+              ownerId: memory.ownerId ?? user.id,
+            });
+          }
+        }
+        resolvedPets = Array.from(synthetic.values());
+      }
+
+      const dedupedPets = Array.from(
+        new Map(resolvedPets.map((pet) => [pet.id, pet])).values()
+      );
+
+      setPets(dedupedPets);
+      setMemories(normalizedMemories);
+
+      setActivePetId((current) => {
+        if (current && dedupedPets.some((pet) => pet.id === current)) return current;
+        return dedupedPets[0]?.id ?? null;
+      });
+
+      setState('ready');
+    } catch (error) {
+      setState('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load memories.');
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const activePet = useMemo(() => {
+    if (!pets.length) return null;
+    return pets.find((pet) => pet.id === activePetId) ?? pets[0];
+  }, [pets, activePetId]);
+
+  const matchesPet = useCallback((memory: MemoryRecord, pet: PetRecord | null) => {
+    if (!pet) return true;
+
+    const memoryPetId = memory.petId?.trim().toLowerCase();
+    const petId = pet.id.trim().toLowerCase();
+
+    if (memoryPetId && memoryPetId === petId) return true;
+
+    const memoryPetName = memory.petName?.trim().toLowerCase();
+    const petName = pet.name.trim().toLowerCase();
+
+    if (memoryPetName && memoryPetName === petName) return true;
+
+    return false;
+  }, []);
+
+  const allMemoriesForActivePet = useMemo(() => {
+    return memories.filter((memory) => matchesPet(memory, activePet));
+  }, [memories, activePet, matchesPet]);
+
+  const availableTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const memory of allMemoriesForActivePet) {
+      const type = memory.type?.trim().toLowerCase();
+      if (type) set.add(type);
+    }
+    return ['all', ...Array.from(set)];
+  }, [allMemoriesForActivePet]);
+
+  const filteredMemories = useMemo(() => {
+    const keyword = appliedSearch.trim().toLowerCase();
+
+    const result = allMemoriesForActivePet
+      .filter((memory) => {
+        if (appliedType !== 'all' && memory.type.trim().toLowerCase() !== appliedType) {
+          return false;
+        }
+
+        if (!keyword) return true;
+
+        const haystack = [
+          memory.content,
+          memory.type,
+          memory.source ?? '',
+          memory.petName ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(keyword);
+      })
+      .sort((a, b) => {
+        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+        return appliedSort === 'latest' ? bTime - aTime : aTime - bTime;
+      });
+
+    return result;
+  }, [allMemoriesForActivePet, appliedSearch, appliedSort, appliedType]);
+
+  const memoriesByPet = useMemo(() => {
+    const map = new Map<string, MemoryRecord[]>();
+
+    for (const pet of pets) {
+      map.set(
+        pet.id,
+        memories.filter((memory) => matchesPet(memory, pet))
+      );
+    }
+
+    return map;
+  }, [pets, memories, matchesPet]);
+
+  const applyFilters = () => {
+    setAppliedSearch(draftSearch);
+    setAppliedType(draftType);
+    setAppliedSort(draftSort);
+  };
+
+  const resetFilters = () => {
+    setDraftSearch('');
+    setDraftType('all');
+    setDraftSort('latest');
+    setAppliedSearch('');
+    setAppliedType('all');
+    setAppliedSort('latest');
+  };
+
+  const activePetMemoryCount = activePet ? memoriesByPet.get(activePet.id)?.length ?? 0 : 0;
+  const activePetUpdatedAt =
+    activePetMemoryCount > 0
+      ? [...(memoriesByPet.get(activePet!.id) ?? [])]
+          .sort((a, b) => {
+            const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+            const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+            return bTime - aTime;
+          })[0]?.updatedAt ??
+        [...(memoriesByPet.get(activePet!.id) ?? [])]
+          .sort((a, b) => {
+            const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+            const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+            return bTime - aTime;
+          })[0]?.createdAt ??
+        null
+      : null;
 
   return (
-    <div className='app-brand-backdrop'>
-      <SiteHeader theme='dark' />
+    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
+      <SiteHeader />
 
-      <main className='container-shell py-6 md:py-8'>
-        <section className='glass-card p-5 md:p-6'>
-          <div className='eyebrow'>✦ Companion memory space</div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,140,48,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(255,170,82,0.10),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(255,110,52,0.08),transparent_30%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] [background-size:44px_44px]"
+      />
 
-          <div className='mt-5 flex flex-col gap-5 md:flex-row md:items-center md:justify-between'>
-            <div className='flex items-start gap-4'>
-              <PetAvatar src={petImage} name={selectedPet.name} className='h-16 w-16' />
-
-              <div>
-                <h1 className='page-title text-[clamp(2.4rem,4vw,4rem)]'>Memories of {selectedPet.name}</h1>
-                <p className='mt-3 max-w-2xl text-[0.98rem] leading-[1.9] text-[rgba(255,244,230,0.78)]'>
-                  Searchable memories, cleaner filters, and a softer brand shell so the page feels
-                  like a natural continuation of Home, Chat, and Account.
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+        <SectionCard className="overflow-hidden">
+          <div className="relative px-6 py-7 sm:px-8 sm:py-8 lg:px-10">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,139,47,0.12),transparent_48%,rgba(255,139,47,0.05)_100%)]"
+            />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-4">
+                  <Avatar name={activePet?.name ?? 'M'} src={activePet?.avatarUrl} size="lg" />
+                  <div className="min-w-0">
+                    <h1 className="truncate font-serif text-4xl tracking-[-0.04em] text-[#fff4ec] sm:text-5xl md:text-6xl">
+                      Memories of {activePet?.name ?? 'Your Companion'}
+                    </h1>
+                  </div>
+                </div>
+                <p className="mt-5 max-w-3xl text-sm leading-7 text-[rgba(255,233,220,0.72)] sm:text-[15px]">
+                  Searchable memories, cleaner filters, and a softer brand shell so the page feels like a natural
+                  continuation of Home, Chat, and Account.
                 </p>
               </div>
-            </div>
 
-            <div className='flex flex-wrap gap-3'>
-              <Link href='/chat' className='subtle-button'>
-                Back to Chat
-              </Link>
-              <Link href='/pets' className='subtle-button'>
-                Manage Pets
-              </Link>
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Link
+                  href="/chat"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-5 font-medium text-[#fff4ec] transition hover:bg-white/5"
+                >
+                  Back to Chat
+                </Link>
+                <Link
+                  href="/pets"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-5 font-medium text-[#fff4ec] transition hover:bg-white/5"
+                >
+                  Manage Pets
+                </Link>
+              </div>
             </div>
           </div>
-        </section>
+        </SectionCard>
 
-        <section className='mt-5 grid gap-5 xl:grid-cols-[280px_minmax(0,1fr)]'>
-          <aside className='grid gap-5'>
-            <section className='glass-card p-5'>
-              <div className='flex items-start gap-3'>
-                <PetAvatar src={petImage} name={selectedPet.name} className='h-14 w-14' />
-                <div>
-                  <div className='text-lg font-extrabold text-[color:#fff7ed]'>{selectedPet.name}</div>
-                  <div className='mt-1 text-sm text-[rgba(255,244,230,0.78)]'>
-                    {filteredMemories.length} memories
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="space-y-5">
+            <SectionCard className="p-5">
+              <div className="flex items-start gap-4">
+                <Avatar name={activePet?.name ?? 'M'} src={activePet?.avatarUrl} />
+                <div className="min-w-0">
+                  <div className="truncate text-[22px] font-semibold tracking-[-0.03em] text-[#fff5ee]">
+                    {activePet?.name ?? 'Companion'}
                   </div>
-                  <div className='mt-1 text-xs text-[rgba(255,244,230,0.56)]'>
-                    Updated {formatDateLabel(summaryRow?.updated_at)}
+                  <div className="mt-1 text-sm text-[rgba(255,233,220,0.70)]">
+                    {activePetMemoryCount} memories
+                  </div>
+                  <div className="mt-1 text-xs text-[rgba(255,233,220,0.48)]">
+                    Updated {formatRelative(activePetUpdatedAt)}
                   </div>
                 </div>
               </div>
-            </section>
+            </SectionCard>
 
-            <section className='glass-card p-5'>
-              <div className='eyebrow'>Pet switcher</div>
-              <h2 className='section-title mt-4 text-xl'>Memory scope</h2>
+            <SectionCard className="p-5">
+              <div className="text-[13px] uppercase tracking-[0.22em] text-[#efc39e]">
+                Pet switcher
+              </div>
+              <div className="mt-4 text-[24px] font-serif tracking-[-0.03em] text-[#fff4eb]">
+                Memory scope
+              </div>
 
-              <div className='mt-5 grid gap-3'>
-                {pets.map((pet) => {
-                  const itemImage =
-                    (pet as any)?.image_url ??
-                    (pet as any)?.imageUrl ??
-                    (pet as any)?.photo_url ??
-                    (pet as any)?.photoUrl ??
-                    null;
+              <div className="mt-5 space-y-3">
+                {pets.length === 0 ? (
+                  <div className="rounded-[22px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-[rgba(255,233,220,0.68)]">
+                    No pets found yet.
+                  </div>
+                ) : (
+                  pets.map((pet) => {
+                    const petMemories = memoriesByPet.get(pet.id) ?? [];
+                    const lastUpdated =
+                      [...petMemories].sort((a, b) => {
+                        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+                        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+                        return bTime - aTime;
+                      })[0]?.updatedAt ??
+                      [...petMemories].sort((a, b) => {
+                        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+                        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+                        return bTime - aTime;
+                      })[0]?.createdAt ??
+                      null;
 
-                  const active = pet.id === selectedPet.id;
-
-                  return (
-                    <Link
-                      key={pet.id}
-                      href={`/memories?petId=${pet.id}`}
-                      className={`rounded-2xl border px-4 py-3 transition ${
-                        active
-                          ? 'border-amber-300/20 bg-amber-400/8'
-                          : 'border-white/8 bg-white/4 hover:bg-white/6'
-                      }`}
-                    >
-                      <div className='flex items-center gap-3'>
-                        <PetAvatar src={itemImage} name={pet.name} className='h-11 w-11' />
-                        <div className='min-w-0'>
-                          <div className='truncate text-sm font-bold text-[color:#fff7ed]'>{pet.name}</div>
-                          <div className='text-xs text-[rgba(255,244,230,0.56)]'>
-                            {pet.id === petOverview?.defaultPetId ? 'Primary pet' : 'Companion'}
+                    return (
+                      <button
+                        key={pet.id}
+                        type="button"
+                        onClick={() => setActivePetId(pet.id)}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-[22px] border px-4 py-4 text-left transition',
+                          activePet?.id === pet.id
+                            ? 'border-[rgba(255,180,103,0.35)] bg-[linear-gradient(180deg,rgba(255,153,69,0.08),rgba(255,255,255,0.03))] shadow-[0_16px_36px_rgba(0,0,0,0.18)]'
+                            : 'border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] hover:bg-white/[0.04]'
+                        )}
+                      >
+                        <Avatar name={pet.name} src={pet.avatarUrl} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-[#fff5ee]">{pet.name}</div>
+                          <div className="truncate text-xs text-[rgba(255,233,220,0.60)]">{pet.role}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs font-medium text-[#efc39e]">{petMemories.length} memories</div>
+                          <div className="mt-1 text-[10px] text-[rgba(255,233,220,0.45)]">
+                            {formatRelative(lastUpdated)}
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })}
+                      </button>
+                    );
+                  })
+                )}
               </div>
-            </section>
+            </SectionCard>
 
-            <section className='glass-card p-5'>
-              <div className='eyebrow'>Companion snapshot</div>
-              <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                {summaryRow?.summary ||
-                  `${selectedPet.name} is building an ongoing emotional memory space with you.`}
+            <SectionCard className="p-5">
+              <div className="text-[18px] font-medium text-[#fff4ec]">Companion snapshot</div>
+              <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">
+                {activePetMemoryCount > 0
+                  ? `${activePet?.name ?? 'Your companion'} has ${activePetMemoryCount} saved memories available in this view.`
+                  : `${activePet?.name ?? 'Your companion'} is building an ongoing emotional memory space with you.`}
               </p>
-            </section>
-          </aside>
+            </SectionCard>
+          </div>
 
-          <section className='grid gap-5'>
-            <section className='glass-card p-5'>
-              <form className='grid gap-3 md:grid-cols-[minmax(0,1.4fr)_180px_180px_auto]'>
-                <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
+          <div className="space-y-5">
+            <SectionCard className="p-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_220px_160px_auto_auto] md:items-end">
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
                     Search
-                  </span>
+                  </label>
                   <input
-                    type='search'
-                    name='query'
-                    defaultValue={pickFirst(resolvedSearchParams.query) ?? ''}
-                    placeholder='Search memory text'
+                    value={draftSearch}
+                    onChange={(e) => setDraftSearch(e.target.value)}
+                    placeholder="Search memory text"
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
                   />
-                </label>
-
-                <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
-                    Type
-                  </span>
-                  <select name='type' defaultValue={pickFirst(resolvedSearchParams.type) ?? ''}>
-                    <option value=''>All types</option>
-                    <option value='emotion'>Emotion</option>
-                    <option value='preference'>Preference</option>
-                    <option value='habit'>Habit</option>
-                    <option value='story'>Story</option>
-                  </select>
-                </label>
-
-                <label className='grid gap-2'>
-                  <span className='text-[0.72rem] font-extrabold uppercase tracking-[0.16em] text-[rgba(255,244,230,0.56)]'>
-                    Sort
-                  </span>
-                  <select name='sort' defaultValue={pickFirst(resolvedSearchParams.sort) ?? 'latest'}>
-                    <option value='latest'>Latest</option>
-                    <option value='oldest'>Oldest</option>
-                  </select>
-                </label>
-
-                <input type='hidden' name='petId' value={selectedPet.id} />
-
-                <div className='flex items-end gap-3'>
-                  <button type='submit' className='brand-button'>
-                    Apply
-                  </button>
-                  <Link href={`/memories?petId=${selectedPet.id}`} className='subtle-button'>
-                    Reset
-                  </Link>
                 </div>
-              </form>
 
-              <div className='mt-4 text-sm text-[rgba(255,244,230,0.78)]'>
-                {filteredMemories.length} result{filteredMemories.length === 1 ? '' : 's'}
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Type
+                  </label>
+                  <select
+                    value={draftType}
+                    onChange={(e) => setDraftType(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none transition focus:border-[rgba(255,180,103,0.35)]"
+                  >
+                    {availableTypes.map((type) => (
+                      <option key={type} value={type} className="bg-[#170e0a]">
+                        {type === 'all' ? 'All types' : titleCase(type)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Sort
+                  </label>
+                  <select
+                    value={draftSort}
+                    onChange={(e) => setDraftSort(e.target.value as 'latest' | 'oldest')}
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none transition focus:border-[rgba(255,180,103,0.35)]"
+                  >
+                    <option value="latest" className="bg-[#170e0a]">
+                      Latest
+                    </option>
+                    <option value="oldest" className="bg-[#170e0a]">
+                      Oldest
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={applyFilters}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,180,103,0.28)] bg-[rgba(255,146,50,0.12)] px-5 text-sm font-medium text-[#fff4ec] transition hover:bg-[rgba(255,146,50,0.18)]"
+                >
+                  Apply
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex h-11 items-center justify-center rounded-full px-2 text-sm font-medium text-[rgba(255,233,220,0.74)] transition hover:text-white"
+                >
+                  Reset
+                </button>
               </div>
-            </section>
 
-            <section className='grid gap-4'>
-              {filteredMemories.length ? (
-                filteredMemories.map((memory) => (
-                  <details key={memory.id} className='glass-card p-5'>
-                    <summary className='cursor-pointer list-none'>
-                      <div className='flex flex-col gap-3 md:flex-row md:items-start md:justify-between'>
-                        <div className='min-w-0'>
-                          <div className='flex flex-wrap gap-2'>
-                            <span className='tag-chip tag-chip--warm'>
-                              {buildTypeLabel(memory.memory_type)}
-                            </span>
-                            <span className='tag-chip tag-chip--soft'>
-                              Priority {memory.priority ?? '—'}
-                            </span>
-                          </div>
+              <div className="mt-4 text-sm text-[rgba(255,233,220,0.64)]">{filteredMemories.length} results</div>
+            </SectionCard>
 
-                          <p className='mt-4 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                            {buildExcerpt(memory.content)}
-                          </p>
-                        </div>
-
-                        <div className='shrink-0 text-xs text-[rgba(255,244,230,0.56)]'>
-                          Updated {formatDateLabel(memory.updated_at)}
-                        </div>
-                      </div>
-                    </summary>
-
-                    <div className='mt-5 border-t border-white/8 pt-5 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                      {memory.content}
-                    </div>
-
-                    <div className='mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-white/8 pt-4'>
-                      <div className='text-xs text-[rgba(255,244,230,0.56)]'>
-                        Created {formatDateLabel(memory.created_at)}
-                      </div>
-
-                      <form action={deleteMemoryAction}>
-                        <input type='hidden' name='memoryId' value={memory.id} />
-                        <button type='submit' className='subtle-button min-h-[38px] px-4 text-sm'>
-                          Delete
-                        </button>
-                      </form>
-                    </div>
-                  </details>
-                ))
+            <SectionCard className="min-h-[380px] p-5">
+              {state === 'loading' || state === 'idle' ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-28 animate-pulse rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)]"
+                    />
+                  ))}
+                </div>
+              ) : state === 'error' ? (
+                <div className="rounded-[24px] border border-[rgba(255,120,120,0.18)] bg-[rgba(255,90,90,0.06)] p-5 text-sm leading-7 text-[#ffd8d8]">
+                  {errorMessage ?? 'Unable to load memories right now.'}
+                </div>
+              ) : filteredMemories.length === 0 ? (
+                <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-5 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
+                  {allMemoriesForActivePet.length === 0
+                    ? 'No memories have been saved for this companion yet. If Chat already shows memory updates, the chat save flow likely is not writing records into the persistent memories table.'
+                    : 'No memories matched your current filters yet.'}
+                </div>
               ) : (
-                <div className='glass-card p-6 text-sm leading-7 text-[rgba(255,244,230,0.78)]'>
-                  No memories matched your current filters yet.
+                <div className="space-y-4">
+                  {filteredMemories.map((memory) => {
+                    const stamp = memory.updatedAt ?? memory.createdAt;
+                    return (
+                      <article
+                        key={memory.id}
+                        className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5"
+                      >
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,180,103,0.24)] bg-[rgba(255,146,50,0.10)] px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
+                            {titleCase(memory.type)}
+                          </span>
+
+                          {memory.source ? (
+                            <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(255,233,220,0.58)]">
+                              {memory.source}
+                            </span>
+                          ) : null}
+
+                          <span className="ml-auto text-xs text-[rgba(255,233,220,0.50)]">
+                            {formatDateTime(stamp)}
+                          </span>
+                        </div>
+
+                        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-[rgba(255,244,236,0.92)]">
+                          {memory.content}
+                        </p>
+                      </article>
+                    );
+                  })}
                 </div>
               )}
-            </section>
-          </section>
-        </section>
+            </SectionCard>
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+'use client';
+
+import Link from 'next/link';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import SiteHeader from '@/components/site-header';
+
+type PetRecord = {
+  id: string;
+  name: string;
+  role: string;
+  avatarUrl: string | null;
+  ownerId: string | null;
+};
+
+type MemoryRecord = {
+  id: string;
+  petId: string | null;
+  petName: string | null;
+  ownerId: string | null;
+  type: string;
+  content: string;
+  createdAt: string | null;
+  updatedAt: string | null;
+  source: string | null;
+};
+
+type LoadState = 'idle' | 'loading' | 'ready' | 'error';
+
+const PET_TABLE_CANDIDATES = ['pets', 'companions', 'user_pets'] as const;
+const MEMORY_TABLE_CANDIDATES = ['pet_memories', 'memories', 'companion_memories'] as const;
+
+function cn(...values: Array<string | false | null | undefined>) {
+  return values.filter(Boolean).join(' ');
+}
+
+function createBrowserSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anon = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!url || !anon) return null;
+  return createClient(url, anon, {
+    auth: {
+      persistSession: true,
+      autoRefreshToken: true,
+    },
+  });
+}
+
+function pickString(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return null;
+}
+
+function pickBoolean(obj: Record<string, unknown>, keys: string[]) {
+  for (const key of keys) {
+    const value = obj[key];
+    if (typeof value === 'boolean') return value;
+  }
+  return null;
+}
+
+function parseDate(value: string | null) {
+  if (!value) return null;
+  const t = Date.parse(value);
+  return Number.isNaN(t) ? null : t;
+}
+
+function formatDateTime(value: string | null) {
+  if (!value) return 'Unknown time';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function formatRelative(value: string | null) {
+  if (!value) return 'Unknown time';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown time';
+
+  const diff = date.getTime() - Date.now();
+  const abs = Math.abs(diff);
+
+  const minute = 60_000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+
+  if (abs < hour) return rtf.format(Math.round(diff / minute), 'minute');
+  if (abs < day) return rtf.format(Math.round(diff / hour), 'hour');
+  return rtf.format(Math.round(diff / day), 'day');
+}
+
+function titleCase(value: string) {
+  return value
+    .replace(/[_-]/g, ' ')
+    .trim()
+    .replace(/\b\w/g, (s) => s.toUpperCase());
+}
+
+function normalizePet(row: Record<string, unknown>): PetRecord | null {
+  const id =
+    pickString(row, ['id', 'pet_id', 'companion_id']) ??
+    `pet-${pickString(row, ['name', 'pet_name', 'title']) ?? Math.random().toString(36).slice(2)}`;
+
+  const name = pickString(row, ['name', 'pet_name', 'title']) ?? 'Companion';
+  const ownerId = pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']);
+  const avatarUrl = pickString(row, ['avatar_url', 'photo_url', 'image_url', 'portrait_url']);
+  const explicitRole = pickString(row, ['role', 'kind', 'pet_role', 'relationship']);
+  const isPrimary = pickBoolean(row, ['is_primary', 'primary_pet']);
+
+  return {
+    id,
+    name,
+    ownerId,
+    avatarUrl,
+    role: explicitRole ?? (isPrimary ? 'Primary pet' : 'Companion'),
+  };
+}
+
+function normalizeMemory(row: Record<string, unknown>): MemoryRecord | null {
+  const content = pickString(row, ['content', 'text', 'body', 'memory', 'summary', 'note']);
+  if (!content) return null;
+
+  const createdAt = pickString(row, ['created_at', 'inserted_at', 'timestamp']);
+  const updatedAt = pickString(row, ['updated_at', 'last_updated_at']);
+
+  return {
+    id: pickString(row, ['id', 'memory_id']) ?? `memory-${Math.random().toString(36).slice(2)}`,
+    petId: pickString(row, ['pet_id', 'companion_id']),
+    petName: pickString(row, ['pet_name', 'name']),
+    ownerId: pickString(row, ['user_id', 'owner_id', 'profile_id', 'account_id']),
+    type: pickString(row, ['memory_type', 'type', 'category', 'kind']) ?? 'general',
+    content,
+    createdAt,
+    updatedAt,
+    source: pickString(row, ['source', 'origin']),
+  };
+}
+
+async function firstSuccessfulTable<T>(
+  supabase: SupabaseClient,
+  tables: readonly string[],
+  run: (table: string) => Promise<{ data: T[] | null; error: { message?: string } | null }>
+) {
+  let lastError: string | null = null;
+
+  for (const table of tables) {
+    try {
+      const { data, error } = await run(table);
+      if (!error) {
+        return { table, data: data ?? [], error: null as string | null };
+      }
+      lastError = error.message ?? `Failed reading ${table}`;
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : `Failed reading ${table}`;
+    }
+  }
+
+  return { table: null as string | null, data: [] as T[], error: lastError };
+}
+
+function Avatar({
+  name,
+  src,
+  size = 'md',
+}: {
+  name: string;
+  src?: string | null;
+  size?: 'sm' | 'md' | 'lg';
+}) {
+  const sizeClass =
+    size === 'sm' ? 'h-10 w-10 text-sm' : size === 'lg' ? 'h-14 w-14 text-lg' : 'h-12 w-12 text-base';
+
+  return src ? (
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={src}
+      alt={name}
+      className={cn(
+        sizeClass,
+        'rounded-2xl border border-[rgba(255,214,179,0.18)] object-cover shadow-[0_10px_26px_rgba(0,0,0,0.22)]'
+      )}
+    />
+  ) : (
+    <div
+      className={cn(
+        sizeClass,
+        'flex items-center justify-center rounded-2xl border border-[rgba(255,214,179,0.18)] bg-[linear-gradient(180deg,#ffbe72,#ff9531)] font-semibold text-[#2f160c] shadow-[0_10px_26px_rgba(255,145,51,0.2)]'
+      )}
+    >
+      {name.slice(0, 1).toUpperCase()}
+    </div>
+  );
+}
+
+function SectionCard({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'rounded-[28px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(28,15,11,0.84),rgba(14,8,6,0.92))] shadow-[0_30px_70px_rgba(0,0,0,0.22)] backdrop-blur-xl',
+        className
+      )}
+    >
+      {children}
+    </div>
+  );
+}
+
+export default function MemoriesPage() {
+  const supabase = useMemo(() => createBrowserSupabaseClient(), []);
+  const [state, setState] = useState<LoadState>('idle');
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const [pets, setPets] = useState<PetRecord[]>([]);
+  const [memories, setMemories] = useState<MemoryRecord[]>([]);
+  const [activePetId, setActivePetId] = useState<string | null>(null);
+
+  const [draftSearch, setDraftSearch] = useState('');
+  const [draftType, setDraftType] = useState('all');
+  const [draftSort, setDraftSort] = useState<'latest' | 'oldest'>('latest');
+
+  const [appliedSearch, setAppliedSearch] = useState('');
+  const [appliedType, setAppliedType] = useState('all');
+  const [appliedSort, setAppliedSort] = useState<'latest' | 'oldest'>('latest');
+
+  const loadData = useCallback(async () => {
+    if (!supabase) {
+      setState('error');
+      setErrorMessage(
+        'Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY.'
+      );
+      return;
+    }
+
+    setState('loading');
+    setErrorMessage(null);
+
+    try {
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) throw authError;
+
+      if (!user) {
+        setState('error');
+        setErrorMessage('Please sign in to view your memories.');
+        return;
+      }
+
+      const petResult = await firstSuccessfulTable<Record<string, unknown>>(
+        supabase,
+        PET_TABLE_CANDIDATES,
+        async (table) => {
+          const query = supabase.from(table).select('*').limit(100);
+          return query;
+        }
+      );
+
+      const memoryResult = await firstSuccessfulTable<Record<string, unknown>>(
+        supabase,
+        MEMORY_TABLE_CANDIDATES,
+        async (table) => {
+          const query = supabase.from(table).select('*').limit(500);
+          return query;
+        }
+      );
+
+      const normalizedPets = (petResult.data ?? [])
+        .map((row) => normalizePet(row))
+        .filter((item): item is PetRecord => Boolean(item))
+        .filter((item) => !item.ownerId || item.ownerId === user.id);
+
+      const normalizedMemories = (memoryResult.data ?? [])
+        .map((row) => normalizeMemory(row))
+        .filter((item): item is MemoryRecord => Boolean(item))
+        .filter((item) => !item.ownerId || item.ownerId === user.id);
+
+      let resolvedPets = normalizedPets;
+      if (resolvedPets.length === 0 && normalizedMemories.length > 0) {
+        const synthetic = new Map<string, PetRecord>();
+        for (const memory of normalizedMemories) {
+          const key = memory.petId ?? memory.petName ?? memory.id;
+          if (!synthetic.has(key)) {
+            synthetic.set(key, {
+              id: memory.petId ?? key,
+              name: memory.petName ?? 'Companion',
+              role: 'Companion',
+              avatarUrl: null,
+              ownerId: memory.ownerId ?? user.id,
+            });
+          }
+        }
+        resolvedPets = Array.from(synthetic.values());
+      }
+
+      const dedupedPets = Array.from(
+        new Map(resolvedPets.map((pet) => [pet.id, pet])).values()
+      );
+
+      setPets(dedupedPets);
+      setMemories(normalizedMemories);
+
+      setActivePetId((current) => {
+        if (current && dedupedPets.some((pet) => pet.id === current)) return current;
+        return dedupedPets[0]?.id ?? null;
+      });
+
+      setState('ready');
+    } catch (error) {
+      setState('error');
+      setErrorMessage(error instanceof Error ? error.message : 'Failed to load memories.');
+    }
+  }, [supabase]);
+
+  useEffect(() => {
+    void loadData();
+  }, [loadData]);
+
+  const activePet = useMemo(() => {
+    if (!pets.length) return null;
+    return pets.find((pet) => pet.id === activePetId) ?? pets[0];
+  }, [pets, activePetId]);
+
+  const matchesPet = useCallback((memory: MemoryRecord, pet: PetRecord | null) => {
+    if (!pet) return true;
+
+    const memoryPetId = memory.petId?.trim().toLowerCase();
+    const petId = pet.id.trim().toLowerCase();
+
+    if (memoryPetId && memoryPetId === petId) return true;
+
+    const memoryPetName = memory.petName?.trim().toLowerCase();
+    const petName = pet.name.trim().toLowerCase();
+
+    if (memoryPetName && memoryPetName === petName) return true;
+
+    return false;
+  }, []);
+
+  const allMemoriesForActivePet = useMemo(() => {
+    return memories.filter((memory) => matchesPet(memory, activePet));
+  }, [memories, activePet, matchesPet]);
+
+  const availableTypes = useMemo(() => {
+    const set = new Set<string>();
+    for (const memory of allMemoriesForActivePet) {
+      const type = memory.type?.trim().toLowerCase();
+      if (type) set.add(type);
+    }
+    return ['all', ...Array.from(set)];
+  }, [allMemoriesForActivePet]);
+
+  const filteredMemories = useMemo(() => {
+    const keyword = appliedSearch.trim().toLowerCase();
+
+    const result = allMemoriesForActivePet
+      .filter((memory) => {
+        if (appliedType !== 'all' && memory.type.trim().toLowerCase() !== appliedType) {
+          return false;
+        }
+
+        if (!keyword) return true;
+
+        const haystack = [
+          memory.content,
+          memory.type,
+          memory.source ?? '',
+          memory.petName ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+
+        return haystack.includes(keyword);
+      })
+      .sort((a, b) => {
+        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+        return appliedSort === 'latest' ? bTime - aTime : aTime - bTime;
+      });
+
+    return result;
+  }, [allMemoriesForActivePet, appliedSearch, appliedSort, appliedType]);
+
+  const memoriesByPet = useMemo(() => {
+    const map = new Map<string, MemoryRecord[]>();
+
+    for (const pet of pets) {
+      map.set(
+        pet.id,
+        memories.filter((memory) => matchesPet(memory, pet))
+      );
+    }
+
+    return map;
+  }, [pets, memories, matchesPet]);
+
+  const applyFilters = () => {
+    setAppliedSearch(draftSearch);
+    setAppliedType(draftType);
+    setAppliedSort(draftSort);
+  };
+
+  const resetFilters = () => {
+    setDraftSearch('');
+    setDraftType('all');
+    setDraftSort('latest');
+    setAppliedSearch('');
+    setAppliedType('all');
+    setAppliedSort('latest');
+  };
+
+  const activePetMemoryCount = activePet ? memoriesByPet.get(activePet.id)?.length ?? 0 : 0;
+  const activePetUpdatedAt =
+    activePetMemoryCount > 0
+      ? [...(memoriesByPet.get(activePet!.id) ?? [])]
+          .sort((a, b) => {
+            const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+            const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+            return bTime - aTime;
+          })[0]?.updatedAt ??
+        [...(memoriesByPet.get(activePet!.id) ?? [])]
+          .sort((a, b) => {
+            const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+            const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+            return bTime - aTime;
+          })[0]?.createdAt ??
+        null
+      : null;
+
+  return (
+    <div className="min-h-screen bg-[#0b0706] text-[#f8efe8]">
+      <SiteHeader />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 bg-[radial-gradient(circle_at_14%_18%,rgba(255,140,48,0.18),transparent_22%),radial-gradient(circle_at_84%_14%,rgba(255,170,82,0.10),transparent_24%),radial-gradient(circle_at_50%_100%,rgba(255,110,52,0.08),transparent_30%)]"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed inset-0 z-0 opacity-[0.05] [background-image:linear-gradient(rgba(255,255,255,0.10)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.10)_1px,transparent_1px)] [background-size:44px_44px]"
+      />
+
+      <main className="relative z-10 mx-auto max-w-7xl px-4 pb-16 pt-28 sm:px-6 lg:px-8">
+        <SectionCard className="overflow-hidden">
+          <div className="relative px-6 py-7 sm:px-8 sm:py-8 lg:px-10">
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(255,139,47,0.12),transparent_48%,rgba(255,139,47,0.05)_100%)]"
+            />
+            <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex items-center gap-4">
+                  <Avatar name={activePet?.name ?? 'M'} src={activePet?.avatarUrl} size="lg" />
+                  <div className="min-w-0">
+                    <h1 className="truncate font-serif text-4xl tracking-[-0.04em] text-[#fff4ec] sm:text-5xl md:text-6xl">
+                      Memories of {activePet?.name ?? 'Your Companion'}
+                    </h1>
+                  </div>
+                </div>
+                <p className="mt-5 max-w-3xl text-sm leading-7 text-[rgba(255,233,220,0.72)] sm:text-[15px]">
+                  Searchable memories, cleaner filters, and a softer brand shell so the page feels like a natural
+                  continuation of Home, Chat, and Account.
+                </p>
+              </div>
+
+              <div className="flex flex-wrap gap-3 text-sm">
+                <Link
+                  href="/chat"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-5 font-medium text-[#fff4ec] transition hover:bg-white/5"
+                >
+                  Back to Chat
+                </Link>
+                <Link
+                  href="/pets"
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.03)] px-5 font-medium text-[#fff4ec] transition hover:bg-white/5"
+                >
+                  Manage Pets
+                </Link>
+              </div>
+            </div>
+          </div>
+        </SectionCard>
+
+        <div className="mt-5 grid grid-cols-1 gap-5 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="space-y-5">
+            <SectionCard className="p-5">
+              <div className="flex items-start gap-4">
+                <Avatar name={activePet?.name ?? 'M'} src={activePet?.avatarUrl} />
+                <div className="min-w-0">
+                  <div className="truncate text-[22px] font-semibold tracking-[-0.03em] text-[#fff5ee]">
+                    {activePet?.name ?? 'Companion'}
+                  </div>
+                  <div className="mt-1 text-sm text-[rgba(255,233,220,0.70)]">
+                    {activePetMemoryCount} memories
+                  </div>
+                  <div className="mt-1 text-xs text-[rgba(255,233,220,0.48)]">
+                    Updated {formatRelative(activePetUpdatedAt)}
+                  </div>
+                </div>
+              </div>
+            </SectionCard>
+
+            <SectionCard className="p-5">
+              <div className="text-[13px] uppercase tracking-[0.22em] text-[#efc39e]">
+                Pet switcher
+              </div>
+              <div className="mt-4 text-[24px] font-serif tracking-[-0.03em] text-[#fff4eb]">
+                Memory scope
+              </div>
+
+              <div className="mt-5 space-y-3">
+                {pets.length === 0 ? (
+                  <div className="rounded-[22px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] px-4 py-4 text-sm text-[rgba(255,233,220,0.68)]">
+                    No pets found yet.
+                  </div>
+                ) : (
+                  pets.map((pet) => {
+                    const petMemories = memoriesByPet.get(pet.id) ?? [];
+                    const lastUpdated =
+                      [...petMemories].sort((a, b) => {
+                        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+                        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+                        return bTime - aTime;
+                      })[0]?.updatedAt ??
+                      [...petMemories].sort((a, b) => {
+                        const aTime = parseDate(a.updatedAt ?? a.createdAt) ?? 0;
+                        const bTime = parseDate(b.updatedAt ?? b.createdAt) ?? 0;
+                        return bTime - aTime;
+                      })[0]?.createdAt ??
+                      null;
+
+                    return (
+                      <button
+                        key={pet.id}
+                        type="button"
+                        onClick={() => setActivePetId(pet.id)}
+                        className={cn(
+                          'flex w-full items-center gap-3 rounded-[22px] border px-4 py-4 text-left transition',
+                          activePet?.id === pet.id
+                            ? 'border-[rgba(255,180,103,0.35)] bg-[linear-gradient(180deg,rgba(255,153,69,0.08),rgba(255,255,255,0.03))] shadow-[0_16px_36px_rgba(0,0,0,0.18)]'
+                            : 'border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] hover:bg-white/[0.04]'
+                        )}
+                      >
+                        <Avatar name={pet.name} src={pet.avatarUrl} size="sm" />
+                        <div className="min-w-0 flex-1">
+                          <div className="truncate text-sm font-semibold text-[#fff5ee]">{pet.name}</div>
+                          <div className="truncate text-xs text-[rgba(255,233,220,0.60)]">{pet.role}</div>
+                        </div>
+                        <div className="shrink-0 text-right">
+                          <div className="text-xs font-medium text-[#efc39e]">{petMemories.length} memories</div>
+                          <div className="mt-1 text-[10px] text-[rgba(255,233,220,0.45)]">
+                            {formatRelative(lastUpdated)}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+            </SectionCard>
+
+            <SectionCard className="p-5">
+              <div className="text-[18px] font-medium text-[#fff4ec]">Companion snapshot</div>
+              <p className="mt-3 text-sm leading-7 text-[rgba(255,233,220,0.70)]">
+                {activePetMemoryCount > 0
+                  ? `${activePet?.name ?? 'Your companion'} has ${activePetMemoryCount} saved memories available in this view.`
+                  : `${activePet?.name ?? 'Your companion'} is building an ongoing emotional memory space with you.`}
+              </p>
+            </SectionCard>
+          </div>
+
+          <div className="space-y-5">
+            <SectionCard className="p-5">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-[minmax(0,1.3fr)_220px_160px_auto_auto] md:items-end">
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Search
+                  </label>
+                  <input
+                    value={draftSearch}
+                    onChange={(e) => setDraftSearch(e.target.value)}
+                    placeholder="Search memory text"
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none placeholder:text-[rgba(255,233,220,0.35)] transition focus:border-[rgba(255,180,103,0.35)]"
+                  />
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Type
+                  </label>
+                  <select
+                    value={draftType}
+                    onChange={(e) => setDraftType(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none transition focus:border-[rgba(255,180,103,0.35)]"
+                  >
+                    {availableTypes.map((type) => (
+                      <option key={type} value={type} className="bg-[#170e0a]">
+                        {type === 'all' ? 'All types' : titleCase(type)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="mb-2 block text-[11px] font-semibold uppercase tracking-[0.20em] text-[#efc39e]">
+                    Sort
+                  </label>
+                  <select
+                    value={draftSort}
+                    onChange={(e) => setDraftSort(e.target.value as 'latest' | 'oldest')}
+                    className="h-11 w-full rounded-xl border border-[rgba(255,233,220,0.12)] bg-[rgba(255,255,255,0.05)] px-4 text-sm text-[#fff5ee] outline-none transition focus:border-[rgba(255,180,103,0.35)]"
+                  >
+                    <option value="latest" className="bg-[#170e0a]">
+                      Latest
+                    </option>
+                    <option value="oldest" className="bg-[#170e0a]">
+                      Oldest
+                    </option>
+                  </select>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={applyFilters}
+                  className="inline-flex h-11 items-center justify-center rounded-full border border-[rgba(255,180,103,0.28)] bg-[rgba(255,146,50,0.12)] px-5 text-sm font-medium text-[#fff4ec] transition hover:bg-[rgba(255,146,50,0.18)]"
+                >
+                  Apply
+                </button>
+
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="inline-flex h-11 items-center justify-center rounded-full px-2 text-sm font-medium text-[rgba(255,233,220,0.74)] transition hover:text-white"
+                >
+                  Reset
+                </button>
+              </div>
+
+              <div className="mt-4 text-sm text-[rgba(255,233,220,0.64)]">{filteredMemories.length} results</div>
+            </SectionCard>
+
+            <SectionCard className="min-h-[380px] p-5">
+              {state === 'loading' || state === 'idle' ? (
+                <div className="space-y-4">
+                  {Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-28 animate-pulse rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.03)]"
+                    />
+                  ))}
+                </div>
+              ) : state === 'error' ? (
+                <div className="rounded-[24px] border border-[rgba(255,120,120,0.18)] bg-[rgba(255,90,90,0.06)] p-5 text-sm leading-7 text-[#ffd8d8]">
+                  {errorMessage ?? 'Unable to load memories right now.'}
+                </div>
+              ) : filteredMemories.length === 0 ? (
+                <div className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[rgba(255,255,255,0.02)] p-5 text-sm leading-7 text-[rgba(255,233,220,0.68)]">
+                  {allMemoriesForActivePet.length === 0
+                    ? 'No memories have been saved for this companion yet. If Chat already shows memory updates, the chat save flow likely is not writing records into the persistent memories table.'
+                    : 'No memories matched your current filters yet.'}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {filteredMemories.map((memory) => {
+                    const stamp = memory.updatedAt ?? memory.createdAt;
+                    return (
+                      <article
+                        key={memory.id}
+                        className="rounded-[24px] border border-[rgba(255,233,220,0.08)] bg-[linear-gradient(180deg,rgba(255,255,255,0.04),rgba(255,255,255,0.02))] p-5"
+                      >
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,180,103,0.24)] bg-[rgba(255,146,50,0.10)] px-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#efc39e]">
+                            {titleCase(memory.type)}
+                          </span>
+
+                          {memory.source ? (
+                            <span className="inline-flex h-8 items-center rounded-full border border-[rgba(255,233,220,0.10)] bg-[rgba(255,255,255,0.03)] px-3 text-[11px] font-medium uppercase tracking-[0.16em] text-[rgba(255,233,220,0.58)]">
+                              {memory.source}
+                            </span>
+                          ) : null}
+
+                          <span className="ml-auto text-xs text-[rgba(255,233,220,0.50)]">
+                            {formatDateTime(stamp)}
+                          </span>
+                        </div>
+
+                        <p className="mt-4 whitespace-pre-wrap text-[15px] leading-8 text-[rgba(255,244,236,0.92)]">
+                          {memory.content}
+                        </p>
+                      </article>
+                    );
+                  })}
+                </div>
+              )}
+            </SectionCard>
+          </div>
+        </div>
       </main>
     </div>
   );

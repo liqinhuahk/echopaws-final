@@ -1,85 +1,153 @@
-import { createSupabaseAdminClient, hasSupabaseAdminEnv } from "@/lib/supabase/admin";
-import {
-  findUserIdByStripeCustomerId,
-  mapStripeSubscriptionToRecord,
-  upsertSubscription,
-} from "@/lib/subscriptions";
-import { getStripeClient } from "@/lib/stripe";
-import Stripe from "stripe";
+import { NextResponse } from 'next/server';
+import Stripe from 'stripe';
+import { createClient } from '@supabase/supabase-js';
+import { stripe } from '@/lib/stripe';
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  if (session.mode !== "subscription") return;
+export const runtime = 'nodejs';
 
-  const userId = session.metadata?.supabase_user_id || session.client_reference_id;
-  const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id;
+function getSupabaseAdmin() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-  if (!userId || !subscriptionId) return;
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      'Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY'
+    );
+  }
 
-  const stripe = getStripeClient();
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-  const record = mapStripeSubscriptionToRecord(subscription, userId, session.metadata?.plan || "vip");
-  await upsertSubscription(record);
+  return createClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
 }
 
-async function handleSubscriptionEvent(subscription: Stripe.Subscription) {
+function isVipStatus(status?: string | null) {
+  return ['active', 'trialing', 'past_due'].includes(status ?? '');
+}
+
+async function getSupabaseUserIdFromCustomer(
+  customerId?: string | null
+): Promise<string | null> {
+  if (!customerId) return null;
+
+  const customer = await stripe.customers.retrieve(customerId);
+
+  if ('deleted' in customer && customer.deleted) {
+    return null;
+  }
+
+  return customer.metadata?.supabase_user_id || null;
+}
+
+async function updateUserAppMetadata(
+  userId: string,
+  patch: Record<string, unknown>
+) {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const existingUser = await supabaseAdmin.auth.admin.getUserById(userId);
+
+  if (existingUser.error || !existingUser.data.user) {
+    throw new Error(
+      `Unable to load Supabase user ${userId}: ${existingUser.error?.message || 'not found'}`
+    );
+  }
+
+  const mergedAppMetadata = {
+    ...(existingUser.data.user.app_metadata ?? {}),
+    ...patch,
+  };
+
+  const updated = await supabaseAdmin.auth.admin.updateUserById(userId, {
+    app_metadata: mergedAppMetadata,
+  });
+
+  if (updated.error) {
+    throw new Error(updated.error.message);
+  }
+}
+
+async function syncSubscriptionStateToUser(params: {
+  userId: string;
+  customerId?: string | null;
+  subscription?: Stripe.Subscription | null;
+}) {
+  const { userId, customerId, subscription } = params;
+
+  const patch = {
+    stripe_customer_id: customerId ?? null,
+    stripe_subscription_id: subscription?.id ?? null,
+    stripe_price_id: subscription?.items?.data?.[0]?.price?.id ?? null,
+    billing_plan:
+      subscription && isVipStatus(subscription.status) ? 'vip' : 'free',
+    billing_status: subscription?.status ?? 'free',
+    billing_vip:
+      subscription && isVipStatus(subscription.status) ? true : false,
+    billing_cancel_at_period_end:
+      subscription?.cancel_at_period_end ?? false,
+    billing_current_period_end:
+      subscription?.current_period_end
+        ? new Date(subscription.current_period_end * 1000).toISOString()
+        : null,
+    billing_updated_at: new Date().toISOString(),
+  };
+
+  await updateUserAppMetadata(userId, patch);
+}
+
+async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
   const customerId =
-    typeof subscription.customer === "string" ? subscription.customer : subscription.customer?.id || "";
+    typeof session.customer === 'string' ? session.customer : session.customer?.id;
 
-  let userId = subscription.metadata?.supabase_user_id || null;
+  const subscriptionId =
+    typeof session.subscription === 'string'
+      ? session.subscription
+      : session.subscription?.id ?? null;
 
-  if (!userId && customerId) {
-    userId = await findUserIdByStripeCustomerId(customerId);
+  const userId =
+    session.metadata?.supabase_user_id ||
+    (await getSupabaseUserIdFromCustomer(customerId));
+
+  if (!userId) {
+    console.warn(
+      '[stripe webhook] checkout.session.completed missing supabase user id',
+      {
+        checkoutSessionId: session.id,
+        customerId,
+      }
+    );
+    return;
   }
 
-  if (!userId) return;
+  const subscription = subscriptionId
+    ? await stripe.subscriptions.retrieve(subscriptionId)
+    : null;
 
-  const record = mapStripeSubscriptionToRecord(subscription, userId, subscription.metadata?.plan || "vip");
-  await upsertSubscription(record);
+  await syncSubscriptionStateToUser({
+    userId,
+    customerId,
+    subscription,
+  });
 }
 
-export async function POST(request: Request) {
-  const signature = request.headers.get("stripe-signature");
-  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+async function syncFromSubscription(subscription: Stripe.Subscription) {
+  const customerId =
+    typeof subscription.customer === 'string'
+      ? subscription.customer
+      : subscription.customer?.id;
 
-  if (!signature || !secret) {
-    return new Response("Missing Stripe webhook secret or signature.", { status: 400 });
+  const userId =
+    subscription.metadata?.supabase_user_id ||
+    (await getSupabaseUserIdFromCustomer(customerId));
+
+  if (!userId) {
+    console.warn('[stripe webhook] subscription event missing supabase user id', {
+      subscriptionId: subscription.id,
+      customerId,
+    });
+    return;
   }
 
-  if (!hasSupabaseAdminEnv()) {
-    return new Response("Missing Supabase service role environment variables.", { status: 500 });
-  }
-
-  createSupabaseAdminClient();
-
-  const body = await request.text();
-  const stripe = getStripeClient();
-
-  let event: Stripe.Event;
-
-  try {
-    event = stripe.webhooks.constructEvent(body, signature, secret);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Invalid Stripe webhook";
-    return new Response(message, { status: 400 });
-  }
-
-  try {
-    switch (event.type) {
-      case "checkout.session.completed":
-        await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
-        break;
-      case "customer.subscription.created":
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted":
-        await handleSubscriptionEvent(event.data.object as Stripe.Subscription);
-        break;
-      default:
-        break;
-    }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : "Stripe webhook handling failed";
-    return new Response(message, { status: 500 });
-  }
-
-  return Response.json({ received: true });
-}
+  await syncSubscriptionStateToUser({

@@ -1,9 +1,28 @@
 import { NextResponse } from 'next/server';
 import Stripe from 'stripe';
 import { createClient } from '@supabase/supabase-js';
-import { stripe } from '@/lib/stripe';
 
 export const runtime = 'nodejs';
+
+function getStripeClient() {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+
+  if (!secretKey) {
+    throw new Error('Missing STRIPE_SECRET_KEY');
+  }
+
+  return new Stripe(secretKey);
+}
+
+function getWebhookSecret() {
+  const secret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!secret) {
+    throw new Error('Missing STRIPE_WEBHOOK_SECRET');
+  }
+
+  return secret;
+}
 
 function getSupabaseAdmin() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -27,12 +46,24 @@ function isVipStatus(status?: string | null) {
   return ['active', 'trialing', 'past_due'].includes(status ?? '');
 }
 
-async function getSupabaseUserIdFromCustomer(
-  customerId?: string | null
-): Promise<string | null> {
+function normalizeCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined
+) {
+  if (!customer) return null;
+  if (typeof customer === 'string') return customer;
+  if ('deleted' in customer && customer.deleted) return null;
+  return customer.id;
+}
+
+async function getSupabaseUserIdFromCustomer(params: {
+  stripeClient: Stripe;
+  customerId?: string | null;
+}) {
+  const { stripeClient, customerId } = params;
+
   if (!customerId) return null;
 
-  const customer = await stripe.customers.retrieve(customerId);
+  const customer = await stripeClient.customers.retrieve(customerId);
 
   if ('deleted' in customer && customer.deleted) {
     return null;
@@ -51,7 +82,9 @@ async function updateUserAppMetadata(
 
   if (existingUser.error || !existingUser.data.user) {
     throw new Error(
-      `Unable to load Supabase user ${userId}: ${existingUser.error?.message || 'not found'}`
+      `Unable to load Supabase user ${userId}: ${
+        existingUser.error?.message || 'not found'
+      }`
     );
   }
 
@@ -97,10 +130,13 @@ async function syncSubscriptionStateToUser(params: {
   await updateUserAppMetadata(userId, patch);
 }
 
-async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
-  const customerId =
-    typeof session.customer === 'string' ? session.customer : session.customer?.id;
+async function syncFromCheckoutSession(params: {
+  stripeClient: Stripe;
+  session: Stripe.Checkout.Session;
+}) {
+  const { stripeClient, session } = params;
 
+  const customerId = normalizeCustomerId(session.customer);
   const subscriptionId =
     typeof session.subscription === 'string'
       ? session.subscription
@@ -108,7 +144,10 @@ async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
 
   const userId =
     session.metadata?.supabase_user_id ||
-    (await getSupabaseUserIdFromCustomer(customerId));
+    (await getSupabaseUserIdFromCustomer({
+      stripeClient,
+      customerId,
+    }));
 
   if (!userId) {
     console.warn(
@@ -122,7 +161,7 @@ async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
   }
 
   const subscription = subscriptionId
-    ? await stripe.subscriptions.retrieve(subscriptionId)
+    ? await stripeClient.subscriptions.retrieve(subscriptionId)
     : null;
 
   await syncSubscriptionStateToUser({
@@ -132,15 +171,20 @@ async function syncFromCheckoutSession(session: Stripe.Checkout.Session) {
   });
 }
 
-async function syncFromSubscription(subscription: Stripe.Subscription) {
-  const customerId =
-    typeof subscription.customer === 'string'
-      ? subscription.customer
-      : subscription.customer?.id;
+async function syncFromSubscription(params: {
+  stripeClient: Stripe;
+  subscription: Stripe.Subscription;
+}) {
+  const { stripeClient, subscription } = params;
+
+  const customerId = normalizeCustomerId(subscription.customer);
 
   const userId =
     subscription.metadata?.supabase_user_id ||
-    (await getSupabaseUserIdFromCustomer(customerId));
+    (await getSupabaseUserIdFromCustomer({
+      stripeClient,
+      customerId,
+    }));
 
   if (!userId) {
     console.warn('[stripe webhook] subscription event missing supabase user id', {
@@ -151,3 +195,140 @@ async function syncFromSubscription(subscription: Stripe.Subscription) {
   }
 
   await syncSubscriptionStateToUser({
+    userId,
+    customerId,
+    subscription,
+  });
+}
+
+async function syncFromInvoice(params: {
+  stripeClient: Stripe;
+  invoice: Stripe.Invoice;
+}) {
+  const { stripeClient, invoice } = params;
+
+  const customerId = normalizeCustomerId(invoice.customer);
+
+  if (!customerId) {
+    return;
+  }
+
+  const userId = await getSupabaseUserIdFromCustomer({
+    stripeClient,
+    customerId,
+  });
+
+  if (!userId) {
+    console.warn('[stripe webhook] invoice event missing supabase user id', {
+      invoiceId: invoice.id,
+      customerId,
+    });
+    return;
+  }
+
+  let subscription: Stripe.Subscription | null = null;
+
+  const invoiceSubscription =
+    typeof invoice.subscription === 'string'
+      ? invoice.subscription
+      : invoice.subscription?.id ?? null;
+
+  if (invoiceSubscription) {
+    subscription = await stripeClient.subscriptions.retrieve(invoiceSubscription);
+  } else {
+    const subscriptions = await stripeClient.subscriptions.list({
+      customer: customerId,
+      status: 'all',
+      limit: 1,
+    });
+
+    subscription = subscriptions.data[0] ?? null;
+  }
+
+  await syncSubscriptionStateToUser({
+    userId,
+    customerId,
+    subscription,
+  });
+}
+
+export async function POST(request: Request) {
+  try {
+    const stripeClient = getStripeClient();
+    const webhookSecret = getWebhookSecret();
+
+    const signature = request.headers.get('stripe-signature');
+
+    if (!signature) {
+      return NextResponse.json(
+        { error: 'Missing stripe-signature header' },
+        { status: 400 }
+      );
+    }
+
+    const rawBody = await request.text();
+
+    let event: Stripe.Event;
+
+    try {
+      event = stripeClient.webhooks.constructEvent(
+        rawBody,
+        signature,
+        webhookSecret
+      );
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'Webhook signature verification failed';
+
+      console.error('[stripe webhook] signature verification failed', message);
+
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object as Stripe.Checkout.Session;
+        await syncFromCheckoutSession({
+          stripeClient,
+          session,
+        });
+        break;
+      }
+
+      case 'customer.subscription.created':
+      case 'customer.subscription.updated':
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object as Stripe.Subscription;
+        await syncFromSubscription({
+          stripeClient,
+          subscription,
+        });
+        break;
+      }
+
+      case 'invoice.paid':
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object as Stripe.Invoice;
+        await syncFromInvoice({
+          stripeClient,
+          invoice,
+        });
+        break;
+      }
+
+      default: {
+        console.log('[stripe webhook] ignored event type:', event.type);
+        break;
+      }
+    }
+
+    return NextResponse.json({ received: true });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Unknown webhook error';
+
+    console.error('[stripe webhook] fatal error', message);
+
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}

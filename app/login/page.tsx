@@ -9,11 +9,24 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
 
 type AuthMode = 'signin' | 'signup';
 type StatusType = 'idle' | 'loading' | 'success' | 'error';
+
+type NavItem = {
+  label: string;
+  href: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { label: 'Home', href: '/' },
+  { label: 'Chat', href: '/chat' },
+  { label: 'Memories', href: '/memories' },
+  { label: 'Pricing', href: '/pricing' },
+  { label: 'Account', href: '/account' },
+];
 
 function createBrowserSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -154,10 +167,94 @@ function StatusIcon({ status }: { status: StatusType }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-sky-300" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-200" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v4l2.5 2.5" />
     </svg>
+  );
+}
+
+function BrandMark() {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffb347] to-[#f59e0b] text-xl shadow-lg shadow-amber-500/20">
+        🐾
+      </div>
+      <div>
+        <p className="text-[30px] font-semibold leading-none text-white">EchoPaws</p>
+        <p className="mt-1 text-[11px] uppercase tracking-[0.32em] text-white/65">
+          AI Companion
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function Header({
+  currentPath,
+  currentUser,
+}: {
+  currentPath: string;
+  currentUser: User | null;
+}) {
+  const accountName = currentUser ? getDisplayName(currentUser) : '';
+  const accountEmail = currentUser?.email || '';
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(12,8,5,0.72)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-6 py-4 lg:px-8">
+        <Link href="/" className="shrink-0">
+          <BrandMark />
+        </Link>
+
+        <nav className="hidden items-center gap-3 md:flex">
+          {NAV_ITEMS.map((item) => {
+            const isActive =
+              item.href === '/'
+                ? currentPath === '/'
+                : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
+
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-full px-5 py-2.5 text-sm font-medium transition ${
+                  isActive
+                    ? 'border border-amber-300/25 bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
+                    : 'text-white/78 hover:bg-white/7 hover:text-white'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="hidden items-center gap-3 lg:flex">
+          {currentUser ? (
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
+              <p className="text-sm font-medium text-white">{accountName}</p>
+              <p className="text-xs text-white/55">{accountEmail}</p>
+            </div>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/pricing"
+                className="rounded-full bg-[#f59e0b] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
+    </header>
   );
 }
 
@@ -187,7 +284,7 @@ function StatusPanel({
       ? 'border-rose-400/25 bg-rose-500/10'
       : status === 'loading'
       ? 'border-amber-400/25 bg-amber-500/10'
-      : 'border-sky-400/20 bg-sky-500/10';
+      : 'border-amber-300/15 bg-white/5';
 
   return (
     <div className={`mb-5 rounded-2xl border p-4 shadow-lg backdrop-blur ${panelClass}`}>
@@ -266,6 +363,7 @@ function FeatureCard({
 
 function LoginPageContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const nextParam = searchParams.get('next');
@@ -421,8 +519,6 @@ function LoginPageContent() {
       setStatusProvider('Google');
 
       const siteUrl = getSiteUrl();
-
-      // 核心修复：Google OAuth 回调先进入 /auth/callback
       const redirectTo = `${siteUrl}/auth/callback?next=${encodeURIComponent(nextPath)}&auth=google`;
 
       const { error } = await supabase.auth.signInWithOAuth({
@@ -537,10 +633,12 @@ function LoginPageContent() {
   const canContinue = status === 'success' && !!currentUser;
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_30%),linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
-      <div className="mx-auto max-w-7xl px-6 py-10 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-white/5 p-8 shadow-2xl backdrop-blur-xl lg:p-10">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),radial-gradient(circle_at_15%_20%,_rgba(251,191,36,0.10),_transparent_24%),linear-gradient(180deg,#130c08_0%,#0f111a_38%,#0b1220_100%)] text-white">
+      <Header currentPath={pathname || '/login'} currentUser={currentUser} />
+
+      <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pt-14">
+        <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
+          <section className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-8 shadow-2xl backdrop-blur-xl lg:p-10">
             <div>
               <div className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-[0.18em] text-amber-200">
                 ECHOPAWS LOGIN
@@ -553,26 +651,27 @@ function LoginPageContent() {
               </h1>
 
               <p className="mt-5 max-w-xl text-base leading-8 text-white/70">
-                Google sign-in and Email sign-in now share the same visible status panel,
-                so users can immediately tell whether authentication succeeded and which account is active.
+                Keep the login experience visually aligned with the main EchoPaws site:
+                warm, soft, and reassuring. The top navigation remains visible, and the
+                signed-in account status stays clear after Google or Email login.
               </p>
 
               <div className="mt-8 grid gap-4 sm:grid-cols-2">
                 <FeatureCard
-                  title="Clear success feedback"
-                  description="After Google or Email sign-in, the page shows a clear signed-in state with account name and email."
+                  title="Visible site navigation"
+                  description="The login page now includes the same top-level navigation structure as the main site."
                 />
                 <FeatureCard
-                  title="Safer redirect flow"
-                  description="Google OAuth returns to the callback flow first, so the page can confirm success before continuing."
+                  title="Matched color system"
+                  description="The background uses warmer amber-to-deep-night gradients instead of an isolated dark blue panel."
                 />
                 <FeatureCard
-                  title="Less confusion"
-                  description="Users no longer have to guess whether they are signed in when Google returns from account selection."
+                  title="Clear signed-in state"
+                  description="After Google or Email sign-in, the account name and email remain visible in the status area."
                 />
                 <FeatureCard
-                  title="Gentle account overview"
-                  description="The auth status card stays visible at the top of the form and highlights the active account identity."
+                  title="Better continuity"
+                  description="Users can move from login to Chat, Memories, Pricing, and Account without feeling the page is disconnected."
                 />
               </div>
             </div>
@@ -580,13 +679,13 @@ function LoginPageContent() {
             <div className="mt-10 rounded-3xl border border-white/10 bg-black/20 p-5">
               <p className="text-sm font-semibold text-white">Less noise, more trust</p>
               <p className="mt-2 text-sm leading-6 text-white/65">
-                The login page should always answer three questions immediately:
-                whether sign-in worked, which account is active, and where the user goes next.
+                The login page should feel like part of the same product, not a separate screen.
+                Keep the header, keep the warmth, and make account state obvious.
               </p>
             </div>
           </section>
 
-          <section className="rounded-[32px] border border-white/10 bg-[#0f172a]/90 p-6 shadow-2xl backdrop-blur-xl sm:p-8">
+          <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,23,42,0.92)_0%,rgba(15,23,42,0.84)_100%)] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
             <div className="mb-6 flex items-center justify-between gap-3">
               <div>
                 <p className="text-sm uppercase tracking-[0.24em] text-amber-200/80">
@@ -777,7 +876,7 @@ function LoginPageContent() {
 
 function LoginPageFallback() {
   return (
-    <main className="min-h-screen bg-[linear-gradient(180deg,#0b1220_0%,#111827_100%)] text-white">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),linear-gradient(180deg,#130c08_0%,#0b1220_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
         <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />

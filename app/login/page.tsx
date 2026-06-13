@@ -9,25 +9,12 @@ import {
   useState,
   type FormEvent,
 } from 'react';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
+import SiteHeader from '@/components/layout/SiteHeader';
 
 type AuthMode = 'signin' | 'signup';
 type StatusType = 'idle' | 'loading' | 'success' | 'error';
-
-type NavItem = {
-  label: string;
-  href: string;
-};
-
-const NAV_ITEMS: NavItem[] = [
-  { label: 'Home', href: '/' },
-  { label: 'Chat', href: '/chat' },
-  { label: 'Memories', href: '/memories' },
-  { label: 'Pricing', href: '/pricing' },
-  { label: 'Account', href: '/account' },
-  { label: 'Contact', href: '/account' },
-];
 
 function createBrowserSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -108,24 +95,6 @@ function getContinueLabel(path: string) {
   return 'Continue to Home';
 }
 
-function BrandMark() {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffcf7a] via-[#f6a63c] to-[#ea8a25] text-xl shadow-[0_10px_30px_rgba(245,158,11,0.35)]">
-        🐾
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-[28px] font-semibold leading-none text-white">
-          EchoPaws
-        </p>
-        <p className="mt-1 text-[11px] uppercase tracking-[0.32em] text-white/60">
-          AI Companion
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-5 w-5" fill="none">
@@ -152,13 +121,7 @@ function GoogleIcon() {
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
     return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-      >
+      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
         <path d="M3 12s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6Z" />
         <circle cx="12" cy="12" r="2.8" />
       </svg>
@@ -166,13 +129,7 @@ function EyeIcon({ open }: { open: boolean }) {
   }
 
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.8"
-    >
+    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
       <path d="M3 3l18 18" />
       <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
       <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5.4 0 9 7 9 7a17.47 17.47 0 0 1-3.06 3.67" />
@@ -183,20 +140,12 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function StatusIcon({ status }: { status: StatusType }) {
   if (status === 'loading') {
-    return (
-      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />
-    );
+    return <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />;
   }
 
   if (status === 'success') {
     return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5 text-emerald-400"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
+      <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M20 6 9 17l-5-5" />
       </svg>
     );
@@ -204,13 +153,7 @@ function StatusIcon({ status }: { status: StatusType }) {
 
   if (status === 'error') {
     return (
-      <svg
-        viewBox="0 0 24 24"
-        className="h-5 w-5 text-rose-400"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-      >
+      <svg viewBox="0 0 24 24" className="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2">
         <path d="M12 8v5" />
         <path d="M12 16h.01" />
         <circle cx="12" cy="12" r="9" />
@@ -219,90 +162,27 @@ function StatusIcon({ status }: { status: StatusType }) {
   }
 
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-5 w-5 text-amber-200"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-    >
+    <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-200" fill="none" stroke="currentColor" strokeWidth="2">
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v4l2.5 2.5" />
     </svg>
   );
 }
 
-function Header({
-  currentPath,
-  currentUser,
+function FeatureCard({
+  title,
+  description,
 }: {
-  currentPath: string;
-  currentUser: User | null;
+  title: string;
+  description: string;
 }) {
-  const currentName = currentUser ? getDisplayName(currentUser) : '';
-  const currentEmail = currentUser?.email || '';
-
   return (
-    <header className="border-b border-white/10 bg-[rgba(16,8,4,0.82)] backdrop-blur-xl">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-8">
-        <Link href="/" className="shrink-0">
-          <BrandMark />
-        </Link>
-
-        <nav className="hidden flex-1 items-center justify-center gap-8 lg:flex">
-          {NAV_ITEMS.map((item) => {
-            const isActive =
-              item.href === '/'
-                ? currentPath === '/'
-                : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`text-sm transition ${
-                  isActive ? 'text-white' : 'text-white/72 hover:text-white'
-                }`}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </nav>
-
-        <div className="hidden items-center gap-3 lg:flex">
-          {currentUser ? (
-            <>
-              <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-2 text-right">
-                <p className="text-sm font-medium text-white">{currentName}</p>
-                <p className="text-[11px] text-white/50">{currentEmail}</p>
-              </div>
-              <Link
-                href="/account"
-                className="rounded-full border border-white/14 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                Account
-              </Link>
-            </>
-          ) : (
-            <>
-              <Link
-                href="/login"
-                className="rounded-full border border-white/14 bg-white/6 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-              >
-                Sign In
-              </Link>
-              <Link
-                href="/pricing"
-                className="rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-5 py-2 text-sm font-semibold text-[#2a1707] transition hover:brightness-105"
-              >
-                Get Started
-              </Link>
-            </>
-          )}
-        </div>
-      </div>
-    </header>
+    <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.15)] backdrop-blur">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc27a]">
+        {title}
+      </p>
+      <p className="mt-3 text-sm leading-7 text-white/62">{description}</p>
+    </div>
   );
 }
 
@@ -346,7 +226,7 @@ function StatusPanel({
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <span className="rounded-full border border-emerald-300/10 bg-emerald-400/8 px-2.5 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-200/90">
-              Signed In
+              Status
             </span>
             {provider ? (
               <span className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] text-white/70">
@@ -356,9 +236,7 @@ function StatusPanel({
           </div>
 
           <p className="mt-3 text-sm font-semibold text-white">{title}</p>
-          {detail ? (
-            <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p>
-          ) : null}
+          {detail ? <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p> : null}
 
           {(userName || userEmail) && (
             <div className="mt-4 rounded-[18px] border border-white/10 bg-black/18 p-3">
@@ -405,26 +283,8 @@ function StatusPanel({
   );
 }
 
-function FeatureCard({
-  title,
-  description,
-}: {
-  title: string;
-  description: string;
-}) {
-  return (
-    <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.15)] backdrop-blur">
-      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc27a]">
-        {title}
-      </p>
-      <p className="mt-3 text-sm leading-7 text-white/62">{description}</p>
-    </div>
-  );
-}
-
 function LoginPageContent() {
   const router = useRouter();
-  const pathname = usePathname();
   const searchParams = useSearchParams();
 
   const nextParam = searchParams.get('next');
@@ -466,9 +326,7 @@ function LoginPageContent() {
   const syncStatusFromUser = useCallback((user: User, providerOverride?: string) => {
     setStatus('success');
     setStatusTitle(`Signed in successfully as ${getDisplayName(user)}`);
-    setStatusDetail(
-      'Google login completed. You can continue with this account now.'
-    );
+    setStatusDetail('You can continue with this account now.');
     setStatusProvider(providerOverride || getProviderLabel(user));
   }, []);
 
@@ -541,28 +399,17 @@ function LoginPageContent() {
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!mounted) return;
-
       setSession(currentSession);
 
-      if (event === 'SIGNED_IN' && currentSession?.user) {
+      if (currentSession?.user) {
         const provider =
           authHint === 'google' || oauthHint === 'done'
             ? 'Google'
             : getProviderLabel(currentSession.user);
 
         syncStatusFromUser(currentSession.user, provider);
-        setIsGoogleLoading(false);
-        setIsEmailLoading(false);
-      }
-
-      if (event === 'SIGNED_OUT') {
-        setSession(null);
-        setStatus('idle');
-        setStatusTitle('Welcome back to your companion space');
-        setStatusDetail('Continue with Google or sign in with email and password.');
-        setStatusProvider('');
         setIsGoogleLoading(false);
         setIsEmailLoading(false);
       }
@@ -589,14 +436,10 @@ function LoginPageContent() {
 
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: {
-          redirectTo,
-        },
+        options: { redirectTo },
       });
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
     } catch (error) {
       setIsGoogleLoading(false);
       setStatus('error');
@@ -705,12 +548,15 @@ function LoginPageContent() {
   const currentName = currentUser ? getDisplayName(currentUser) : '';
   const currentEmail = currentUser?.email || '';
   const canContinue = status === 'success' && !!currentUser;
-  const currentPath = pathname || '/login';
   const showRedirectChip = continuePath && continuePath !== '/';
 
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_14%_18%,rgba(255,120,20,0.24),transparent_18%),radial-gradient(circle_at_84%_28%,rgba(255,132,0,0.18),transparent_16%),linear-gradient(180deg,#120906_0%,#090304_42%,#060304_100%)] text-white">
-      <Header currentPath={currentPath} currentUser={currentUser} />
+      <SiteHeader
+        isLoggedIn={!!currentUser}
+        userName={currentName}
+        userEmail={currentEmail}
+      />
 
       <section className="relative overflow-hidden">
         <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px]" />

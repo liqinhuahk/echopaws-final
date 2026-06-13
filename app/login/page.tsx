@@ -26,6 +26,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Memories', href: '/memories' },
   { label: 'Pricing', href: '/pricing' },
   { label: 'Account', href: '/account' },
+  { label: 'Contact', href: '/account' },
 ];
 
 function createBrowserSupabaseClient() {
@@ -100,10 +101,17 @@ function getProviderLabel(user: User | null) {
   return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
 }
 
+function getContinueLabel(path: string) {
+  if (path === '/chat') return 'Continue to Chat';
+  if (path === '/memories') return 'Continue to Memories';
+  if (path === '/account') return 'Continue to Account';
+  return 'Continue to Home';
+}
+
 function BrandMark() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffbf66] via-[#f59e0b] to-[#f08a24] text-xl shadow-[0_12px_30px_rgba(245,158,11,0.28)]">
+      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#ffcf7a] via-[#f6a63c] to-[#ea8a25] text-xl shadow-[0_10px_30px_rgba(245,158,11,0.35)]">
         🐾
       </div>
       <div className="min-w-0">
@@ -235,69 +243,63 @@ function Header({
   const currentEmail = currentUser?.email || '';
 
   return (
-    <header className="sticky top-0 z-40 border-b border-white/8 bg-[rgba(18,12,8,0.72)] backdrop-blur-xl">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="flex min-h-[78px] items-center justify-between gap-4">
-          <Link href="/" className="shrink-0">
-            <BrandMark />
-          </Link>
+    <header className="border-b border-white/10 bg-[rgba(16,8,4,0.82)] backdrop-blur-xl">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-6 py-4 lg:px-8">
+        <Link href="/" className="shrink-0">
+          <BrandMark />
+        </Link>
 
-          <div className="hidden items-center gap-3 lg:flex">
-            {currentUser ? (
-              <>
-                <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-2 text-right">
-                  <p className="text-sm font-medium text-white">{currentName}</p>
-                  <p className="text-xs text-white/55">{currentEmail}</p>
-                </div>
-                <Link
-                  href="/account"
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
-                >
-                  Account
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link
-                  href="/login"
-                  className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-white/85 transition hover:bg-white/10"
-                >
-                  Sign In
-                </Link>
-                <Link
-                  href="/pricing"
-                  className="rounded-full bg-[#f59e0b] px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
-                >
-                  Get Started
-                </Link>
-              </>
-            )}
-          </div>
-        </div>
+        <nav className="hidden flex-1 items-center justify-center gap-8 lg:flex">
+          {NAV_ITEMS.map((item) => {
+            const isActive =
+              item.href === '/'
+                ? currentPath === '/'
+                : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
 
-        <div className="pb-4">
-          <nav className="flex gap-3 overflow-x-auto no-scrollbar">
-            {NAV_ITEMS.map((item) => {
-              const isActive =
-                item.href === '/'
-                  ? currentPath === '/'
-                  : currentPath === item.href || currentPath.startsWith(`${item.href}/`);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`text-sm transition ${
+                  isActive ? 'text-white' : 'text-white/72 hover:text-white'
+                }`}
+              >
+                {item.label}
+              </Link>
+            );
+          })}
+        </nav>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className={`shrink-0 rounded-full px-5 py-2.5 text-sm font-medium transition ${
-                    isActive
-                      ? 'border border-amber-300/25 bg-white/10 text-white shadow-[0_0_0_1px_rgba(255,255,255,0.06)]'
-                      : 'text-white/78 hover:bg-white/7 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
+        <div className="hidden items-center gap-3 lg:flex">
+          {currentUser ? (
+            <>
+              <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-2 text-right">
+                <p className="text-sm font-medium text-white">{currentName}</p>
+                <p className="text-[11px] text-white/50">{currentEmail}</p>
+              </div>
+              <Link
+                href="/account"
+                className="rounded-full border border-white/14 bg-white/6 px-4 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Account
+              </Link>
+            </>
+          ) : (
+            <>
+              <Link
+                href="/login"
+                className="rounded-full border border-white/14 bg-white/6 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
+              >
+                Sign In
+              </Link>
+              <Link
+                href="/pricing"
+                className="rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-5 py-2 text-sm font-semibold text-[#2a1707] transition hover:brightness-105"
+              >
+                Get Started
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </header>
@@ -311,6 +313,7 @@ function StatusPanel({
   provider,
   userName,
   userEmail,
+  continueLabel,
   canContinue,
   onContinue,
 }: {
@@ -320,20 +323,21 @@ function StatusPanel({
   provider: string;
   userName: string;
   userEmail: string;
+  continueLabel: string;
   canContinue: boolean;
   onContinue: () => void;
 }) {
   const panelClass =
     status === 'success'
-      ? 'border-emerald-400/25 bg-emerald-500/10'
+      ? 'border-emerald-300/18 bg-[rgba(82,120,78,0.14)]'
       : status === 'error'
-      ? 'border-rose-400/25 bg-rose-500/10'
+      ? 'border-rose-300/18 bg-[rgba(120,52,52,0.16)]'
       : status === 'loading'
-      ? 'border-amber-400/25 bg-amber-500/10'
-      : 'border-white/10 bg-white/5';
+      ? 'border-amber-300/18 bg-[rgba(120,89,42,0.16)]'
+      : 'border-white/10 bg-white/[0.04]';
 
   return (
-    <div className={`mb-5 rounded-2xl border p-4 shadow-lg backdrop-blur ${panelClass}`}>
+    <div className={`rounded-[22px] border p-4 shadow-[0_20px_60px_rgba(0,0,0,0.22)] ${panelClass}`}>
       <div className="flex items-start gap-3">
         <div className="mt-0.5 shrink-0">
           <StatusIcon status={status} />
@@ -341,35 +345,38 @@ function StatusPanel({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <p className="text-sm font-semibold text-white">{title}</p>
+            <span className="rounded-full border border-emerald-300/10 bg-emerald-400/8 px-2.5 py-1 text-[10px] uppercase tracking-[0.22em] text-emerald-200/90">
+              Signed In
+            </span>
             {provider ? (
-              <span className="rounded-full border border-white/10 bg-white/10 px-2.5 py-0.5 text-[11px] text-white/80">
+              <span className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] text-white/70">
                 {provider}
               </span>
             ) : null}
           </div>
 
+          <p className="mt-3 text-sm font-semibold text-white">{title}</p>
           {detail ? (
-            <p className="mt-1 text-sm leading-6 text-white/75">{detail}</p>
+            <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p>
           ) : null}
 
           {(userName || userEmail) && (
-            <div className="mt-3 rounded-xl border border-white/10 bg-black/20 px-3 py-3">
-              <div className="grid gap-2 sm:grid-cols-2">
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
-                    Account Name
-                  </p>
-                  <p className="mt-1 text-sm font-medium text-white">{userName || '—'}</p>
-                </div>
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.18em] text-white/40">
-                    Email
-                  </p>
-                  <p className="mt-1 break-all text-sm font-medium text-white">
-                    {userEmail || '—'}
-                  </p>
-                </div>
+            <div className="mt-4 rounded-[18px] border border-white/10 bg-black/18 p-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-white/42">
+                Signed-in Account
+              </p>
+              <p className="mt-2 text-sm font-medium text-white">{userName || '—'}</p>
+              <p className="mt-1 break-all text-sm text-white/62">{userEmail || '—'}</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <span className="rounded-full border border-emerald-300/14 bg-emerald-400/8 px-2.5 py-1 text-[10px] text-emerald-200">
+                  Login successful
+                </span>
+                {provider ? (
+                  <span className="rounded-full border border-white/10 bg-white/6 px-2.5 py-1 text-[10px] text-white/65">
+                    Method: {provider}
+                  </span>
+                ) : null}
               </div>
             </div>
           )}
@@ -379,16 +386,16 @@ function StatusPanel({
               <button
                 type="button"
                 onClick={onContinue}
-                className="inline-flex items-center justify-center rounded-xl bg-[#f59e0b] px-4 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b]"
+                className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-4 py-2.5 text-sm font-semibold text-[#2a1707] transition hover:brightness-105"
               >
-                Continue
+                {continueLabel}
               </button>
 
               <Link
                 href="/account"
-                className="inline-flex items-center justify-center rounded-xl border border-white/10 bg-white/5 px-4 py-2.5 text-sm font-medium text-white/85 transition hover:bg-white/10"
+                className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/6 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
               >
-                Account
+                View account
               </Link>
             </div>
           )}
@@ -406,9 +413,11 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur">
-      <p className="text-sm font-semibold text-white">{title}</p>
-      <p className="mt-2 text-sm leading-6 text-white/65">{description}</p>
+    <div className="rounded-[20px] border border-white/10 bg-white/[0.04] p-4 shadow-[0_12px_40px_rgba(0,0,0,0.15)] backdrop-blur">
+      <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-[#efc27a]">
+        {title}
+      </p>
+      <p className="mt-3 text-sm leading-7 text-white/62">{description}</p>
     </div>
   );
 }
@@ -425,6 +434,7 @@ function LoginPageContent() {
 
   const nextPath = useMemo(() => getSafeNextPath(nextParam), [nextParam]);
   const continuePath = useMemo(() => getFinalContinuePath(nextPath), [nextPath]);
+  const continueLabel = useMemo(() => getContinueLabel(continuePath), [continuePath]);
 
   const supabase = useMemo(() => {
     try {
@@ -449,14 +459,16 @@ function LoginPageContent() {
   const [status, setStatus] = useState<StatusType>('idle');
   const [statusTitle, setStatusTitle] = useState('Welcome back to your companion space');
   const [statusDetail, setStatusDetail] = useState(
-    'Sign in with Google or Email to continue where you left off.'
+    'Continue with Google or sign in with email and password.'
   );
-  const [statusProvider, setStatusProvider] = useState('Ready');
+  const [statusProvider, setStatusProvider] = useState('');
 
   const syncStatusFromUser = useCallback((user: User, providerOverride?: string) => {
     setStatus('success');
-    setStatusTitle(`Signed in as ${getDisplayName(user)}`);
-    setStatusDetail(user.email || 'Authentication completed successfully.');
+    setStatusTitle(`Signed in successfully as ${getDisplayName(user)}`);
+    setStatusDetail(
+      'Google login completed. You can continue with this account now.'
+    );
     setStatusProvider(providerOverride || getProviderLabel(user));
   }, []);
 
@@ -492,8 +504,8 @@ function LoginPageContent() {
       setStatusProvider('Google');
     } else if (authHint === 'google' && oauthHint === 'done') {
       setStatus('loading');
-      setStatusTitle('Google sign-in completed');
-      setStatusDetail('Syncing your account session…');
+      setStatusTitle('Redirecting back…');
+      setStatusDetail('Checking your signed-in session now.');
       setStatusProvider('Google');
     }
 
@@ -549,8 +561,8 @@ function LoginPageContent() {
         setSession(null);
         setStatus('idle');
         setStatusTitle('Welcome back to your companion space');
-        setStatusDetail('Sign in with Google or Email to continue where you left off.');
-        setStatusProvider('Ready');
+        setStatusDetail('Continue with Google or sign in with email and password.');
+        setStatusProvider('');
         setIsGoogleLoading(false);
         setIsEmailLoading(false);
       }
@@ -648,7 +660,10 @@ function LoginPageContent() {
 
         if (data.user) {
           setSession(data.session ?? null);
-          syncStatusFromUser(data.user, 'Email');
+          setStatus('success');
+          setStatusTitle(`Signed in successfully as ${getDisplayName(data.user)}`);
+          setStatusDetail('Email login completed. You can continue with this account now.');
+          setStatusProvider('Email');
         }
       } else {
         const { data, error } = await supabase.auth.signUp({
@@ -663,7 +678,10 @@ function LoginPageContent() {
 
         if (data.user && data.session) {
           setSession(data.session);
-          syncStatusFromUser(data.user, 'Email');
+          setStatus('success');
+          setStatusTitle(`Signed in successfully as ${getDisplayName(data.user)}`);
+          setStatusDetail('Account created and signed in successfully.');
+          setStatusProvider('Email');
         } else {
           setStatus('success');
           setStatusTitle('Account created');
@@ -687,252 +705,284 @@ function LoginPageContent() {
   const currentName = currentUser ? getDisplayName(currentUser) : '';
   const currentEmail = currentUser?.email || '';
   const canContinue = status === 'success' && !!currentUser;
+  const currentPath = pathname || '/login';
+  const showRedirectChip = continuePath && continuePath !== '/';
 
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),radial-gradient(circle_at_16%_18%,_rgba(251,191,36,0.10),_transparent_26%),linear-gradient(180deg,#1a100a_0%,#120d09_24%,#0f1119_58%,#0b1220_100%)] text-white">
-      <Header currentPath={pathname || '/login'} currentUser={currentUser} />
+    <main className="min-h-screen bg-[radial-gradient(circle_at_14%_18%,rgba(255,120,20,0.24),transparent_18%),radial-gradient(circle_at_84%_28%,rgba(255,132,0,0.18),transparent_16%),linear-gradient(180deg,#120906_0%,#090304_42%,#060304_100%)] text-white">
+      <Header currentPath={currentPath} currentUser={currentUser} />
 
-      <div className="mx-auto max-w-7xl px-6 pb-16 pt-10 lg:px-8 lg:pt-14">
-        <div className="grid gap-8 lg:grid-cols-[1.08fr_0.92fr]">
-          <section className="flex flex-col justify-between rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.03)_100%)] p-8 shadow-2xl backdrop-blur-xl lg:p-10">
-            <div>
-              <div className="inline-flex items-center rounded-full border border-amber-300/20 bg-amber-400/10 px-3 py-1 text-xs font-medium tracking-[0.18em] text-amber-200">
-                ECHOPAWS LOGIN
-              </div>
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px]" />
 
-              <h1 className="mt-6 text-4xl font-semibold tracking-tight text-white sm:text-5xl">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-10 lg:grid-cols-[1.2fr_0.8fr] lg:px-8 lg:py-12">
+          <section className="relative z-10 flex min-h-[720px] flex-col justify-center">
+            <div className="max-w-2xl">
+              <span className="inline-flex rounded-full border border-[#e6b46a]/18 bg-white/[0.04] px-4 py-1.5 text-[11px] uppercase tracking-[0.26em] text-[#efc27a]">
+                Warm Luxury Login
+              </span>
+
+              <h1 className="mt-8 font-serif text-5xl font-semibold leading-[0.96] tracking-[-0.03em] text-white sm:text-6xl">
                 Sign in with calm,
                 <br />
-                continue with comfort
+                continue with <span className="text-[#f1b358]">comfort</span>
               </h1>
 
-              <p className="mt-5 max-w-xl text-base leading-8 text-white/70">
-                This login page now keeps the same product feeling as the EchoPaws home
-                experience: warm gradients, visible navigation, and a clear signed-in state
-                after Google or Email authentication.
+              <p className="mt-6 max-w-xl text-base leading-8 text-white/62">
+                A refined sign-in experience that stays aligned with the EchoPaws home theme:
+                warm, elegant, readable, and reassuring for everyday use.
               </p>
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+              <div className="mt-10 grid gap-4 md:grid-cols-3">
                 <FeatureCard
-                  title="Visible site navigation"
-                  description="Users can still access Home, Chat, Memories, Pricing, and Account from the login page."
+                  title="Better Readability"
+                  description="Cleaner hierarchy, softer contrast, and easier reading across the whole page."
                 />
                 <FeatureCard
-                  title="Matched visual tone"
-                  description="The background is aligned to the home page style with warm amber highlights and deep night layers."
+                  title="Gentler Form Feel"
+                  description="Softer surfaces, calmer spacing, and more comfortable inputs for daily use."
                 />
                 <FeatureCard
-                  title="Clear signed-in state"
-                  description="After Google or Email login, the account name and email remain visible in the status panel."
-                />
-                <FeatureCard
-                  title="OAuth flow preserved"
-                  description="Google sign-in still returns through the callback route before coming back to the login page."
+                  title="Safer Interaction"
+                  description="Password visibility toggle, clearer feedback states, and more transparent login status."
                 />
               </div>
-            </div>
 
-            <div className="mt-10 rounded-3xl border border-white/10 bg-black/20 p-5">
-              <p className="text-sm font-semibold text-white">Less noise, more trust</p>
-              <p className="mt-2 text-sm leading-6 text-white/65">
-                The login page should feel like part of the same product, not a detached
-                screen. Keep the header, keep the warmth, and make account state obvious.
-              </p>
+              <div className="mt-8 rounded-[24px] border border-white/10 bg-white/[0.035] p-5 shadow-[0_18px_50px_rgba(0,0,0,0.18)]">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-[11px] uppercase tracking-[0.24em] text-[#efc27a]">
+                    EchoPaws Feeling
+                  </span>
+                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] text-white/45">
+                    Home-aligned
+                  </span>
+                </div>
+                <h2 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.02em] text-white">
+                  Less noise, more trust
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-white/60">
+                  The login page should always feel like part of the product, not just a utility
+                  screen — calm to enter, clear to use, and consistent with the EchoPaws home
+                  experience.
+                </p>
+              </div>
             </div>
           </section>
 
-          <section className="rounded-[32px] border border-white/10 bg-[linear-gradient(180deg,rgba(13,23,42,0.92)_0%,rgba(15,23,42,0.84)_100%)] p-6 shadow-2xl backdrop-blur-xl sm:p-8">
-            <div className="mb-6 flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm uppercase tracking-[0.24em] text-amber-200/80">
-                  Companion Access
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-white">
-                  {mode === 'signin' ? 'Welcome back' : 'Create your account'}
-                </h2>
+          <section className="relative z-10 flex items-start justify-center lg:justify-end">
+            <div className="w-full max-w-[390px] rounded-[28px] border border-[rgba(255,190,110,0.10)] bg-[linear-gradient(180deg,rgba(40,18,10,0.95)_0%,rgba(25,12,8,0.96)_100%)] p-4 shadow-[0_30px_90px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+              <div className="mb-4 flex items-center justify-between gap-3 px-1">
+                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#efc27a]">
+                  Auth
+                </span>
+                {showRedirectChip ? (
+                  <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] text-white/45">
+                    Redirect: {continuePath}
+                  </span>
+                ) : null}
               </div>
 
-              <div className="inline-flex rounded-2xl border border-white/10 bg-white/5 p-1">
-                <button
-                  type="button"
-                  onClick={() => setMode('signin')}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    mode === 'signin'
-                      ? 'bg-[#f59e0b] text-slate-950'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  Sign In
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setMode('signup')}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition ${
-                    mode === 'signup'
-                      ? 'bg-[#f59e0b] text-slate-950'
-                      : 'text-white/70 hover:text-white'
-                  }`}
-                >
-                  Create Account
-                </button>
-              </div>
-            </div>
-
-            <StatusPanel
-              status={status}
-              title={statusTitle}
-              detail={statusDetail}
-              provider={statusProvider}
-              userName={currentName}
-              userEmail={currentEmail}
-              canContinue={canContinue}
-              onContinue={handleContinue}
-            />
-
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={!supabase || isGoogleLoading}
-              className="inline-flex w-full items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white px-4 py-3.5 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
-            >
-              {isGoogleLoading ? (
-                <div className="h-5 w-5 animate-spin rounded-full border-2 border-slate-300 border-t-slate-700" />
-              ) : (
-                <GoogleIcon />
-              )}
-              <span>{isGoogleLoading ? 'Opening Google…' : 'Continue with Google'}</span>
-            </button>
-
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-white/10" />
-              <span className="text-xs uppercase tracking-[0.22em] text-white/40">
-                Or use email
-              </span>
-              <div className="h-px flex-1 bg-white/10" />
-            </div>
-
-            <form onSubmit={handleEmailAuth} className="space-y-4">
-              <div>
-                <label htmlFor="email" className="mb-2 block text-sm font-medium text-white/80">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  autoComplete="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="you@example.com"
-                  className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
-                />
-              </div>
-
-              <div>
-                <label htmlFor="password" className="mb-2 block text-sm font-medium text-white/80">
-                  Password
-                </label>
-                <div className="relative">
-                  <input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 pr-12 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((prev) => !prev)}
-                    className="absolute inset-y-0 right-3 inline-flex items-center text-white/55 transition hover:text-white"
-                    aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  >
-                    <EyeIcon open={showPassword} />
-                  </button>
-                </div>
-              </div>
-
-              {mode === 'signup' && (
-                <div>
-                  <label
-                    htmlFor="confirmPassword"
-                    className="mb-2 block text-sm font-medium text-white/80"
-                  >
-                    Confirm Password
-                  </label>
-                  <input
-                    id="confirmPassword"
-                    type={showPassword ? 'text' : 'password'}
-                    autoComplete="new-password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    placeholder="Confirm your password"
-                    className="w-full rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-white outline-none transition placeholder:text-white/30 focus:border-amber-300/50 focus:bg-white/10"
-                  />
-                </div>
-              )}
-
-              <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:items-center sm:justify-between">
-                <label className="inline-flex items-center gap-2 text-sm text-white/70">
-                  <input
-                    type="checkbox"
-                    checked={rememberEmail}
-                    onChange={(e) => setRememberEmail(e.target.checked)}
-                    className="h-4 w-4 rounded border-white/20 bg-white/5 text-amber-400 focus:ring-amber-400"
-                  />
-                  Remember my email
-                </label>
-
-                {mode === 'signin' ? (
-                  <Link
-                    href="/login"
-                    className="text-sm text-amber-200/90 transition hover:text-amber-100"
-                  >
-                    Forgot password
-                  </Link>
-                ) : (
+              <div className="rounded-full border border-white/10 bg-white/[0.04] p-1">
+                <div className="grid grid-cols-2 gap-1">
                   <button
                     type="button"
                     onClick={() => setMode('signin')}
-                    className="text-left text-sm text-amber-200/90 transition hover:text-amber-100"
+                    className={`rounded-full px-4 py-3 text-sm font-medium transition ${
+                      mode === 'signin'
+                        ? 'bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] text-[#2a1707] shadow-[0_10px_24px_rgba(245,158,11,0.35)]'
+                        : 'text-white/70 hover:text-white'
+                    }`}
                   >
-                    Already have an account
+                    Sign In
                   </button>
-                )}
+                  <button
+                    type="button"
+                    onClick={() => setMode('signup')}
+                    className={`rounded-full px-4 py-3 text-sm font-medium transition ${
+                      mode === 'signup'
+                        ? 'bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] text-[#2a1707] shadow-[0_10px_24px_rgba(245,158,11,0.35)]'
+                        : 'text-white/70 hover:text-white'
+                    }`}
+                  >
+                    Create Account
+                  </button>
+                </div>
+              </div>
+
+              <div className="mt-5 px-1">
+                <h2 className="font-serif text-[42px] font-semibold leading-[0.96] tracking-[-0.03em] text-white">
+                  Welcome back to your
+                  <br />
+                  companion space
+                </h2>
+                <p className="mt-3 text-sm leading-7 text-white/62">
+                  Continue with Google or sign in with email and password.
+                </p>
+              </div>
+
+              <div className="mt-5">
+                <StatusPanel
+                  status={status}
+                  title={statusTitle}
+                  detail={statusDetail}
+                  provider={statusProvider}
+                  userName={currentName}
+                  userEmail={currentEmail}
+                  continueLabel={continueLabel}
+                  canContinue={canContinue}
+                  onContinue={handleContinue}
+                />
               </div>
 
               <button
-                type="submit"
-                disabled={!supabase || isEmailLoading}
-                className="inline-flex w-full items-center justify-center rounded-2xl bg-[#f59e0b] px-4 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-[#f7b84b] disabled:cursor-not-allowed disabled:opacity-60"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={!supabase || isGoogleLoading}
+                className="mt-4 inline-flex w-full items-center justify-center gap-3 rounded-[16px] border border-white/10 bg-white/[0.03] px-4 py-3.5 text-sm font-medium text-white transition hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isEmailLoading
-                  ? mode === 'signin'
-                    ? 'Signing In…'
-                    : 'Creating Account…'
-                  : mode === 'signin'
-                  ? 'Sign In'
-                  : 'Create Account'}
+                {isGoogleLoading ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/20 border-t-white" />
+                ) : (
+                  <GoogleIcon />
+                )}
+                <span>{isGoogleLoading ? 'Opening Google…' : 'Continue with Google'}</span>
               </button>
-            </form>
 
-            <div className="mt-6 rounded-2xl border border-white/10 bg-white/5 p-4 text-sm leading-6 text-white/60">
-              <p>
+              <div className="my-6 flex items-center gap-3">
+                <div className="h-px flex-1 bg-white/10" />
+                <span className="text-[10px] uppercase tracking-[0.28em] text-white/35">
+                  Or use email
+                </span>
+                <div className="h-px flex-1 bg-white/10" />
+              </div>
+
+              <form onSubmit={handleEmailAuth} className="space-y-4">
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-2 block text-[11px] font-medium uppercase tracking-[0.22em] text-white/55"
+                  >
+                    Email Address
+                  </label>
+                  <input
+                    id="email"
+                    type="email"
+                    autoComplete="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="you@example.com"
+                    className="w-full rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#eab25f]/40 focus:bg-white/[0.06]"
+                  />
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="password"
+                    className="mb-2 block text-[11px] font-medium uppercase tracking-[0.22em] text-white/55"
+                  >
+                    Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder={mode === 'signin' ? 'Enter your password' : 'Create a password'}
+                      className="w-full rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 pr-12 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#eab25f]/40 focus:bg-white/[0.06]"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                      className="absolute inset-y-0 right-3 inline-flex items-center text-white/40 transition hover:text-white"
+                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                    >
+                      <EyeIcon open={showPassword} />
+                    </button>
+                  </div>
+                </div>
+
+                {mode === 'signup' && (
+                  <div>
+                    <label
+                      htmlFor="confirmPassword"
+                      className="mb-2 block text-[11px] font-medium uppercase tracking-[0.22em] text-white/55"
+                    >
+                      Confirm Password
+                    </label>
+                    <input
+                      id="confirmPassword"
+                      type={showPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Confirm your password"
+                      className="w-full rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition placeholder:text-white/25 focus:border-[#eab25f]/40 focus:bg-white/[0.06]"
+                    />
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-4 text-sm">
+                  <label className="inline-flex items-center gap-2 text-white/62">
+                    <input
+                      type="checkbox"
+                      checked={rememberEmail}
+                      onChange={(e) => setRememberEmail(e.target.checked)}
+                      className="h-4 w-4 rounded border-white/20 bg-white/5 text-amber-400 focus:ring-amber-400"
+                    />
+                    Remember my email
+                  </label>
+
+                  {mode === 'signin' ? (
+                    <Link
+                      href="/login"
+                      className="text-[#efc27a] transition hover:text-[#f5d399]"
+                    >
+                      Forgot password
+                    </Link>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setMode('signin')}
+                      className="text-[#efc27a] transition hover:text-[#f5d399]"
+                    >
+                      Already have an account
+                    </button>
+                  )}
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={!supabase || isEmailLoading}
+                  className="inline-flex w-full items-center justify-center rounded-[14px] bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-4 py-3.5 text-sm font-semibold text-[#2a1707] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {isEmailLoading
+                    ? mode === 'signin'
+                      ? 'Signing In…'
+                      : 'Creating Account…'
+                    : mode === 'signin'
+                    ? 'Sign In'
+                    : 'Create Account'}
+                </button>
+              </form>
+
+              <div className="mt-4 rounded-[16px] border border-white/10 bg-white/[0.03] px-4 py-3 text-xs leading-6 text-white/45">
                 {currentUser
                   ? `Current session: ${getDisplayName(currentUser)} · ${currentUser.email || 'No email'}`
-                  : 'No active session yet. After Google or Email sign-in, this page will show your account name and login result here.'}
-              </p>
+                  : 'No active session yet. After Google or Email sign-in, this page will display your account name and login result here.'}
+              </div>
             </div>
           </section>
         </div>
-      </div>
+      </section>
     </main>
   );
 }
 
 function LoginPageFallback() {
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(245,158,11,0.18),_transparent_26%),linear-gradient(180deg,#1a100a_0%,#0b1220_100%)] text-white">
+    <main className="min-h-screen bg-[radial-gradient(circle_at_14%_18%,rgba(255,120,20,0.24),transparent_18%),linear-gradient(180deg,#120906_0%,#060304_100%)] text-white">
       <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
         <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
           <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />

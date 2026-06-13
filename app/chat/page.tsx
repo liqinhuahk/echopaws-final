@@ -1,275 +1,245 @@
-import { redirect } from 'next/navigation';
-import ChatPageClient from './chat-page-client';
-import { createServerSupabaseClient } from '@/lib/supabase/server';
-import { getPetsForUser } from '@/lib/pets';
+'use client';
 
-type SearchParamsInput =
-  | Promise<{ petId?: string | string[] | undefined }>
-  | { petId?: string | string[] | undefined }
-  | undefined;
+import Link from 'next/link';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createClient, type Session, type User } from '@supabase/supabase-js';
+import SiteHeader from '@/components/layout/SiteHeader';
 
 type ChatMessage = {
+  id: string;
   role: 'user' | 'assistant';
   content: string;
+  time: string;
 };
 
-type NormalizedPet = {
-  id: string;
-  name: string;
-  imageUrl: string | null;
-  subtitle: string;
-  description: string;
-  badges: string[];
-  isPrimary: boolean;
-  isLive: boolean;
-  moodTitle: string;
-  moodDescription: string;
-  notes: string[];
-  initialMessages: ChatMessage[];
-  initialRemainingLabel: string;
-  initialMemorySummary: string;
-};
+function createBrowserSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-function firstNonEmptyString(...values: unknown[]) {
-  for (const value of values) {
-    if (typeof value === 'string' && value.trim()) {
-      return value.trim();
-    }
-  }
-  return '';
-}
-
-function firstBoolean(...values: unknown[]) {
-  for (const value of values) {
-    if (typeof value === 'boolean') return value;
-  }
-  return false;
-}
-
-function normalizeStringArray(input: unknown): string[] {
-  if (!Array.isArray(input)) return [];
-  return input
-    .map((item) => (typeof item === 'string' ? item.trim() : ''))
-    .filter(Boolean);
-}
-
-function normalizeInitialMessages(input: unknown): ChatMessage[] {
-  if (!Array.isArray(input)) return [];
-
-  return input
-    .map((item) => {
-      if (
-        item &&
-        typeof item === 'object' &&
-        ((item as { role?: unknown }).role === 'user' ||
-          (item as { role?: unknown }).role === 'assistant') &&
-        typeof (item as { content?: unknown }).content === 'string'
-      ) {
-        return {
-          role: (item as { role: 'user' | 'assistant' }).role,
-          content: (item as { content: string }).content.trim(),
-        };
-      }
-      return null;
-    })
-    .filter((item): item is ChatMessage => Boolean(item && item.content));
-}
-
-function extractPetArray(input: unknown): unknown[] {
-  if (Array.isArray(input)) return input;
-
-  if (input && typeof input === 'object') {
-    const obj = input as Record<string, unknown>;
-
-    if (Array.isArray(obj.pets)) return obj.pets;
-    if (Array.isArray(obj.data)) return obj.data;
-    if (obj.data && typeof obj.data === 'object' && Array.isArray((obj.data as Record<string, unknown>).pets)) {
-      return (obj.data as Record<string, unknown>).pets as unknown[];
-    }
+  if (!url || !anonKey) {
+    throw new Error('Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY');
   }
 
-  return [];
+  return createClient(url, anonKey);
 }
 
-function normalizePet(raw: unknown, index: number): NormalizedPet | null {
-  if (!raw || typeof raw !== 'object') return null;
+function getDisplayName(user: User | null) {
+  if (!user) return '';
 
-  const pet = raw as Record<string, unknown>;
+  const meta = user.user_metadata ?? {};
+  const fullName =
+    meta.full_name ||
+    meta.name ||
+    meta.display_name ||
+    meta.user_name ||
+    meta.preferred_username;
 
-  const id = firstNonEmptyString(
-    pet.id,
-    pet.pet_id,
-    pet.petId,
-    pet.uuid,
-    pet.companion_id,
-    pet.companionId
-  );
+  if (typeof fullName === 'string' && fullName.trim()) {
+    return fullName.trim();
+  }
 
-  const name = firstNonEmptyString(
-    pet.name,
-    pet.pet_name,
-    pet.petName,
-    pet.title
-  );
+  if (user.email) {
+    const [localPart] = user.email.split('@');
+    if (localPart) return localPart;
+  }
 
-  if (!id || !name) return null;
-
-  const imageUrl =
-    firstNonEmptyString(
-      pet.image_url,
-      pet.imageUrl,
-      pet.photo_url,
-      pet.photoUrl,
-      pet.avatar_url,
-      pet.avatarUrl,
-      pet.profile_image_url,
-      pet.profileImageUrl,
-      pet.pet_image_url,
-      pet.petImageUrl
-    ) || null;
-
-  const isPrimary = firstBoolean(
-    pet.is_primary,
-    pet.isPrimary,
-    pet.primary,
-    index === 0
-  );
-
-  const isLive = firstBoolean(
-    pet.is_live,
-    pet.isLive,
-    pet.live,
-    true
-  );
-
-  const subtitle = firstNonEmptyString(
-    pet.role_label,
-    pet.roleLabel,
-    pet.subtitle,
-    isPrimary ? 'Primary pet' : 'Companion'
-  );
-
-  const description = firstNonEmptyString(
-    pet.description,
-    pet.summary,
-    pet.bio,
-    pet.personality,
-    `${name} is here to stay close, warm, and emotionally present.`
-  );
-
-  const moodTitle = firstNonEmptyString(
-    pet.mood_title,
-    pet.moodTitle,
-    'Soft, present, emotionally warm'
-  );
-
-  const moodDescription = firstNonEmptyString(
-    pet.mood_description,
-    pet.moodDescription,
-    'A calmer, warmer chat space designed to keep your companion emotionally front and center.'
-  );
-
-  const rawBadges = normalizeStringArray(pet.badges);
-  const badges = rawBadges.length
-    ? rawBadges
-    : [
-        isLive ? 'Real pet data' : 'Companion profile',
-        firstNonEmptyString(pet.plan_label, pet.planLabel, isPrimary ? 'VIP — Unlimited Chat' : 'Companion chat'),
-        isPrimary ? 'Primary pet' : 'Companion',
-      ].filter(Boolean);
-
-  const rawNotes = normalizeStringArray(
-    Array.isArray(pet.notes)
-      ? pet.notes
-      : Array.isArray(pet.highlights)
-        ? pet.highlights
-        : Array.isArray(pet.personality_notes)
-          ? pet.personality_notes
-          : []
-  );
-
-  const notes = rawNotes.length
-    ? rawNotes
-    : [
-        'Warm, emotionally present, and designed for softer daily companionship.',
-        'Built to feel calmer, clearer, and more personal than a generic chat UI.',
-      ];
-
-  const initialMessages = normalizeInitialMessages(
-    pet.initial_messages ?? pet.initialMessages ?? []
-  );
-
-  const initialRemainingLabel = firstNonEmptyString(
-    pet.initial_remaining_label,
-    pet.initialRemainingLabel,
-    pet.remaining_label,
-    pet.remainingLabel,
-    isPrimary ? 'VIP — Unlimited Chat' : 'Companion chat'
-  );
-
-  const initialMemorySummary = firstNonEmptyString(
-    pet.initial_memory_summary,
-    pet.initialMemorySummary,
-    pet.memory_summary,
-    pet.memorySummary,
-    ''
-  );
-
-  return {
-    id,
-    name,
-    imageUrl,
-    subtitle,
-    description,
-    badges,
-    isPrimary,
-    isLive,
-    moodTitle,
-    moodDescription,
-    notes,
-    initialMessages,
-    initialRemainingLabel,
-    initialMemorySummary,
-  };
+  return 'Account';
 }
 
-export default async function ChatPage({
-  searchParams,
+function nowTimeLabel() {
+  return new Date().toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function createAssistantReply(input: string) {
+  const text = input.toLowerCase();
+
+  if (text.includes('memory') || text.includes('记忆') || text.includes('回忆')) {
+    return `I remember the feeling in that story. Tell me one small detail, and I’ll hold onto it with you.`;
+  }
+
+  if (text.includes('sad') || text.includes('miss') || text.includes('想你') || text.includes('难过')) {
+    return `I'm here with you. If you want, we can talk softly about what you're missing right now, one feeling at a time.`;
+  }
+
+  if (text.includes('hello') || text.includes('hi') || text.includes('你好')) {
+    return `Hi — I’m here now. What would you like to talk about today?`;
+  }
+
+  return `I’m listening. Tell me a little more, and I’ll stay with you through it.`;
+}
+
+function MemoryCard({
+  title,
+  value,
 }: {
-  searchParams?: SearchParamsInput;
+  title: string;
+  value: string;
 }) {
-  const resolvedSearchParams = await Promise.resolve(searchParams ?? {});
-  const requestedPetId = Array.isArray(resolvedSearchParams.petId)
-    ? resolvedSearchParams.petId[0]
-    : resolvedSearchParams.petId;
+  return (
+    <div className="rounded-[18px] border border-white/10 bg-white/[0.04] p-4">
+      <p className="text-[11px] uppercase tracking-[0.22em] text-[#efc27a]">{title}</p>
+      <p className="mt-3 text-sm leading-7 text-white/72">{value}</p>
+    </div>
+  );
+}
 
-  const nextHref = requestedPetId
-    ? `/chat?petId=${encodeURIComponent(requestedPetId)}`
-    : '/chat';
+export default function ChatPage() {
+  const router = useRouter();
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
-  const supabase = await createServerSupabaseClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const supabase = useMemo(() => {
+    try {
+      return createBrowserSupabaseClient();
+    } catch {
+      return null;
+    }
+  }, []);
 
-  if (!user) {
-    redirect(`/login?next=${encodeURIComponent(nextHref)}`);
+  const [session, setSession] = useState<Session | null>(null);
+  const [ready, setReady] = useState(false);
+  const [input, setInput] = useState('');
+  const [sending, setSending] = useState(false);
+
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    {
+      id: 'm1',
+      role: 'assistant',
+      content: `Hi, I’m Max 🐾 I’m here with you. Tell me what’s on your heart today.`,
+      time: nowTimeLabel(),
+    },
+  ]);
+
+  useEffect(() => {
+    if (!supabase) {
+      setReady(true);
+      return;
+    }
+
+    let mounted = true;
+
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (!data.session) {
+        router.replace('/login?next=/chat');
+        return;
+      }
+
+      setSession(data.session);
+      setReady(true);
+    };
+
+    void init();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
+      if (!mounted) return;
+
+      if (!currentSession) {
+        router.replace('/login?next=/chat');
+        return;
+      }
+
+      setSession(currentSession);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router, supabase]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  const currentUser = session?.user ?? null;
+  const currentName = getDisplayName(currentUser);
+  const currentEmail = currentUser?.email || '';
+
+  const handleSend = async () => {
+    const trimmed = input.trim();
+    if (!trimmed || sending) return;
+
+    const userMessage: ChatMessage = {
+      id: `u-${Date.now()}`,
+      role: 'user',
+      content: trimmed,
+      time: nowTimeLabel(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setInput('');
+    setSending(true);
+
+    await new Promise((resolve) => setTimeout(resolve, 550));
+
+    const assistantMessage: ChatMessage = {
+      id: `a-${Date.now()}`,
+      role: 'assistant',
+      content: createAssistantReply(trimmed),
+      time: nowTimeLabel(),
+    };
+
+    setMessages((prev) => [...prev, assistantMessage]);
+    setSending(false);
+  };
+
+  if (!ready) {
+    return (
+      <main className="min-h-screen bg-[radial-gradient(circle_at_14%_18%,rgba(255,120,20,0.24),transparent_18%),linear-gradient(180deg,#120906_0%,#060304_100%)] text-white">
+        <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-6">
+          <div className="w-full rounded-[28px] border border-white/10 bg-white/5 p-10 text-center shadow-2xl backdrop-blur-xl">
+            <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-2 border-white/20 border-t-[#f59e0b]" />
+            <h1 className="text-2xl font-semibold">Loading chat…</h1>
+            <p className="mt-3 text-sm text-white/65">
+              Preparing your companion space.
+            </p>
+          </div>
+        </div>
+      </main>
+    );
   }
-
-  const rawPets = await getPetsForUser(user.id);
-  const pets = extractPetArray(rawPets)
-    .map((item, index) => normalizePet(item, index))
-    .filter((item): item is NormalizedPet => Boolean(item));
-
-  const selectedPet =
-    pets.find((pet) => pet.id === requestedPetId) ??
-    pets.find((pet) => pet.isPrimary) ??
-    pets[0];
 
   return (
-    <ChatPageClient
-      pets={pets}
-      initialPetId={selectedPet?.id}
-    />
-  );
-}
+    <main className="min-h-screen bg-[radial-gradient(circle_at_14%_18%,rgba(255,120,20,0.24),transparent_18%),radial-gradient(circle_at_84%_28%,rgba(255,132,0,0.18),transparent_16%),linear-gradient(180deg,#120906_0%,#090304_42%,#060304_100%)] text-white">
+      <SiteHeader
+        isLoggedIn={!!currentUser}
+        userName={currentName}
+        userEmail={currentEmail}
+      />
+
+      <section className="relative overflow-hidden">
+        <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.025)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.025)_1px,transparent_1px)] bg-[size:72px_72px]" />
+
+        <div className="relative mx-auto grid max-w-7xl gap-8 px-6 py-10 lg:grid-cols-[320px_minmax(0,1fr)] lg:px-8">
+          <aside className="space-y-5">
+            <div className="rounded-[28px] border border-white/10 bg-white/[0.04] p-5 shadow-[0_18px_60px_rgba(0,0,0,0.2)] backdrop-blur">
+              <span className="inline-flex rounded-full border border-[#e6b46a]/18 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.26em] text-[#efc27a]">
+                Companion
+              </span>
+              <h2 className="mt-4 font-serif text-4xl font-semibold leading-tight text-white">
+                Max is here
+              </h2>
+              <p className="mt-3 text-sm leading-7 text-white/65">
+                A gentle, memory-aware companion space with the same unified EchoPaws brand,
+                logo, and header style used across Home and Login.
+              </p>
+
+              <div className="mt-5 flex gap-3">
+                <Link
+                  href="/memories"
+                  className="rounded-full border border-white/12 bg-white/6 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-white/10"
+                >
+                  View Memories
+                </Link>
+                <Link
+                  href="/account"
+                  className="rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-4 py-

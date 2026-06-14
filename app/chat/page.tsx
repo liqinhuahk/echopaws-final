@@ -1,7 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
 import SiteHeader from '@/components/layout/SiteHeader';
@@ -60,20 +66,20 @@ function buildAssistantReply(input: string) {
   if (
     text.includes('memory') ||
     text.includes('memories') ||
-    text.includes('回忆') ||
-    text.includes('記憶')
+    text.includes('記憶') ||
+    text.includes('回忆')
   ) {
-    return 'I remember the feeling in what you shared. Tell me one small detail, and I will stay with it together with you.';
+    return '我记得你刚才提到的那种感觉。你可以再告诉我一个小细节，我会陪你把它慢慢说完。';
   }
 
   if (
     text.includes('sad') ||
     text.includes('miss') ||
-    text.includes('想你') ||
+    text.includes('难过') ||
     text.includes('難過') ||
-    text.includes('难过')
+    text.includes('想你')
   ) {
-    return 'I am here with you. If you want, we can talk softly about what you are missing right now, one feeling at a time.';
+    return '我在这里陪着你。如果你愿意，我们可以慢慢聊一聊你现在最想念的是什么。';
   }
 
   if (
@@ -82,10 +88,10 @@ function buildAssistantReply(input: string) {
     text.includes('你好') ||
     text.includes('hey')
   ) {
-    return 'Hi — I am here now. What would you like to talk about today?';
+    return '你好，我在这里。今天你想和我聊些什么？';
   }
 
-  return 'I am listening. Tell me a little more, and I will stay with you through it.';
+  return '我在认真听你说。你可以再多告诉我一点，我会一直陪着你。';
 }
 
 function InfoCard({
@@ -151,7 +157,7 @@ export default function ChatPage() {
     {
       id: 'initial-assistant-message',
       role: 'assistant',
-      content: `Hi, I’m Max 🐾 I’m here with you. Tell me what’s on your heart today.`,
+      content: 'Hi, I’m Max 🐾 I’m here with you. Tell me what’s on your heart today.',
       time: formatNowTime(),
     },
   ]);
@@ -265,6 +271,9 @@ export default function ChatPage() {
         isLoggedIn={!!currentUser}
         userName={currentName}
         userEmail={currentEmail}
+        forceActive="/chat"
+        variant="solid"
+        contactHref="/contact"
       />
 
       <section className="relative overflow-hidden">
@@ -293,6 +302,7 @@ export default function ChatPage() {
                 >
                   View Memories
                 </Link>
+
                 <Link
                   href="/account"
                   className="rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-4 py-2.5 text-sm font-semibold text-[#2a1707] transition hover:brightness-105"
@@ -324,9 +334,11 @@ export default function ChatPage() {
                     <span className="inline-flex rounded-full border border-[#e6b46a]/18 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.26em] text-[#efc27a]">
                       Chat
                     </span>
+
                     <h1 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.03em] text-white">
                       Your companion space
                     </h1>
+
                     <p className="mt-2 text-sm leading-7 text-white/60">
                       Talk gently, remember meaningful things, and keep the connection close.
                     </p>

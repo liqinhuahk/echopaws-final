@@ -54,6 +54,13 @@ function getFinalContinuePath(nextPath: string) {
   return nextPath;
 }
 
+function getContinueLabel(path: string) {
+  if (path === '/chat') return 'Continue to Chat';
+  if (path === '/memories') return 'Continue to Memories';
+  if (path === '/account') return 'Continue to Account';
+  return 'Continue to Home';
+}
+
 function getDisplayName(user: User | null) {
   if (!user) return 'User';
 
@@ -80,19 +87,15 @@ function getDisplayName(user: User | null) {
 function getProviderLabel(user: User | null) {
   if (!user) return 'Session';
 
-  const provider = user.app_metadata?.provider || 'email';
+  const provider =
+    user.app_metadata?.provider ||
+    user.identities?.[0]?.provider ||
+    'email';
 
   if (provider === 'google') return 'Google';
   if (provider === 'email') return 'Email';
 
   return String(provider).charAt(0).toUpperCase() + String(provider).slice(1);
-}
-
-function getContinueLabel(path: string) {
-  if (path === '/chat') return 'Continue to Chat';
-  if (path === '/memories') return 'Continue to Memories';
-  if (path === '/account') return 'Continue to Account';
-  return 'Continue to Home';
 }
 
 function GoogleIcon() {
@@ -121,7 +124,13 @@ function GoogleIcon() {
 function EyeIcon({ open }: { open: boolean }) {
   if (open) {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      >
         <path d="M3 12s3.6-6 9-6 9 6 9 6-3.6 6-9 6-9-6-9-6Z" />
         <circle cx="12" cy="12" r="2.8" />
       </svg>
@@ -129,7 +138,13 @@ function EyeIcon({ open }: { open: boolean }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+    >
       <path d="M3 3l18 18" />
       <path d="M10.58 10.58A2 2 0 0 0 12 14a2 2 0 0 0 1.42-.58" />
       <path d="M9.88 5.09A10.94 10.94 0 0 1 12 5c5.4 0 9 7 9 7a17.47 17.47 0 0 1-3.06 3.67" />
@@ -140,12 +155,20 @@ function EyeIcon({ open }: { open: boolean }) {
 
 function StatusIcon({ status }: { status: StatusType }) {
   if (status === 'loading') {
-    return <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />;
+    return (
+      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/25 border-t-[#f59e0b]" />
+    );
   }
 
   if (status === 'success') {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-emerald-400" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-emerald-400"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <path d="M20 6 9 17l-5-5" />
       </svg>
     );
@@ -153,7 +176,13 @@ function StatusIcon({ status }: { status: StatusType }) {
 
   if (status === 'error') {
     return (
-      <svg viewBox="0 0 24 24" className="h-5 w-5 text-rose-400" fill="none" stroke="currentColor" strokeWidth="2">
+      <svg
+        viewBox="0 0 24 24"
+        className="h-5 w-5 text-rose-400"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+      >
         <path d="M12 8v5" />
         <path d="M12 16h.01" />
         <circle cx="12" cy="12" r="9" />
@@ -162,7 +191,13 @@ function StatusIcon({ status }: { status: StatusType }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" className="h-5 w-5 text-amber-200" fill="none" stroke="currentColor" strokeWidth="2">
+    <svg
+      viewBox="0 0 24 24"
+      className="h-5 w-5 text-amber-200"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+    >
       <circle cx="12" cy="12" r="9" />
       <path d="M12 8v4l2.5 2.5" />
     </svg>
@@ -236,7 +271,10 @@ function StatusPanel({
           </div>
 
           <p className="mt-3 text-sm font-semibold text-white">{title}</p>
-          {detail ? <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p> : null}
+
+          {detail ? (
+            <p className="mt-1 text-sm leading-6 text-white/65">{detail}</p>
+          ) : null}
 
           {(userName || userEmail) && (
             <div className="mt-4 rounded-[18px] border border-white/10 bg-black/18 p-3">
@@ -401,6 +439,7 @@ function LoginPageContent() {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, currentSession) => {
       if (!mounted) return;
+
       setSession(currentSession);
 
       if (currentSession?.user) {
@@ -439,7 +478,9 @@ function LoginPageContent() {
         options: { redirectTo },
       });
 
-      if (error) throw error;
+      if (error) {
+        throw error;
+      }
     } catch (error) {
       setIsGoogleLoading(false);
       setStatus('error');
@@ -556,6 +597,8 @@ function LoginPageContent() {
         isLoggedIn={!!currentUser}
         userName={currentName}
         userEmail={currentEmail}
+        variant="overlay"
+        contactHref="/contact"
       />
 
       <section className="relative overflow-hidden">
@@ -575,7 +618,7 @@ function LoginPageContent() {
               </h1>
 
               <p className="mt-6 max-w-xl text-base leading-8 text-white/62">
-                A refined sign-in experience that stays aligned with the EchoPaws home theme:
+                A refined sign-in experience that stays aligned with the EchoPaws brand:
                 warm, elegant, readable, and reassuring for everyday use.
               </p>
 
@@ -603,13 +646,14 @@ function LoginPageContent() {
                     Home-aligned
                   </span>
                 </div>
+
                 <h2 className="mt-3 font-serif text-4xl font-semibold tracking-[-0.02em] text-white">
                   Less noise, more trust
                 </h2>
+
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/60">
                   The login page should always feel like part of the product, not just a utility
-                  screen — calm to enter, clear to use, and consistent with the EchoPaws home
-                  experience.
+                  screen — calm to enter, clear to use, and consistent with the EchoPaws experience.
                 </p>
               </div>
             </div>
@@ -621,6 +665,7 @@ function LoginPageContent() {
                 <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] uppercase tracking-[0.24em] text-[#efc27a]">
                   Auth
                 </span>
+
                 {showRedirectChip ? (
                   <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] text-white/45">
                     Redirect: {continuePath}
@@ -641,6 +686,7 @@ function LoginPageContent() {
                   >
                     Sign In
                   </button>
+
                   <button
                     type="button"
                     onClick={() => setMode('signup')}
@@ -661,6 +707,7 @@ function LoginPageContent() {
                   <br />
                   companion space
                 </h2>
+
                 <p className="mt-3 text-sm leading-7 text-white/62">
                   Continue with Google or sign in with email and password.
                 </p>

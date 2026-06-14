@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
 import { createClient, type Session, type User } from '@supabase/supabase-js';
-import EchoPawsLogo from '@/components/brand/EchoPawsLogo';
+import SiteHeader from '@/components/layout/SiteHeader';
 
 function createBrowserSupabaseClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -39,123 +39,19 @@ function getDisplayName(user: User | null) {
   return 'Account';
 }
 
-function HomeHeader({
-  currentUser,
-}: {
-  currentUser: User | null;
-}) {
-  const currentName = currentUser ? getDisplayName(currentUser) : '';
-  const currentEmail = currentUser?.email || '';
-
-  const navItems = [
-    { label: 'Home', href: '/' },
-    { label: 'Chat', href: '/chat' },
-    { label: 'Memories', href: '/memories' },
-    { label: 'Pricing', href: '/pricing' },
-    { label: 'Account', href: '/account' },
-    { label: 'Contact', href: '/account' },
-  ];
-
-  return (
-    <header className="absolute inset-x-0 top-0 z-30">
-      <div className="mx-auto max-w-7xl px-6 pt-5 lg:px-8">
-        <div className="rounded-[22px] border border-white/10 bg-[rgba(42,34,28,0.72)] px-6 py-4 shadow-[0_18px_60px_rgba(0,0,0,0.20)] backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-6">
-            <EchoPawsLogo href="/" size={40} textSize="sm" />
-
-            <nav className="hidden flex-1 items-center justify-center gap-7 lg:flex">
-              {navItems.map((item, index) => {
-                const isHome = index === 0;
-
-                return (
-                  <Link
-                    key={item.href + item.label}
-                    href={item.href}
-                    className={`text-sm transition ${
-                      isHome
-                        ? 'rounded-full border border-white/15 bg-white/10 px-4 py-2 text-white'
-                        : 'text-white/75 hover:text-white'
-                    }`}
-                  >
-                    {item.label}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            <div className="hidden items-center gap-3 lg:flex">
-              {currentUser ? (
-                <>
-                  <div className="rounded-[18px] border border-white/10 bg-white/5 px-4 py-2 text-right">
-                    <p className="max-w-[180px] truncate text-sm font-medium text-white">
-                      {currentName}
-                    </p>
-                    <p className="max-w-[180px] truncate text-[11px] text-white/50">
-                      {currentEmail}
-                    </p>
-                  </div>
-                  <Link
-                    href="/account"
-                    className="rounded-full border border-white/14 bg-white/6 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-                  >
-                    Account
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/login"
-                    className="rounded-full border border-white/14 bg-white/6 px-5 py-2 text-sm font-medium text-white transition hover:bg-white/10"
-                  >
-                    Sign In
-                  </Link>
-                  <Link
-                    href="/pricing"
-                    className="rounded-full bg-gradient-to-r from-[#f8bd69] to-[#f59e0b] px-5 py-2 text-sm font-semibold text-[#2a1707] transition hover:brightness-105"
-                  >
-                    Get Started
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div className="mt-4 flex gap-3 overflow-x-auto pb-1 lg:hidden">
-            {navItems.map((item, index) => {
-              const isHome = index === 0;
-
-              return (
-                <Link
-                  key={item.href + item.label + '-mobile'}
-                  href={item.href}
-                  className={`shrink-0 rounded-full px-4 py-2 text-sm transition ${
-                    isHome
-                      ? 'border border-white/16 bg-white/10 text-white'
-                      : 'border border-transparent bg-white/4 text-white/72 hover:bg-white/8 hover:text-white'
-                  }`}
-                >
-                  {item.label}
-                </Link>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </header>
-  );
-}
-
 function FeatureCard({
+  icon,
   title,
   description,
 }: {
+  icon: string;
   title: string;
   description: string;
 }) {
   return (
     <div className="rounded-[26px] border border-[#efe7dc] bg-white/80 p-7 shadow-[0_16px_40px_rgba(64,42,18,0.06)]">
       <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-full bg-[#f7f1ea] text-sm">
-        {title === 'Emotional AI Chat' ? '💬' : title === 'Long-Term Memory' ? '🧠' : '❤️'}
+        {icon}
       </div>
       <h3 className="font-serif text-[20px] font-semibold leading-tight text-[#232748]">
         {title}
@@ -203,6 +99,8 @@ export default function HomePage() {
   }, [supabase]);
 
   const currentUser = session?.user ?? null;
+  const currentName = currentUser ? getDisplayName(currentUser) : '';
+  const currentEmail = currentUser?.email || '';
 
   return (
     <main className="min-h-screen bg-[#f3efe7] text-[#232748]">
@@ -216,7 +114,12 @@ export default function HomePage() {
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(28,16,10,0.72)_0%,rgba(28,16,10,0.44)_36%,rgba(28,16,10,0.18)_58%,rgba(28,16,10,0.10)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#f3efe7] to-transparent" />
 
-        <HomeHeader currentUser={currentUser} />
+        <SiteHeader
+          isLoggedIn={!!currentUser}
+          userName={currentName}
+          userEmail={currentEmail}
+          forceActive="/"
+        />
 
         <div className="relative z-10 mx-auto grid min-h-[760px] max-w-7xl items-center gap-10 px-6 pb-24 pt-32 lg:grid-cols-[1.02fr_0.98fr] lg:px-8">
           <div className="max-w-2xl">
@@ -254,7 +157,7 @@ export default function HomePage() {
             </div>
 
             <div className="mt-8 flex flex-wrap gap-5 text-sm text-white/76">
-              <span>✓ Google & Email Login</span>
+              <span>✓ Google &amp; Email Login</span>
               <span>✓ Emotional AI Chat</span>
               <span>✓ Long-Term Memory</span>
             </div>
@@ -282,14 +185,17 @@ export default function HomePage() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <FeatureCard
+            icon="💬"
             title="Emotional AI Chat"
             description="Warm, personal conversations that feel gentle, familiar, and emotionally close."
           />
           <FeatureCard
+            icon="🧠"
             title="Long-Term Memory"
             description="Your AI pet remembers stories, habits, and meaningful moments over time."
           />
           <FeatureCard
+            icon="❤️"
             title="Always by Your Side"
             description="A comforting presence whenever you need support, companionship, or warmth."
           />

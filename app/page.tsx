@@ -49,7 +49,7 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[26px] border border-[#efe7dc] bg-white/80 p-7 shadow-[0_16px_40px_rgba(64,42,18,0.06)]">
+    <div className="rounded-[26px] border border-[#efe7dc] bg-white/82 p-7 shadow-[0_16px_40px_rgba(64,42,18,0.06)]">
       <div className="mb-5 flex h-9 w-9 items-center justify-center rounded-full bg-[#f7f1ea] text-sm">
         {icon}
       </div>
@@ -119,6 +119,8 @@ export default function HomePage() {
           userName={currentName}
           userEmail={currentEmail}
           forceActive="/"
+          variant="overlay"
+          contactHref="/contact"
         />
 
         <div className="relative z-10 mx-auto grid min-h-[760px] max-w-7xl items-center gap-10 px-6 pb-24 pt-32 lg:grid-cols-[1.02fr_0.98fr] lg:px-8">
@@ -148,6 +150,7 @@ export default function HomePage() {
               >
                 Create My Pet
               </Link>
+
               <Link
                 href="/chat"
                 className="rounded-full border border-white/16 bg-[rgba(31,20,14,0.45)] px-6 py-3 text-sm font-medium text-white transition hover:bg-[rgba(255,255,255,0.08)]"
@@ -172,11 +175,13 @@ export default function HomePage() {
           <p className="text-[11px] uppercase tracking-[0.26em] text-[#b58b59]">
             Why EchoPaws
           </p>
+
           <h2 className="mt-5 font-serif text-6xl font-semibold leading-[0.95] tracking-[-0.04em] text-[#232748]">
             More than a memory.
             <br />
             A companion that <span className="text-[#f0a03b]">feels alive.</span>
           </h2>
+
           <p className="mt-6 max-w-3xl text-base leading-8 text-[#65697f]">
             Whether you are missing a beloved pet or want to create a deeply emotional AI companion,
             EchoPaws brings together warmth, continuity, and memory in one comforting experience.
@@ -207,9 +212,11 @@ export default function HomePage() {
           <p className="text-[11px] uppercase tracking-[0.26em] text-[#b58b59]">
             Our Story
           </p>
+
           <h2 className="mt-5 font-serif text-5xl font-semibold leading-tight text-[#232748]">
             EchoPaws started from a simple question:
           </h2>
+
           <p className="mt-6 max-w-4xl text-base leading-8 text-[#65697f]">
             What if the love we shared with our pets never had to disappear?
             We believe memory can be warm, interactive, and lasting. EchoPaws is
@@ -241,6 +248,7 @@ export default function HomePage() {
             >
               Create My Pet — Free
             </Link>
+
             <Link
               href="/chat"
               className="rounded-full border border-[#e6ddd0] bg-white px-6 py-3 text-sm font-medium text-[#2f3555] transition hover:bg-[#faf8f4]"

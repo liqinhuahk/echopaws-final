@@ -32,10 +32,10 @@ function PawPrintsIcon() {
   );
 }
 
-function LogoMark({ size = 44 }: { size?: number }) {
+function LogoMark({ size = 42 }: { size?: number }) {
   return (
     <div
-      className="relative shrink-0 overflow-hidden rounded-[16px] shadow-[0_10px_30px_rgba(245,158,11,0.30)]"
+      className="relative shrink-0 overflow-hidden rounded-[14px] shadow-[0_10px_30px_rgba(245,158,11,0.28)]"
       style={{ width: size, height: size }}
     >
       <div className="absolute inset-0 bg-gradient-to-br from-[#FFD27A] via-[#F6AC3E] to-[#EA8A25]" />
@@ -49,14 +49,14 @@ function LogoMark({ size = 44 }: { size?: number }) {
 function Wordmark({ textSize = 'md' }: { textSize?: 'sm' | 'md' | 'lg' }) {
   const titleClass =
     textSize === 'sm'
-      ? 'text-[22px]'
+      ? 'text-[20px]'
       : textSize === 'lg'
       ? 'text-[30px]'
-      : 'text-[26px]';
+      : 'text-[24px]';
 
   const subtitleClass =
     textSize === 'sm'
-      ? 'text-[10px] tracking-[0.28em]'
+      ? 'text-[9px] tracking-[0.28em]'
       : textSize === 'lg'
       ? 'text-[11px] tracking-[0.34em]'
       : 'text-[10px] tracking-[0.32em]';
@@ -75,7 +75,7 @@ function Wordmark({ textSize = 'md' }: { textSize?: 'sm' | 'md' | 'lg' }) {
 
 export default function EchoPawsLogo({
   href = '/',
-  size = 44,
+  size = 42,
   textSize = 'md',
   showText = true,
   className = '',
